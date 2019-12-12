@@ -54,6 +54,7 @@ jobs:
           condition: <<parameters.run-lint>>
           steps:
             - run: make lint
+      - run: go get ./...
       - run: go build ./...
       
       - run:
@@ -92,4 +93,5 @@ jobs:
           name: build and test
           command: |
             cd ${env:GOPATH}\src\${env:PACKAGE_PATH}
+            go get ./...
             go test -race ./...

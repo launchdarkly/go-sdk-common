@@ -6,6 +6,7 @@ LINTER=./bin/golangci-lint
 .PHONY: build clean test lint
 
 build:
+	go get ./...
 	go build ./...
 
 clean:
