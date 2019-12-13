@@ -16,7 +16,7 @@ We encourage pull requests and other contributions from the community. Before su
  
 This project should be built against Go 1.8 or newer.
 
-Note that the public import path is `gopkg.in/launchdarkly/go-server-sdk-core.v1` (using the [`gopkg.in`](https://labix.org/gopkg.in) service as a simple way to pin to a major version). Since it does not use Go modules, and it references its own import path in imports between packages, this means that in order to build it you must check it out at `$GOPATH/src/gopkg.in/launchdarkly/go-server-sdk-core.v1`-- not `$GOPATH/src/github.com/launchdarkly/go-server-sdk-core`.
+Note that the public import path is `gopkg.in/launchdarkly/go-server-sdk-core.v2` (using the [`gopkg.in`](https://labix.org/gopkg.in) service as a simple way to pin to a major version). Since it does not use Go modules, and it references its own import path in imports between packages, this means that in order to build it you must check it out at `$GOPATH/src/gopkg.in/launchdarkly/go-server-sdk-core.v2`-- not `$GOPATH/src/github.com/launchdarkly/go-server-sdk-core`.
 
 ### Building
 
