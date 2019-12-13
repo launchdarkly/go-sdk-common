@@ -1,5 +1,4 @@
 # LaunchDarkly Go SDK Core Packages
-===================================
 
 [![Circle CI](https://circleci.com/gh/launchdarkly/go-server-sdk-core.svg?style=svg)](https://circleci.com/gh/launchdarkly/go-server-sdk-core)
 
@@ -9,7 +8,7 @@ This repository contains packages that are shared between the [LaunchDarkly Go S
 
 Applications using the LaunchDarkly Go SDK will usually not need to reference these packages directly. If you do (for instance, if you are using the SDK's JSONVariation method, which returns the type `Value` from the `ldvalue` package), you should import the same major version of the package that is imported by the SDK. See the SDK documentation for more details.
 
-Note that the base import path is `gopkg.in/launchdarkly/go-server-sdk-core.v1` (to ensure that you receive the latest release of major version 1.x), not `github.com/launchdarkly/go-server-sdk`.
+Note that the base import path is `gopkg.in/launchdarkly/go-server-sdk-core.v1` (to ensure that you receive the latest release of major version 1.x), not `github.com/launchdarkly/go-server-sdk-core`.
 
 ## Supported Go versions
 
