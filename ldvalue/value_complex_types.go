@@ -85,7 +85,7 @@ func CopyObject(m map[string]Value) Value {
 
 // ObjectBuild creates a builder for constructing an immutable JSON object Value.
 //
-//     objValue := ldvalue.ObjectBuild().Set("a", ldvalue.Int(100)).Add("b", ldvalue.Int(200)).Build()
+//     objValue := ldvalue.ObjectBuild().Set("a", ldvalue.Int(100)).Set("b", ldvalue.Int(200)).Build()
 func ObjectBuild() ObjectBuilder {
 	return ObjectBuildWithCapacity(1)
 }
@@ -95,7 +95,7 @@ func ObjectBuild() ObjectBuilder {
 // The capacity parameter is the same as the capacity of a map, allowing you to preallocate space
 // if you know the number of elements; otherwise you can pass zero.
 //
-//     objValue := ldvalue.ObjectBuildWithCapacity(2).Set("a", ldvalue.Int(100)).Add("b", ldvalue.Int(200)).Build()
+//     objValue := ldvalue.ObjectBuildWithCapacity(2).Set("a", ldvalue.Int(100)).Set("b", ldvalue.Int(200)).Build()
 func ObjectBuildWithCapacity(capacity int) ObjectBuilder {
 	return &objectBuilderImpl{output: make(map[string]Value, capacity)}
 }
