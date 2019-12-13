@@ -146,3 +146,41 @@ func TestUnsafeValueJsonMarshal(t *testing.T) {
 		})
 	}
 }
+
+func TestUnsafeComplexValuesEqualSafeComplexValues(t *testing.T) {
+	valueFnGroups := [][]func() Value{
+		[]func() Value{
+			func() Value { return UnsafeUseArbitraryValue([]interface{}{}) },
+			func() Value { return ArrayOf() },
+		},
+		[]func() Value{
+			func() Value { return UnsafeUseArbitraryValue([]interface{}{1}) },
+			func() Value { return ArrayOf(Int(1)) },
+		},
+		[]func() Value{
+			func() Value { return UnsafeUseArbitraryValue([]interface{}{1, []interface{}{"a"}}) },
+			func() Value { return ArrayOf(Int(1), ArrayOf(String("a"))) },
+		},
+		[]func() Value{
+			func() Value { return UnsafeUseArbitraryValue(map[string]interface{}{}) },
+			func() Value { return ObjectBuild().Build() },
+		},
+		[]func() Value{
+			func() Value { return UnsafeUseArbitraryValue(map[string]interface{}{"a": 1}) },
+			func() Value { return ObjectBuild().Set("a", Int(1)).Build() },
+		},
+	}
+	for thisGroupIndex, equivalentFns := range valueFnGroups {
+		for _, fn0 := range equivalentFns {
+			for otherGroupIndex, otherFns := range valueFnGroups {
+				for _, fn1 := range otherFns {
+					if thisGroupIndex == otherGroupIndex {
+						valuesShouldBeEqual(t, fn0(), fn1())
+					} else {
+						valuesShouldNotBeEqual(t, fn0(), fn1())
+					}
+				}
+			}
+		}
+	}
+}

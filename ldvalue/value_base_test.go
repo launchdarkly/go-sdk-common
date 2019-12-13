@@ -250,3 +250,37 @@ func TestConvertPrimitivesToArbitraryValue(t *testing.T) {
 	assert.Equal(t, float64(2), Int(2).AsArbitraryValue())
 	assert.Equal(t, "x", String("x").AsArbitraryValue())
 }
+
+func TestEqualPrimitives(t *testing.T) {
+	valueFns := []func() Value{
+		func() Value { return Null() },
+		func() Value { return Bool(false) },
+		func() Value { return Bool(true) },
+		func() Value { return Int(1) },
+		func() Value { return Float64(2.5) },
+		func() Value { return String("") },
+		func() Value { return String("1") },
+		func() Value { return Raw(json.RawMessage("1")) },
+	}
+	for i, fn0 := range valueFns {
+		v0 := fn0()
+		for j, fn1 := range valueFns {
+			v1 := fn1()
+			if i == j {
+				valuesShouldBeEqual(t, v0, v1)
+			} else {
+				valuesShouldNotBeEqual(t, v0, v1)
+			}
+		}
+	}
+}
+
+func valuesShouldBeEqual(t *testing.T, value0 Value, value1 Value) {
+	assert.True(t, value0.Equal(value1), "%s should equal %s", value0, value1)
+	assert.True(t, value1.Equal(value0), "%s should equal %s conversely", value1, value0)
+}
+
+func valuesShouldNotBeEqual(t *testing.T, value0 Value, value1 Value) {
+	assert.False(t, value0.Equal(value1), "%s should not equal %s", value0, value1)
+	assert.False(t, value1.Equal(value0), "%s should not equal %s", value1, value0)
+}

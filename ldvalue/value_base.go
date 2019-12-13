@@ -26,18 +26,19 @@ import (
 // Value represents any of the data types supported by JSON, all of which can be used for a LaunchDarkly
 // feature flag variation or a custom user attribute.
 //
-// Values constructed with the regular constructors in this package are immutable, and struct equality
-// comparisons between them will work as expected.
+// You cannot compare Value instances with the == operator, because the struct may contain a slice.
+// Value has an Equal method for this purpose; reflect.DeepEqual should not be used because it may not
+// always work correctly (see below).
 //
-// However, in the current implementation, the SDK may also return a Value that is a wrapper for an
-// interface{} value that was parsed from JSON, which could be a mutable slice or map. For backward
-// compatibility with code that expects to be able to get the interface{} value without an extra
-// deep-copy step, this value is accessible directly with the UnsafeArbitraryValue method. Application
-// code should not use that method and does not need to know about the difference between these two
-// kinds of Value, except as follows: struct equality comparisons between the two kinds will not work,
-// so if you want to check for equality against a value that you received from the SDK, use methods
-// like AsInt to get the values as some specific type and compare against that. In a future version,
-// this distinction will be removed.
+// Values constructed with the regular constructors in this package are immutable. However, in the
+// current implementation, the SDK may also return a Value that is a wrapper for an interface{} value
+// that was parsed from JSON, which could be a mutable slice or map. For backward compatibility with
+// code that expects to be able to get the interface{} value without an extra deep-copy step, this
+// value is accessible directly with the UnsafeArbitraryValue method. Application code should not use
+// the Unsafe methods and does not need to be concerned with the difference between these two kinds of
+// Value, except that it is the reason why reflect.DeepEqual should not be used (that is, two Values
+// that are logically equal might not have exactly the same fields internally because one might be a
+// wrapper for an interface{}).
 type Value struct {
 	valueType ValueType
 	// Used when the value is a boolean.
@@ -361,4 +362,48 @@ func deepCopyArbitraryValue(value interface{}) interface{} {
 // representation.
 func (v Value) String() string {
 	return v.JSONString()
+}
+
+// Equal tests whether this Value is equal to another, in both type and value.
+//
+// For arrays and objects, this is a deep equality test. Do not use reflect.DeepEqual with
+// Value; it currently is not guaranteed to work due to possible differences in how the same
+// value may be represented internally.
+func (v Value) Equal(other Value) bool {
+	if v.valueType == other.valueType {
+		switch v.valueType {
+		case NullType:
+			return true
+		case BoolType:
+			return v.boolValue == other.boolValue
+		case NumberType:
+			return v.numberValue == other.numberValue
+		case StringType, RawType:
+			return v.stringValue == other.stringValue
+		case ArrayType:
+			n := v.Count()
+			if n == other.Count() {
+				for i := 0; i < n; i++ {
+					if !v.GetByIndex(i).Equal(other.GetByIndex(i)) {
+						return false
+					}
+				}
+				return true
+			}
+			return false
+		case ObjectType:
+			keys := v.Keys()
+			if len(keys) == other.Count() {
+				for _, key := range keys {
+					v0 := v.GetByKey(key)
+					if v1, found := other.TryGetByKey(key); !found || !v0.Equal(v1) {
+						return false
+					}
+				}
+				return true
+			}
+			return false
+		}
+	}
+	return false
 }

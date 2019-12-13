@@ -137,3 +137,30 @@ func TestConvertComplexTypesToArbitraryValue(t *testing.T) {
 		assert.Equal(t, expected, v.AsArbitraryValue())
 	})
 }
+
+func TestEqualComplexTypes(t *testing.T) {
+	valueFns := []func() Value{
+		func() Value { return Null() },
+		func() Value { return Bool(false) },
+		func() Value { return ArrayOf() },
+		func() Value { return ArrayOf(Int(1)) },
+		func() Value { return ArrayOf(Int(2)) },
+		func() Value { return ArrayOf(Int(1), ArrayOf(String("a"))) },
+		func() Value { return ArrayOf(Int(1), ArrayOf(String("a"), String("b"))) },
+		func() Value { return ObjectBuild().Build() },
+		func() Value { return ObjectBuild().Set("a", Int(1)).Build() },
+		func() Value { return ObjectBuild().Set("a", Int(2)).Build() },
+		func() Value { return ObjectBuild().Set("a", Int(1)).Set("b", Int(1)).Build() },
+	}
+	for i, fn0 := range valueFns {
+		v0 := fn0()
+		for j, fn1 := range valueFns {
+			v1 := fn1()
+			if i == j {
+				valuesShouldBeEqual(t, v0, v1)
+			} else {
+				valuesShouldNotBeEqual(t, v0, v1)
+			}
+		}
+	}
+}
