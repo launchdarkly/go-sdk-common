@@ -275,6 +275,15 @@ func (v Value) AsString() string {
 	return ""
 }
 
+// AsOptionalString converts the value to the OptionalString type, which contains either a string
+// value or nothing if the original value was not a string.
+func (v Value) AsOptionalString() OptionalString {
+	if v.valueType == StringType {
+		return NewOptionalStringWithValue(v.stringValue)
+	}
+	return OptionalString{}
+}
+
 // AsRaw returns the value as a json.RawMessage.
 //
 // If the value was originally created from a RawMessage, it returns the same value. For all other

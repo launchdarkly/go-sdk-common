@@ -22,6 +22,7 @@ func TestArrayOf(t *testing.T) {
 	assert.False(t, value.AsBool())
 	assert.Equal(t, float64(0), value.AsFloat64())
 	assert.Equal(t, "", value.AsString())
+	assert.Equal(t, OptionalString{}, value.AsOptionalString())
 }
 
 func TestArrayBuild(t *testing.T) {
@@ -80,6 +81,15 @@ func TestObjectBuild(t *testing.T) {
 	valueAfterModifyingBuilder := b.Build()
 	assert.Equal(t, item0x, valueAfterModifyingBuilder.GetByKey("item0"))
 	assert.Equal(t, item0, value.GetByKey("item0")) // verifies builder's copy-on-write behavior
+
+	assert.False(t, value.IsNull())
+	assert.False(t, value.IsNumber())
+	assert.False(t, value.IsInt())
+
+	assert.False(t, value.AsBool())
+	assert.Equal(t, float64(0), value.AsFloat64())
+	assert.Equal(t, "", value.AsString())
+	assert.Equal(t, OptionalString{}, value.AsOptionalString())
 }
 
 func TestObjectGetByKey(t *testing.T) {

@@ -22,6 +22,7 @@ func TestNullValue(t *testing.T) {
 	assert.False(t, v.AsBool())
 	assert.Equal(t, float64(0), v.AsFloat64())
 	assert.Equal(t, "", v.AsString())
+	assert.Equal(t, OptionalString{}, v.AsOptionalString())
 	assert.Equal(t, 0, v.Count())
 	assert.Equal(t, Null(), v.GetByIndex(0))
 	assert.Equal(t, Null(), v.GetByKey("x"))
@@ -42,6 +43,7 @@ func TestBoolValue(t *testing.T) {
 	// treating a bool as a non-bool produces empty values
 	assert.Equal(t, float64(0), tv.AsFloat64())
 	assert.Equal(t, "", tv.AsString())
+	assert.Equal(t, OptionalString{}, tv.AsOptionalString())
 	assert.Equal(t, 0, tv.Count())
 	assert.Equal(t, Null(), tv.GetByIndex(0))
 	assert.Equal(t, Null(), tv.GetByKey("x"))
@@ -75,6 +77,7 @@ func TestIntValue(t *testing.T) {
 	// treating a number as a non-number produces empty values
 	assert.False(t, v.AsBool())
 	assert.Equal(t, "", v.AsString())
+	assert.Equal(t, OptionalString{}, v.AsOptionalString())
 	assert.Equal(t, 0, v.Count())
 	assert.Equal(t, Null(), v.GetByIndex(0))
 	assert.Equal(t, Null(), v.GetByKey("x"))
@@ -104,6 +107,7 @@ func TestFloat64Value(t *testing.T) {
 	// treating a number as a non-number produces empty values
 	assert.False(t, v.AsBool())
 	assert.Equal(t, "", v.AsString())
+	assert.Equal(t, OptionalString{}, v.AsOptionalString())
 	assert.Equal(t, 0, v.Count())
 	assert.Equal(t, Null(), v.GetByIndex(0))
 	assert.Equal(t, Null(), v.GetByKey("x"))
@@ -114,6 +118,7 @@ func TestStringValue(t *testing.T) {
 
 	assert.Equal(t, StringType, v.Type())
 	assert.Equal(t, "abc", v.AsString())
+	assert.Equal(t, NewOptionalStringWithValue("abc"), v.AsOptionalString())
 	assert.False(t, v.IsNull())
 	assert.False(t, v.IsNumber())
 	assert.False(t, v.IsInt())
@@ -145,6 +150,8 @@ func TestRawValue(t *testing.T) {
 	// treating a Raw as a non-Raw produces empty values
 	assert.False(t, v.AsBool())
 	assert.Equal(t, float64(0), v.AsFloat64())
+	assert.Equal(t, "", v.AsString())
+	assert.Equal(t, OptionalString{}, v.AsOptionalString())
 	assert.Equal(t, 0, v.Count())
 	assert.Equal(t, Null(), v.GetByIndex(0))
 	assert.Equal(t, Null(), v.GetByKey("x"))
