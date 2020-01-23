@@ -121,7 +121,7 @@ func (v *Value) UnmarshalJSON(data []byte) error {
 			*v = Value{valueType: ObjectType, immutableObjectValue: o}
 		}
 		return e
-	case '.', '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+	case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9': // note, JSON does not allow a leading '.'
 		var n float64
 		e := json.Unmarshal(data, &n)
 		if e == nil {
