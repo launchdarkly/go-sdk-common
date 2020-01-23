@@ -26,7 +26,17 @@ func TestOptionalStringWithValue(t *testing.T) {
 	assert.False(t, o == OptionalString{})
 }
 
-func TestOptionalStringFromPointer(t *testing.T) {
+func TestOptionalStringFromNilPointer(t *testing.T) {
+	o := NewOptionalStringFromPointer(nil)
+	assert.False(t, o.IsDefined())
+	assert.Equal(t, "", o.StringValue())
+	assert.Nil(t, o.AsPointer())
+	assert.Equal(t, Null(), o.AsValue())
+	assert.True(t, o == o)
+	assert.True(t, o == OptionalString{})
+}
+
+func TestOptionalStringFromNonNilPointer(t *testing.T) {
 	v := "value"
 	p := &v
 	o := NewOptionalStringFromPointer(p)

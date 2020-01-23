@@ -7,6 +7,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestValueTypes(t *testing.T) {
+	assert.Equal(t, "null", NullType.String())
+	assert.Equal(t, "bool", BoolType.String())
+	assert.Equal(t, "number", NumberType.String())
+	assert.Equal(t, "string", StringType.String())
+	assert.Equal(t, "array", ArrayType.String())
+	assert.Equal(t, "object", ObjectType.String())
+	assert.Equal(t, "raw", RawType.String())
+	assert.Equal(t, "unknown", ValueType(99).String())
+}
+
 func TestNullValue(t *testing.T) {
 	v := Null()
 
@@ -19,9 +30,10 @@ func TestNullValue(t *testing.T) {
 	assert.Equal(t, Value{}, v)
 
 	// treating a null as a non-null produces empty values
-	assert.False(t, v.AsBool())
-	assert.Equal(t, float64(0), v.AsFloat64())
-	assert.Equal(t, "", v.AsString())
+	assert.False(t, v.BoolValue())
+	assert.Equal(t, 0, v.IntValue())
+	assert.Equal(t, float64(0), v.Float64Value())
+	assert.Equal(t, "", v.StringValue())
 	assert.Equal(t, OptionalString{}, v.AsOptionalString())
 	assert.Equal(t, 0, v.Count())
 	assert.Equal(t, Null(), v.GetByIndex(0))
@@ -32,7 +44,7 @@ func TestBoolValue(t *testing.T) {
 	tv := Bool(true)
 
 	assert.Equal(t, BoolType, tv.Type())
-	assert.True(t, tv.AsBool())
+	assert.True(t, tv.BoolValue())
 	assert.False(t, tv.IsNull())
 	assert.False(t, tv.IsNumber())
 	assert.False(t, tv.IsInt())
@@ -41,8 +53,9 @@ func TestBoolValue(t *testing.T) {
 	assert.NotEqual(t, Bool(false), tv)
 
 	// treating a bool as a non-bool produces empty values
-	assert.Equal(t, float64(0), tv.AsFloat64())
-	assert.Equal(t, "", tv.AsString())
+	assert.Equal(t, 0, tv.IntValue())
+	assert.Equal(t, float64(0), tv.Float64Value())
+	assert.Equal(t, "", tv.StringValue())
 	assert.Equal(t, OptionalString{}, tv.AsOptionalString())
 	assert.Equal(t, 0, tv.Count())
 	assert.Equal(t, Null(), tv.GetByIndex(0))
@@ -51,7 +64,7 @@ func TestBoolValue(t *testing.T) {
 	fv := Bool(false)
 
 	assert.Equal(t, BoolType, fv.Type())
-	assert.False(t, fv.AsBool())
+	assert.False(t, fv.BoolValue())
 	assert.False(t, fv.IsNull())
 	assert.False(t, fv.IsNumber())
 	assert.False(t, fv.IsInt())
@@ -64,8 +77,8 @@ func TestIntValue(t *testing.T) {
 	v := Int(2)
 
 	assert.Equal(t, NumberType, v.Type())
-	assert.Equal(t, 2, v.AsInt())
-	assert.Equal(t, float64(2), v.AsFloat64())
+	assert.Equal(t, 2, v.IntValue())
+	assert.Equal(t, float64(2), v.Float64Value())
 	assert.False(t, v.IsNull())
 	assert.True(t, v.IsNumber())
 	assert.True(t, v.IsInt())
@@ -75,8 +88,8 @@ func TestIntValue(t *testing.T) {
 	assert.NotEqual(t, Float64(2.5), v)
 
 	// treating a number as a non-number produces empty values
-	assert.False(t, v.AsBool())
-	assert.Equal(t, "", v.AsString())
+	assert.False(t, v.BoolValue())
+	assert.Equal(t, "", v.StringValue())
 	assert.Equal(t, OptionalString{}, v.AsOptionalString())
 	assert.Equal(t, 0, v.Count())
 	assert.Equal(t, Null(), v.GetByIndex(0))
@@ -87,16 +100,16 @@ func TestFloat64Value(t *testing.T) {
 	v := Float64(2.75)
 
 	assert.Equal(t, NumberType, v.Type())
-	assert.Equal(t, 2, v.AsInt())
-	assert.Equal(t, 2.75, v.AsFloat64())
+	assert.Equal(t, 2, v.IntValue())
+	assert.Equal(t, 2.75, v.Float64Value())
 	assert.False(t, v.IsNull())
 	assert.True(t, v.IsNumber())
 	assert.False(t, v.IsInt())
 
 	floatButReallyInt := Float64(2.0)
 	assert.Equal(t, NumberType, floatButReallyInt.Type())
-	assert.Equal(t, 2, floatButReallyInt.AsInt())
-	assert.Equal(t, 2.0, floatButReallyInt.AsFloat64())
+	assert.Equal(t, 2, floatButReallyInt.IntValue())
+	assert.Equal(t, 2.0, floatButReallyInt.Float64Value())
 	assert.False(t, floatButReallyInt.IsNull())
 	assert.True(t, floatButReallyInt.IsNumber())
 	assert.True(t, floatButReallyInt.IsInt())
@@ -105,8 +118,8 @@ func TestFloat64Value(t *testing.T) {
 	assert.NotEqual(t, Float64(2.5), v)
 
 	// treating a number as a non-number produces empty values
-	assert.False(t, v.AsBool())
-	assert.Equal(t, "", v.AsString())
+	assert.False(t, v.BoolValue())
+	assert.Equal(t, "", v.StringValue())
 	assert.Equal(t, OptionalString{}, v.AsOptionalString())
 	assert.Equal(t, 0, v.Count())
 	assert.Equal(t, Null(), v.GetByIndex(0))
@@ -117,7 +130,7 @@ func TestStringValue(t *testing.T) {
 	v := String("abc")
 
 	assert.Equal(t, StringType, v.Type())
-	assert.Equal(t, "abc", v.AsString())
+	assert.Equal(t, "abc", v.StringValue())
 	assert.Equal(t, NewOptionalStringWithValue("abc"), v.AsOptionalString())
 	assert.False(t, v.IsNull())
 	assert.False(t, v.IsNumber())
@@ -128,8 +141,9 @@ func TestStringValue(t *testing.T) {
 	assert.NotEqual(t, String("def"), v)
 
 	// treating a string as a non-string produces empty values
-	assert.False(t, v.AsBool())
-	assert.Equal(t, float64(0), v.AsFloat64())
+	assert.False(t, v.BoolValue())
+	assert.Equal(t, 0, v.IntValue())
+	assert.Equal(t, float64(0), v.Float64Value())
 	assert.Equal(t, 0, v.Count())
 	assert.Equal(t, Null(), v.GetByIndex(0))
 	assert.Equal(t, Null(), v.GetByKey("x"))
@@ -148,9 +162,10 @@ func TestRawValue(t *testing.T) {
 	// conversion of other types to Raw is covered in value_serialization_test
 
 	// treating a Raw as a non-Raw produces empty values
-	assert.False(t, v.AsBool())
-	assert.Equal(t, float64(0), v.AsFloat64())
-	assert.Equal(t, "", v.AsString())
+	assert.False(t, v.BoolValue())
+	assert.Equal(t, 0, v.IntValue())
+	assert.Equal(t, float64(0), v.Float64Value())
+	assert.Equal(t, "", v.StringValue())
 	assert.Equal(t, OptionalString{}, v.AsOptionalString())
 	assert.Equal(t, 0, v.Count())
 	assert.Equal(t, Null(), v.GetByIndex(0))
@@ -248,6 +263,10 @@ func TestConvertPrimitivesFromArbitraryValue(t *testing.T) {
 		v := CopyArbitraryValue(s)
 		assert.Equal(t, ObjectBuild().Set("x", Int(2)).Build(), v)
 	})
+	t.Run("raw", func(t *testing.T) {
+		v := CopyArbitraryValue(json.RawMessage("[3]"))
+		assert.Equal(t, Raw(json.RawMessage("[3]")), v)
+	})
 }
 
 func TestConvertPrimitivesToArbitraryValue(t *testing.T) {
@@ -256,6 +275,7 @@ func TestConvertPrimitivesToArbitraryValue(t *testing.T) {
 	assert.Equal(t, false, Bool(false).AsArbitraryValue())
 	assert.Equal(t, float64(2), Int(2).AsArbitraryValue())
 	assert.Equal(t, "x", String("x").AsArbitraryValue())
+	assert.Equal(t, json.RawMessage("[3]"), Raw(json.RawMessage("[3]")).AsArbitraryValue())
 }
 
 func TestEqualPrimitives(t *testing.T) {
@@ -290,4 +310,24 @@ func valuesShouldBeEqual(t *testing.T, value0 Value, value1 Value) {
 func valuesShouldNotBeEqual(t *testing.T, value0 Value, value1 Value) {
 	assert.False(t, value0.Equal(value1), "%s should not equal %s", value0, value1)
 	assert.False(t, value1.Equal(value0), "%s should not equal %s", value1, value0)
+}
+
+func TestValueWithInvalidType(t *testing.T) {
+	// Application code has no way to construct a Value like this, but we'll still prove
+	// that we would handle it gracefully if we did it somehow
+	v := Value{valueType: ValueType(99)}
+
+	assert.False(t, v.IsNull())
+	assert.False(t, v.IsNumber())
+	assert.False(t, v.IsInt())
+	assert.False(t, v.BoolValue())
+	assert.Equal(t, 0, v.IntValue())
+	assert.Equal(t, float64(0), v.Float64Value())
+	assert.Equal(t, "", v.StringValue())
+	assert.Equal(t, OptionalString{}, v.AsOptionalString())
+	assert.Equal(t, 0, v.Count())
+	assert.Equal(t, Null(), v.GetByIndex(0))
+	assert.Equal(t, Null(), v.GetByKey("x"))
+	assert.Nil(t, v.AsArbitraryValue())
+	assert.Nil(t, v.AsRaw())
 }

@@ -1,6 +1,7 @@
 package ldvalue
 
 import (
+	"encoding/json"
 	"sort"
 	"testing"
 
@@ -19,9 +20,10 @@ func TestArrayOf(t *testing.T) {
 	assert.False(t, value.IsNumber())
 	assert.False(t, value.IsInt())
 
-	assert.False(t, value.AsBool())
-	assert.Equal(t, float64(0), value.AsFloat64())
-	assert.Equal(t, "", value.AsString())
+	assert.False(t, value.BoolValue())
+	assert.Equal(t, 0, value.IntValue())
+	assert.Equal(t, float64(0), value.Float64Value())
+	assert.Equal(t, "", value.StringValue())
 	assert.Equal(t, OptionalString{}, value.AsOptionalString())
 }
 
@@ -64,6 +66,25 @@ func TestArrayGetByIndex(t *testing.T) {
 	assert.Equal(t, Null(), item)
 }
 
+func TestUsingArrayMethodsForNonArrayValue(t *testing.T) {
+	values := []Value{
+		Null(),
+		Bool(true),
+		Int(1),
+		Float64(2.5),
+		String(""),
+		Raw(json.RawMessage("1")),
+	}
+	for _, v := range values {
+		t.Run(v.String(), func(t *testing.T) {
+			assert.Equal(t, 0, v.Count())
+			assert.Equal(t, Null(), v.GetByIndex(0))
+			_, ok := v.TryGetByIndex(0)
+			assert.False(t, ok)
+		})
+	}
+}
+
 func TestObjectBuild(t *testing.T) {
 	item0 := String("a")
 	item1 := Int(1)
@@ -86,9 +107,10 @@ func TestObjectBuild(t *testing.T) {
 	assert.False(t, value.IsNumber())
 	assert.False(t, value.IsInt())
 
-	assert.False(t, value.AsBool())
-	assert.Equal(t, float64(0), value.AsFloat64())
-	assert.Equal(t, "", value.AsString())
+	assert.False(t, value.BoolValue())
+	assert.Equal(t, 0, value.IntValue())
+	assert.Equal(t, float64(0), value.Float64Value())
+	assert.Equal(t, "", value.StringValue())
 	assert.Equal(t, OptionalString{}, value.AsOptionalString())
 }
 
@@ -107,6 +129,25 @@ func TestObjectGetByKey(t *testing.T) {
 	item, ok = value.TryGetByKey("bad-key")
 	assert.False(t, ok)
 	assert.Equal(t, Null(), item)
+}
+
+func TestUsingObjectMethodsForNonObjectValue(t *testing.T) {
+	values := []Value{
+		Null(),
+		Bool(true),
+		Int(1),
+		Float64(2.5),
+		String(""),
+		Raw(json.RawMessage("1")),
+	}
+	for _, v := range values {
+		t.Run(v.String(), func(t *testing.T) {
+			assert.Nil(t, v.Keys())
+			assert.Equal(t, Null(), v.GetByKey("x"))
+			_, ok := v.TryGetByKey("x")
+			assert.False(t, ok)
+		})
+	}
 }
 
 func TestConvertComplexTypesFromArbitraryValue(t *testing.T) {
@@ -145,6 +186,27 @@ func TestConvertComplexTypesToArbitraryValue(t *testing.T) {
 		v := ObjectBuild().Set("x", ArrayOf(Int(2))).Build()
 		expected := map[string]interface{}{"x": []interface{}{float64(2)}}
 		assert.Equal(t, expected, v.AsArbitraryValue())
+	})
+}
+
+func TestConvertComplexTypesFromArbitraryValueAndBackAgain(t *testing.T) {
+	t.Run("map[string]interface{}", func(t *testing.T) {
+		mapValue0 := map[string]interface{}{"x": []interface{}{"b"}}
+		v := CopyArbitraryValue(mapValue0)
+		mapValue1 := v.AsArbitraryValue()
+		assert.Equal(t, mapValue0, mapValue1)
+		// Verify that the map was deep-copied
+		mapValue0["x"].([]interface{})[0] = "c"
+		assert.NotEqual(t, mapValue0, mapValue1)
+	})
+	t.Run("[]interface{}", func(t *testing.T) {
+		sliceValue0 := []interface{}{[]interface{}{"b"}}
+		v := CopyArbitraryValue(sliceValue0)
+		sliceValue1 := v.AsArbitraryValue()
+		assert.Equal(t, sliceValue0, sliceValue1)
+		// Verify that the slice was deep-copied
+		sliceValue0[0].([]interface{})[0] = "c"
+		assert.NotEqual(t, sliceValue0, sliceValue1)
 	})
 }
 

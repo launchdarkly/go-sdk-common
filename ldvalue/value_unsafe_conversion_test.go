@@ -119,6 +119,48 @@ func TestUnsafeConvertComplexTypesToSameArbitraryValue(t *testing.T) {
 	})
 }
 
+func TestConvertComplexTypesUnsafelyFromArbitraryValueAndUnsafelyBackAgain(t *testing.T) {
+	t.Run("map[string]interface{}", func(t *testing.T) {
+		mapValue0 := map[string]interface{}{"x": []interface{}{"b"}}
+		v := UnsafeUseArbitraryValue(mapValue0)
+		mapValue1 := v.UnsafeArbitraryValue()
+		assert.Equal(t, mapValue0, mapValue1)
+		// Verify that it's the same map, not deep-copied
+		mapValue0["x"].([]interface{})[0] = "c"
+		assert.Equal(t, mapValue0, mapValue1)
+	})
+	t.Run("[]interface{}", func(t *testing.T) {
+		sliceValue0 := []interface{}{[]interface{}{"b"}}
+		v := UnsafeUseArbitraryValue(sliceValue0)
+		sliceValue1 := v.UnsafeArbitraryValue()
+		assert.Equal(t, sliceValue0, sliceValue1)
+		// Verify that it's the same slice, not deep-copied
+		sliceValue0[0].([]interface{})[0] = "c"
+		assert.Equal(t, sliceValue0, sliceValue1)
+	})
+}
+
+func TestConvertComplexTypesUnsafelyFromArbitraryValueAndSafelyBackAgain(t *testing.T) {
+	t.Run("map[string]interface{}", func(t *testing.T) {
+		mapValue0 := map[string]interface{}{"x": []interface{}{"b"}}
+		v := UnsafeUseArbitraryValue(mapValue0)
+		mapValue1 := v.AsArbitraryValue()
+		assert.Equal(t, mapValue0, mapValue1)
+		// Verify that the map was deep-copied
+		mapValue0["x"].([]interface{})[0] = "c"
+		assert.NotEqual(t, mapValue0, mapValue1)
+	})
+	t.Run("[]interface{}", func(t *testing.T) {
+		sliceValue0 := []interface{}{[]interface{}{"b"}}
+		v := UnsafeUseArbitraryValue(sliceValue0)
+		sliceValue1 := v.AsArbitraryValue()
+		assert.Equal(t, sliceValue0, sliceValue1)
+		// Verify that the slice was deep-copied
+		sliceValue0[0].([]interface{})[0] = "c"
+		assert.NotEqual(t, sliceValue0, sliceValue1)
+	})
+}
+
 func TestUnsafeValueJsonMarshal(t *testing.T) {
 	items := []struct {
 		value interface{}
@@ -133,6 +175,7 @@ func TestUnsafeValueJsonMarshal(t *testing.T) {
 		{"x", `"x"`},
 		{[]interface{}{true, "x"}, `[true,"x"]`},
 		{map[string]interface{}{"a": true}, `{"a":true}`},
+		{json.RawMessage("[3]"), "[3]"},
 	}
 	for _, item := range items {
 		t.Run(fmt.Sprintf("value %v, json %v", item.value, item.json), func(t *testing.T) {

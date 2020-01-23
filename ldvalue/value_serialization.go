@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 )
 
 // This file contains methods for converting Value to and from JSON.
@@ -75,12 +74,12 @@ func (v Value) MarshalJSON() ([]byte, error) {
 		}
 		return []byte(v.stringValue), nil
 	}
-	return nil, errors.New("unknown data type")
+	return nil, errors.New("unknown data type") // should not be possible
 }
 
 // UnmarshalJSON parses a Value from JSON.
 func (v *Value) UnmarshalJSON(data []byte) error {
-	if len(data) == 0 {
+	if len(data) == 0 { // should not be possible, the parser doesn't pass empty slices to UnmarshalJSON
 		return errors.New("cannot parse empty data")
 	}
 	firstCh := data[0]
@@ -103,34 +102,32 @@ func (v *Value) UnmarshalJSON(data []byte) error {
 		}
 	case '"':
 		var s string
-		if e := json.Unmarshal(data, &s); e != nil {
-			return e
+		e := json.Unmarshal(data, &s)
+		if e == nil {
+			*v = String(s)
 		}
-		*v = String(s)
-		return nil
+		return e
 	case '[':
 		var a []Value
-		if e := json.Unmarshal(data, &a); e != nil {
-			return e
+		e := json.Unmarshal(data, &a)
+		if e == nil {
+			*v = Value{valueType: ArrayType, immutableArrayValue: a}
 		}
-		*v = Value{valueType: ArrayType, immutableArrayValue: a}
-		return nil
+		return e
 	case '{':
 		var o map[string]Value
-		if e := json.Unmarshal(data, &o); e != nil {
-			return e
+		e := json.Unmarshal(data, &o)
+		if e == nil {
+			*v = Value{valueType: ObjectType, immutableObjectValue: o}
 		}
-		*v = Value{valueType: ObjectType, immutableObjectValue: o}
-		return nil
+		return e
 	case '.', '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 		var n float64
-		if e := json.Unmarshal(data, &n); e != nil {
-			return e
+		e := json.Unmarshal(data, &n)
+		if e == nil {
+			*v = Value{valueType: NumberType, numberValue: n}
 		}
-		*v = Value{valueType: NumberType, numberValue: n}
-		return nil
-	case ' ', '\t', '\r', '\n':
-		return v.UnmarshalJSON([]byte(strings.TrimSpace(string(data))))
+		return e
 	}
 	return fmt.Errorf("unknown JSON token: %s", data)
 }

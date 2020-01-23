@@ -235,40 +235,40 @@ func (v Value) IsInt() bool {
 	return false
 }
 
-// AsBool returns the Value as a boolean.
+// BoolValue returns the Value as a boolean.
 //
 // If the Value is not a boolean, it returns false.
-func (v Value) AsBool() bool {
+func (v Value) BoolValue() bool {
 	return v.valueType == BoolType && v.boolValue
 }
 
-// AsInt returns the value as an int.
+// IntValue returns the value as an int.
 //
 // If the Value is not numeric, it returns zero. If the value is a number but not an integer, it is
 // rounded toward zero (truncated).
-func (v Value) AsInt() int {
+func (v Value) IntValue() int {
 	if v.valueType == NumberType {
 		return int(v.numberValue)
 	}
 	return 0
 }
 
-// AsFloat64 returns the value as a float64.
+// Float64Value returns the value as a float64.
 //
 // If the Value is not numeric, it returns zero.
-func (v Value) AsFloat64() float64 {
+func (v Value) Float64Value() float64 {
 	if v.valueType == NumberType {
 		return v.numberValue
 	}
 	return 0
 }
 
-// AsString returns the value as a string.
+// StringValue returns the value as a string.
 //
 // If the value is not a string, it returns an empty string.
 //
 // This is different from String(), which returns a concise string representation of any value type.
-func (v Value) AsString() string {
+func (v Value) StringValue() string {
 	if v.valueType == StringType {
 		return v.stringValue
 	}
@@ -339,7 +339,7 @@ func (v Value) AsArbitraryValue() interface{} {
 	case RawType:
 		return v.AsRaw()
 	}
-	return nil
+	return nil // should not be possible
 }
 
 func deepCopyArbitraryValue(value interface{}) interface{} {
@@ -355,14 +355,15 @@ func deepCopyArbitraryValue(value interface{}) interface{} {
 		for key, element := range o {
 			ret[key] = deepCopyArbitraryValue(element)
 		}
+		return ret
 	}
 	return value
 }
 
 // String converts the value to a string representation, equivalent to JSONString().
 //
-// This is different from AsString, which returns the actual string for a string value or an empty
-// string for anything else. For instance, Int(2).String() returns "2" and String("x").String()
+// This is different from StringValue, which returns the actual string for a string value or an empty
+// string for anything else. For instance, Int(2).StringValue() returns "2" and String("x").StringValue()
 // returns "\"x\"", whereas Int(2).AsString() returns "" and String("x").AsString() returns
 // "x".
 //
