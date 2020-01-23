@@ -4,7 +4,7 @@ LaunchDarkly has published an [SDK contributor's guide](https://docs.launchdarkl
  
 ## Submitting bug reports and feature requests
 
-The LaunchDarkly SDK team monitors the [issue tracker](https://github.com/launchdarkly/go-server-sdk-core/issues) in tis repository. Bug reports and feature requests specific to this project should be filed in this issue tracker. The SDK team will respond to all newly filed issues within two business days. For issues or requests that are more generally related to the LaunchDarkly Go SDK, rather than specifically for the code in this repository, please use the [`go-server-sdk`](https://github.com/launchdarkly/go-server-sdk) repository.
+The LaunchDarkly SDK team monitors the [issue tracker](https://github.com/launchdarkly/go-sdk-core/issues) in tis repository. Bug reports and feature requests specific to this project should be filed in this issue tracker. The SDK team will respond to all newly filed issues within two business days. For issues or requests that are more generally related to the LaunchDarkly Go SDK, rather than specifically for the code in this repository, please use the [`go-server-sdk`](https://github.com/launchdarkly/go-server-sdk) repository.
  
 ## Submitting pull requests
  
@@ -16,7 +16,7 @@ We encourage pull requests and other contributions from the community. Before su
  
 This project should be built against Go 1.8 or newer.
 
-Note that the public import path is `gopkg.in/launchdarkly/go-server-sdk-core.v1` (using the [`gopkg.in`](https://labix.org/gopkg.in) service as a simple way to pin to a major version). Since it does not use Go modules, and it references its own import path in imports between packages, this means that in order to build it you must check it out at `$GOPATH/src/gopkg.in/launchdarkly/go-server-sdk-core.v1`-- not `$GOPATH/src/github.com/launchdarkly/go-server-sdk-core`.
+Note that the public import path is `gopkg.in/launchdarkly/go-sdk-core.v1` (using the [`gopkg.in`](https://labix.org/gopkg.in) service as a simple way to pin to a major version). Since it does not use Go modules, and it references its own import path in imports between packages, this means that in order to build it you must check it out at `$GOPATH/src/gopkg.in/launchdarkly/go-sdk-core.v1`-- not `$GOPATH/src/github.com/launchdarkly/go-sdk-core`.
 
 ### Building
 
