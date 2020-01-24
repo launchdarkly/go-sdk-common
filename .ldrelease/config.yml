@@ -6,5 +6,5 @@ releasableBranches:
   - name: v1
 
 publications:
-  - url: https://godoc.org/github.com/launchdarkly/go-sdk-common
+  - url: https://godoc.org/gopkg.in/launchdarkly/go-sdk-common.v1
     description: documentation
