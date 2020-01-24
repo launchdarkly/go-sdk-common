@@ -55,6 +55,14 @@ func (o OptionalString) StringValue() string {
 	return o.value
 }
 
+// OrElse returns the OptionalString's value if it has one, or else the specified fallback value.
+func (o OptionalString) OrElse(valueIfEmpty string) string {
+	if o.hasValue {
+		return o.value
+	}
+	return valueIfEmpty
+}
+
 // AsPointer returns the OptionalString's value as a string pointer if it has a value, or
 // nil otherwise.
 //
@@ -83,7 +91,7 @@ func (o OptionalString) AsValue() Value {
 // of the OptionalString instead of this special representation, you should call StringValue():
 //
 //     s := OptionalString{}
-//     fmt.Printf("it is '%s'", s) // prints "it is '[empty]'"
+//     fmt.Printf("it is '%s'", s) // prints "it is '[none]'"
 //     fmt.Printf("it is '%s'", s.StringValue()) // prints "it is ''"
 func (o OptionalString) String() string {
 	if o.hasValue {
