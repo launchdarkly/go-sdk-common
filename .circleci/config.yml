@@ -46,7 +46,7 @@ jobs:
             github.com/golang/dep/cmd/dep
             github.com/jstemmer/go-junit-report
 
-    working_directory: /go/src/gopkg.in/launchdarkly/go-sdk-common.v1
+    working_directory: /go/src/gopkg.in/launchdarkly/go-sdk-common.v2
 
     steps:
       - checkout
@@ -79,7 +79,7 @@ jobs:
 
     environment:
       GOPATH: C:\Users\VssAdministrator\go
-      PACKAGE_PATH: gopkg.in\launchdarkly\go-sdk-common.v1
+      PACKAGE_PATH: gopkg.in\launchdarkly\go-sdk-common.v2
 
     steps:
       - checkout
