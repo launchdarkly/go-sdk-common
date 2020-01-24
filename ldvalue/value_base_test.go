@@ -131,7 +131,7 @@ func TestStringValue(t *testing.T) {
 
 	assert.Equal(t, StringType, v.Type())
 	assert.Equal(t, "abc", v.StringValue())
-	assert.Equal(t, NewOptionalStringWithValue("abc"), v.AsOptionalString())
+	assert.Equal(t, NewOptionalString("abc"), v.AsOptionalString())
 	assert.False(t, v.IsNull())
 	assert.False(t, v.IsNumber())
 	assert.False(t, v.IsInt())
@@ -330,4 +330,11 @@ func TestValueWithInvalidType(t *testing.T) {
 	assert.Equal(t, Null(), v.GetByKey("x"))
 	assert.Nil(t, v.AsArbitraryValue())
 	assert.Nil(t, v.AsRaw())
+}
+
+func TestValueAsPointer(t *testing.T) {
+	v := String("value")
+	assert.Equal(t, &v, v.AsPointer())
+
+	assert.Nil(t, Null().AsPointer())
 }
