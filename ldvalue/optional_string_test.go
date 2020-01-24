@@ -11,6 +11,7 @@ func TestEmptyOptionalString(t *testing.T) {
 	o := OptionalString{}
 	assert.False(t, o.IsDefined())
 	assert.Equal(t, "", o.StringValue())
+	assert.Equal(t, "no", o.OrElse("no"))
 	assert.Nil(t, o.AsPointer())
 	assert.Equal(t, Null(), o.AsValue())
 	assert.True(t, o == o)
@@ -20,6 +21,7 @@ func TestOptionalStringWithValue(t *testing.T) {
 	o := NewOptionalString("value")
 	assert.True(t, o.IsDefined())
 	assert.Equal(t, "value", o.StringValue())
+	assert.Equal(t, "value", o.OrElse("no"))
 	assert.NotNil(t, o.AsPointer())
 	assert.Equal(t, "value", *o.AsPointer())
 	assert.Equal(t, String("value"), o.AsValue())
@@ -31,6 +33,7 @@ func TestOptionalStringFromNilPointer(t *testing.T) {
 	o := NewOptionalStringFromPointer(nil)
 	assert.False(t, o.IsDefined())
 	assert.Equal(t, "", o.StringValue())
+	assert.Equal(t, "no", o.OrElse("no"))
 	assert.Nil(t, o.AsPointer())
 	assert.Equal(t, Null(), o.AsValue())
 	assert.True(t, o == o)
