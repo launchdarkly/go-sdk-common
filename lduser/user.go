@@ -262,47 +262,6 @@ func (u User) String() string {
 	return ""
 }
 
-// Used internally in evaluations. The second return value is true if the attribute exists for this user,
-// false if not.
-func (u User) valueOf(attr string) (interface{}, bool) {
-	if attr == "key" {
-		if u.Key != nil {
-			return *u.Key, true
-		}
-		return nil, false
-	} else if attr == "ip" {
-		return optionalStringAsEmptyInterface(u.GetIP())
-	} else if attr == "country" {
-		return optionalStringAsEmptyInterface(u.GetCountry())
-	} else if attr == "email" {
-		return optionalStringAsEmptyInterface(u.GetEmail())
-	} else if attr == "firstName" {
-		return optionalStringAsEmptyInterface(u.GetFirstName())
-	} else if attr == "lastName" {
-		return optionalStringAsEmptyInterface(u.GetLastName())
-	} else if attr == "avatar" {
-		return optionalStringAsEmptyInterface(u.GetAvatar())
-	} else if attr == "name" {
-		return optionalStringAsEmptyInterface(u.GetName())
-	} else if attr == "anonymous" {
-		value, ok := u.GetAnonymousOptional()
-		return value, ok
-	}
-
-	// Select a custom attribute
-	value, ok := u.GetCustom(attr)
-	// Currently our evaluation logic still uses interface{} rather than Value; we can use the faster
-	// Unsafe method to avoid a deep copy in this context
-	return value.UnsafeArbitraryValue(), ok //nolint (using deprecated method)
-}
-
-func optionalStringAsEmptyInterface(os ldvalue.OptionalString) (interface{}, bool) {
-	if os.IsDefined() {
-		return os.StringValue(), true
-	}
-	return nil, false
-}
-
 // DerivedAttribute is an entry in a Derived attribute map and is for internal use by LaunchDarkly only.'
 // Derived attributes sent to LaunchDarkly are ignored.
 //
