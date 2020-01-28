@@ -9,138 +9,144 @@ import (
 	"gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
 )
 
-type userStringPropertyDesc struct {
-	name   string
-	getter func(User) ldvalue.OptionalString
-	setter func(UserBuilder, string) UserBuilderCanMakeAttributePrivate
+var allBuiltInAttributes = []UserAttribute{
+	KeyAttribute,
+	SecondaryKeyAttribute,
+	IPAttribute,
+	CountryAttribute,
+	EmailAttribute,
+	FirstNameAttribute,
+	LastNameAttribute,
+	AvatarAttribute,
+	NameAttribute,
+	AnonymousAttribute,
 }
 
-var userSecondaryKeyProperty = userStringPropertyDesc{
-	"secondary",
-	User.GetSecondaryKey,
-	UserBuilder.Secondary,
-}
-var userIPProperty = userStringPropertyDesc{
-	"ip",
-	User.GetIP,
-	UserBuilder.IP,
-}
-var userCountryProperty = userStringPropertyDesc{
-	"country",
-	User.GetCountry,
-	UserBuilder.Country,
-}
-var emailProperty = userStringPropertyDesc{
-	"country",
-	User.GetCountry,
-	UserBuilder.Country,
-}
-var userFirstNameProperty = userStringPropertyDesc{
-	"firstName",
-	User.GetFirstName,
-	UserBuilder.FirstName,
-}
-var userLastNameProperty = userStringPropertyDesc{
-	"lastName",
-	User.GetLastName,
-	UserBuilder.LastName,
-}
-var userAvatarProperty = userStringPropertyDesc{
-	"avatar",
-	User.GetAvatar,
-	UserBuilder.Avatar,
-}
-var userNameProperty = userStringPropertyDesc{
-	"name",
-	User.GetName,
-	UserBuilder.Name,
+var optionalStringGetters = map[UserAttribute]func(User) ldvalue.OptionalString{
+	SecondaryKeyAttribute: User.GetSecondaryKey,
+	IPAttribute:           User.GetIP,
+	CountryAttribute:      User.GetCountry,
+	EmailAttribute:        User.GetEmail,
+	FirstNameAttribute:    User.GetFirstName,
+	LastNameAttribute:     User.GetLastName,
+	AvatarAttribute:       User.GetAvatar,
+	NameAttribute:         User.GetName,
 }
 
-var allUserStringProperties = []userStringPropertyDesc{
-	userSecondaryKeyProperty,
-	userIPProperty,
-	userCountryProperty,
-	userFirstNameProperty,
-	userLastNameProperty,
-	userAvatarProperty,
-	userNameProperty,
+var optionalStringSetters = map[UserAttribute]func(UserBuilder, string) UserBuilderCanMakeAttributePrivate{
+	SecondaryKeyAttribute: UserBuilder.Secondary,
+	IPAttribute:           UserBuilder.IP,
+	CountryAttribute:      UserBuilder.Country,
+	EmailAttribute:        UserBuilder.Email,
+	FirstNameAttribute:    UserBuilder.FirstName,
+	LastNameAttribute:     UserBuilder.LastName,
+	AvatarAttribute:       UserBuilder.Avatar,
+	NameAttribute:         UserBuilder.Name,
 }
 
-func (p userStringPropertyDesc) assertNotSet(t *testing.T, user User) {
-	assert.Equal(t, ldvalue.OptionalString{}, p.getter(user), "should not have had a value for %s", p.name)
+func assertStringAttrNotSet(t *testing.T, a UserAttribute, user User) {
+	assert.Equal(t, ldvalue.OptionalString{}, optionalStringGetters[a](user), "should not have had a value for %s", a)
+	assert.Equal(t, ldvalue.Null(), user.GetAttribute(a), "should not have had a value for %s", a)
 }
 
 func assertStringPropertiesNotSet(t *testing.T, user User) {
-	for _, p := range allUserStringProperties {
-		p.assertNotSet(t, user)
+	for a, _ := range optionalStringGetters {
+		assertStringAttrNotSet(t, a, user)
 	}
+}
+
+func getCustomAttrs(user User) []string {
+	var ret []string
+	user.ForCustom(func(a string, v ldvalue.Value) {
+		ret = append(ret, a)
+	})
+	sort.Strings(ret)
+	return ret
+}
+
+func getPrivateAttrs(user User) []string {
+	var ret []string
+	for _, a := range allBuiltInAttributes {
+		if user.IsPrivateAttribute(a) {
+			ret = append(ret, string(a))
+		}
+	}
+	user.ForCustom(func(a string, v ldvalue.Value) {
+		if user.IsPrivateAttribute(UserAttribute(a)) {
+			ret = append(ret, a)
+		}
+	})
+	sort.Strings(ret)
+	return ret
 }
 
 func TestNewUser(t *testing.T) {
 	user := NewUser("some-key")
 
 	assert.Equal(t, "some-key", user.GetKey())
+	assert.Equal(t, ldvalue.String("some-key"), user.GetAttribute(KeyAttribute))
 
-	for _, p := range allUserStringProperties {
-		p.assertNotSet(t, user)
-	}
+	assertStringPropertiesNotSet(t, user)
 
 	anon, found := user.GetAnonymousOptional()
 	assert.False(t, anon)
 	assert.False(t, found)
+	assert.Equal(t, ldvalue.Null(), user.GetAttribute(AnonymousAttribute))
 
-	assert.Nil(t, user.Custom)
-	assert.Nil(t, user.PrivateAttributeNames)
+	assert.Nil(t, getCustomAttrs(user))
+	assert.Nil(t, getPrivateAttrs(user))
 }
 
 func TestNewAnonymousUser(t *testing.T) {
 	user := NewAnonymousUser("some-key")
 
 	assert.Equal(t, "some-key", user.GetKey())
+	assert.Equal(t, ldvalue.String("some-key"), user.GetAttribute(KeyAttribute))
 
-	for _, p := range allUserStringProperties {
-		p.assertNotSet(t, user)
-	}
+	assertStringPropertiesNotSet(t, user)
 
 	anon, found := user.GetAnonymousOptional()
 	assert.True(t, anon)
 	assert.True(t, found)
+	assert.Equal(t, ldvalue.Bool(true), user.GetAttribute(AnonymousAttribute))
 
-	assert.Nil(t, user.Custom)
-	assert.Nil(t, user.PrivateAttributeNames)
+	assert.Nil(t, getCustomAttrs(user))
+	assert.Nil(t, getPrivateAttrs(user))
 }
 
 func TestUserBuilderSetsOnlyKeyByDefault(t *testing.T) {
 	user := NewUserBuilder("some-key").Build()
 
 	assert.Equal(t, "some-key", user.GetKey())
+	assert.Equal(t, ldvalue.String("some-key"), user.GetAttribute(KeyAttribute))
 
-	for _, p := range allUserStringProperties {
-		p.assertNotSet(t, user)
-	}
+	assertStringPropertiesNotSet(t, user)
 
 	anon, found := user.GetAnonymousOptional()
 	assert.False(t, anon)
 	assert.False(t, found)
+	assert.Equal(t, ldvalue.Null(), user.GetAttribute(AnonymousAttribute))
 
-	assert.Nil(t, user.Custom)
-	assert.Nil(t, user.PrivateAttributeNames)
+	assert.Nil(t, getCustomAttrs(user))
+	assert.Nil(t, getPrivateAttrs(user))
 }
 
 func TestUserBuilderCanSetStringAttributes(t *testing.T) {
-	for _, p := range allUserStringProperties {
-		t.Run(p.name, func(t *testing.T) {
+	for a, setter := range optionalStringSetters {
+		t.Run(string(a), func(t *testing.T) {
 			builder := NewUserBuilder("some-key")
-			p.setter(builder, "value")
+			setter(builder, "value")
 			user := builder.Build()
 
 			assert.Equal(t, "some-key", user.GetKey())
+			assert.Equal(t, ldvalue.String("some-key"), user.GetAttribute(KeyAttribute))
 
-			for _, p1 := range allUserStringProperties {
-				if p1.name == p.name {
-					assert.Equal(t, ldvalue.NewOptionalString("value"), p.getter(user), p.name)
-				} else {
-					p1.assertNotSet(t, user)
+			assert.Equal(t, ldvalue.NewOptionalString("value"), optionalStringGetters[a](user), a)
+			assert.Equal(t, ldvalue.String("value"), user.GetAttribute(a))
+
+			for a1, _ := range optionalStringSetters {
+				if a1 != a {
+					assertStringAttrNotSet(t, a1, user)
 				}
 			}
 		})
@@ -153,40 +159,43 @@ func TestUserBuilderCanSetAnonymous(t *testing.T) {
 	value, ok := user0.GetAnonymousOptional()
 	assert.False(t, ok)
 	assert.False(t, value)
+	assert.Equal(t, ldvalue.Null(), user0.GetAttribute(AnonymousAttribute))
 
 	user1 := NewUserBuilder("some-key").Anonymous(true).Build()
 	assert.True(t, user1.GetAnonymous())
 	value, ok = user1.GetAnonymousOptional()
 	assert.True(t, ok)
 	assert.True(t, value)
+	assert.Equal(t, ldvalue.Bool(true), user1.GetAttribute(AnonymousAttribute))
 
 	user2 := NewUserBuilder("some-key").Anonymous(false).Build()
 	assert.False(t, user2.GetAnonymous())
 	value, ok = user2.GetAnonymousOptional()
 	assert.True(t, ok)
 	assert.False(t, value)
-	assert.NotNil(t, user2.Anonymous)
+	assert.Equal(t, ldvalue.Bool(false), user2.GetAttribute(AnonymousAttribute))
 }
 
 func TestUserBuilderCanSetPrivateStringAttributes(t *testing.T) {
-	for _, p := range allUserStringProperties {
-		t.Run(p.name, func(t *testing.T) {
+	for a, setter := range optionalStringSetters {
+		t.Run(string(a), func(t *testing.T) {
 			builder := NewUserBuilder("some-key")
-			p.setter(builder, "value").AsPrivateAttribute()
+			setter(builder, "value").AsPrivateAttribute()
 			user := builder.Build()
 
 			assert.Equal(t, "some-key", user.GetKey())
 
-			for _, p1 := range allUserStringProperties {
-				if p1.name == p.name {
-					assert.Equal(t, ldvalue.NewOptionalString("value"), p.getter(user))
-				} else {
-					p1.assertNotSet(t, user)
+			assert.Equal(t, ldvalue.NewOptionalString("value"), optionalStringGetters[a](user))
+			assert.Equal(t, ldvalue.String("value"), user.GetAttribute(a))
+
+			for a1, _ := range optionalStringSetters {
+				if a1 != a {
+					assertStringAttrNotSet(t, a1, user)
 				}
 			}
 
-			assert.Nil(t, user.Custom)
-			assert.Equal(t, []string{p.name}, user.PrivateAttributeNames)
+			assert.Nil(t, getCustomAttrs(user))
+			assert.Equal(t, []string{string(a)}, getPrivateAttrs(user))
 		})
 	}
 }
@@ -199,7 +208,7 @@ func TestUserBuilderCanMakeAttributeNonPrivate(t *testing.T) {
 	builder.Email("f").AsNonPrivateAttribute()
 	user := builder.Build()
 	assert.Equal(t, "f", user.GetEmail().StringValue())
-	assert.Equal(t, []string{"name"}, user.PrivateAttributeNames)
+	assert.Equal(t, []string{"name"}, getPrivateAttrs(user))
 }
 
 func TestUserBuilderCanSetCustomAttributes(t *testing.T) {
@@ -217,23 +226,55 @@ func TestUserBuilderCanSetCustomAttributes(t *testing.T) {
 	assert.False(t, ok)
 	assert.Equal(t, ldvalue.Null(), value)
 
-	keys := user.GetCustomKeys()
-	sort.Strings(keys)
-	assert.Equal(t, []string{"first", "second"}, keys)
+	assert.Equal(t, []string{"first", "second"}, getCustomAttrs(user))
 
-	assert.Nil(t, user.PrivateAttributeNames)
+	assert.Nil(t, getPrivateAttrs(user))
+}
+
+func TestUserBuilderCanSetAttributesAfterSettingAttributeThatCanBePrivate(t *testing.T) {
+	// This tests that chaining methods off of UserBuilderCanMakeAttributePrivate works correctly.
+	builder := NewUserBuilder("some-key").Name("original-name")
+	builder.Key("new-key")
+	builder.Anonymous(true)
+	builder.Custom("thing", ldvalue.String("custom-value"))
+	user := builder.Build()
+
+	assert.Equal(t, "new-key", user.GetKey())
+	assert.Equal(t, ldvalue.Bool(true), user.GetAttribute(AnonymousAttribute))
+	assert.Equal(t, ldvalue.String("custom-value"), user.GetAttribute(UserAttribute("thing")))
+
+	for a, setter := range optionalStringSetters {
+		t.Run(string(a), func(t *testing.T) {
+			builder := NewUserBuilder("some-key").Name("original-name")
+			// builder is now a UserBuilderCanMakeAttributePrivate
+			setter(builder, "value")
+			user := builder.Build()
+
+			assert.Equal(t, ldvalue.NewOptionalString("value"), optionalStringGetters[a](user))
+			assert.Equal(t, ldvalue.String("value"), user.GetAttribute(a))
+		})
+	}
+}
+
+func TestIterateCustomAttributes(t *testing.T) {
+	user := NewUserBuilder("some-key").Custom("first", ldvalue.Int(1)).Custom("second", ldvalue.String("two")).Build()
+	m := make(map[string]ldvalue.Value)
+	user.ForCustom(func(a string, v ldvalue.Value) {
+		m[a] = v
+	})
+	assert.Equal(t, map[string]ldvalue.Value{"first": ldvalue.Int(1), "second": ldvalue.String("two")}, m)
 }
 
 func TestUserWithNoCustomAttributes(t *testing.T) {
 	user := NewUser("some-key")
 
-	assert.Nil(t, user.Custom)
+	assert.Nil(t, getCustomAttrs(user))
 
 	value, ok := user.GetCustom("attr")
 	assert.False(t, ok)
 	assert.Equal(t, ldvalue.Null(), value)
 
-	assert.Nil(t, user.GetCustomKeys())
+	assert.Nil(t, getCustomAttrs(user))
 }
 
 func TestUserBuilderCanSetPrivateCustomAttributes(t *testing.T) {
@@ -252,12 +293,9 @@ func TestUserBuilderCanSetPrivateCustomAttributes(t *testing.T) {
 	assert.False(t, ok)
 	assert.Equal(t, ldvalue.Null(), value)
 
-	keys := user.GetCustomKeys()
-	sort.Strings(keys)
-	assert.Equal(t, []string{"first", "second"}, keys)
+	assert.Equal(t, []string{"first", "second"}, getCustomAttrs(user))
 
-	assert.NotNil(t, user.PrivateAttributeNames)
-	assert.Equal(t, []string{"first"}, user.PrivateAttributeNames)
+	assert.Equal(t, []string{"first"}, getPrivateAttrs(user))
 }
 
 func TestUserBuilderCanCopyFromExistingUserWithOnlyKey(t *testing.T) {
@@ -266,11 +304,9 @@ func TestUserBuilderCanCopyFromExistingUserWithOnlyKey(t *testing.T) {
 
 	assert.Equal(t, "some-key", user1.GetKey())
 
-	for _, p := range allUserStringProperties {
-		p.assertNotSet(t, user1)
-	}
-	assert.Nil(t, user1.Custom)
-	assert.Nil(t, user1.PrivateAttributeNames)
+	assertStringPropertiesNotSet(t, user1)
+	assert.Nil(t, getCustomAttrs(user1))
+	assert.Nil(t, getPrivateAttrs(user1))
 }
 
 func TestUserBuilderCanCopyFromExistingUserWithAllAttributes(t *testing.T) {
@@ -279,9 +315,18 @@ func TestUserBuilderCanCopyFromExistingUserWithAllAttributes(t *testing.T) {
 	assert.Equal(t, user0, user1)
 }
 
+func TestGetUnknownAttribute(t *testing.T) {
+	assert.Equal(t, ldvalue.Null(), NewUser("some-key").GetAttribute(UserAttribute("no-such-thing")))
+}
+
 func TestUserEqualsComparesAllAttributes(t *testing.T) {
+	shouldEqual := func(a User, b User) {
+		assert.True(t, b.Equal(a), "%s should equal %s", b, a)
+		assert.True(t, a.Equal(b), "%s should equal %s", a, b)
+	}
 	shouldNotEqual := func(a User, b User) {
 		assert.False(t, b.Equal(a), "%s should not equal %s", b, a)
+		assert.False(t, a.Equal(b), "%s should not equal %s", a, b)
 	}
 
 	user0 := NewUser("some-key")
@@ -290,16 +335,16 @@ func TestUserEqualsComparesAllAttributes(t *testing.T) {
 	user1 := newUserBuilderWithAllPropertiesSet("some-key").Build()
 	assert.True(t, user1.Equal(user1), "%s should equal itself", user1)
 	user2 := NewUserBuilderFromUser(user1).Build()
-	assert.True(t, user2.Equal(user1), "%s should equal %s", user2, user1)
+	shouldEqual(user1, user2)
 
-	for i, p := range allUserStringProperties {
+	for a, setter := range optionalStringSetters {
 		builder3 := NewUserBuilderFromUser(user1)
-		p.setter(builder3, "different-value")
+		setter(builder3, "different-value")
 		user3 := builder3.Build()
 		shouldNotEqual(user1, user3)
 
 		builder4 := NewUserBuilderFromUser(user1)
-		p.setter(builder4, fmt.Sprintf("value%d", i)).AsPrivateAttribute()
+		setter(builder4, fmt.Sprintf("value-%s", a)).AsPrivateAttribute()
 		user4 := builder4.Build()
 		shouldNotEqual(user1, user4)
 	}
@@ -309,14 +354,31 @@ func TestUserEqualsComparesAllAttributes(t *testing.T) {
 	shouldNotEqual(user0, NewUserBuilderFromUser(user0).Anonymous(true).Build())
 	shouldNotEqual(NewUserBuilderFromUser(user0).Anonymous(true).Build(), NewUserBuilderFromUser(user0).Anonymous(false).Build())
 
-	shouldNotEqual(user1, NewUserBuilderFromUser(user1).Custom("thing1", ldvalue.String("value9")).Build())
+	// modifying an existing custom attribute
+	shouldNotEqual(user1, NewUserBuilderFromUser(user1).Custom("thing1", ldvalue.String("other-value")).Build())
+
+	// adding a new custom attribute
+	shouldNotEqual(user1, NewUserBuilderFromUser(user1).Custom("thing3", ldvalue.String("other-value")).Build())
+
+	// adding an extra private attribute
 	shouldNotEqual(user1, NewUserBuilderFromUser(user1).Custom("thing1", ldvalue.String("value1")).AsPrivateAttribute().Build())
+
+	// having the same number of private attributes, but not the same ones
+	shouldNotEqual(
+		NewUserBuilderFromUser(user1).
+			Custom("thing3", ldvalue.Bool(true)).AsPrivateAttribute().
+			Custom("thing4", ldvalue.Bool(true)).
+			Build(),
+		NewUserBuilderFromUser(user1).
+			Custom("thing3", ldvalue.Bool(true)).
+			Custom("thing4", ldvalue.Bool(true)).AsPrivateAttribute().
+			Build())
 }
 
 func newUserBuilderWithAllPropertiesSet(key string) UserBuilder {
 	builder := NewUserBuilder(key)
-	for i, p := range allUserStringProperties {
-		p.setter(builder, fmt.Sprintf("value%d", i))
+	for a, setter := range optionalStringSetters {
+		setter(builder, fmt.Sprintf("value-%s", a))
 	}
 	builder.Anonymous(true)
 	builder.Custom("thing1", ldvalue.String("value1"))
