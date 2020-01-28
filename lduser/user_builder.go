@@ -4,12 +4,12 @@ import "gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
 
 // NewUser creates a new user identified by the given key.
 func NewUser(key string) User {
-	return User{Key: key}
+	return User{key: key}
 }
 
 // NewAnonymousUser creates a new anonymous user identified by the given key.
 func NewAnonymousUser(key string) User {
-	return User{Key: key, Anonymous: ldvalue.Bool(true)}
+	return User{key: key, anonymous: ldvalue.Bool(true)}
 }
 
 // UserBuilder is a mutable object that uses the Builder pattern to specify properties for a User.
@@ -71,7 +71,7 @@ type UserBuilder interface {
 	//     user := NewUserBuilder("user-key").
 	//         Custom("custom-attr-name", ldvalue.String("some-string-value")).AsPrivateAttribute().
 	//         Build()
-	Custom(name string, value ldvalue.Value) UserBuilderCanMakeAttributePrivate
+	Custom(attribute string, value ldvalue.Value) UserBuilderCanMakeAttributePrivate
 
 	// Build creates a User from the current UserBuilder properties.
 	//
@@ -130,13 +130,13 @@ type userBuilderImpl struct {
 	avatar       ldvalue.OptionalString
 	name         ldvalue.OptionalString
 	anonymous    ldvalue.Value
-	custom       map[string]ldvalue.Value
-	privateAttrs map[string]bool
+	custom       map[UserAttribute]ldvalue.Value
+	privateAttrs map[UserAttribute]struct{}
 }
 
 type userBuilderCanMakeAttributePrivate struct {
-	builder  *userBuilderImpl
-	attrName string
+	builder   *userBuilderImpl
+	attribute UserAttribute
 }
 
 // NewUserBuilder constructs a new UserBuilder, specifying the user key.
@@ -151,34 +151,34 @@ func NewUserBuilder(key string) UserBuilder {
 // then call setter methods on the new UserBuilder to modify those attributes.
 func NewUserBuilderFromUser(fromUser User) UserBuilder {
 	builder := &userBuilderImpl{
-		key:       fromUser.Key,
-		secondary: fromUser.Secondary,
-		ip:        fromUser.Ip,
-		country:   fromUser.Country,
-		email:     fromUser.Email,
-		firstName: fromUser.FirstName,
-		lastName:  fromUser.LastName,
-		avatar:    fromUser.Avatar,
-		name:      fromUser.Name,
-		anonymous: fromUser.Anonymous,
+		key:       fromUser.key,
+		secondary: fromUser.secondary,
+		ip:        fromUser.ip,
+		country:   fromUser.country,
+		email:     fromUser.email,
+		firstName: fromUser.firstName,
+		lastName:  fromUser.lastName,
+		avatar:    fromUser.avatar,
+		name:      fromUser.name,
+		anonymous: fromUser.anonymous,
 	}
-	if fromUser.Custom != nil {
-		builder.custom = make(map[string]ldvalue.Value, len(fromUser.Custom))
-		for k, v := range fromUser.Custom {
+	if fromUser.custom != nil {
+		builder.custom = make(map[UserAttribute]ldvalue.Value, len(fromUser.custom))
+		for k, v := range fromUser.custom {
 			builder.custom[k] = v
 		}
 	}
-	if len(fromUser.PrivateAttributeNames) > 0 {
-		builder.privateAttrs = make(map[string]bool, len(fromUser.PrivateAttributeNames))
-		for _, name := range fromUser.PrivateAttributeNames {
-			builder.privateAttrs[name] = true
+	if len(fromUser.privateAttributes) > 0 {
+		builder.privateAttrs = make(map[UserAttribute]struct{}, len(fromUser.privateAttributes))
+		for name := range fromUser.privateAttributes {
+			builder.privateAttrs[name] = struct{}{}
 		}
 	}
 	return builder
 }
 
-func (b *userBuilderImpl) canMakeAttributePrivate(attrName string) UserBuilderCanMakeAttributePrivate {
-	return &userBuilderCanMakeAttributePrivate{builder: b, attrName: attrName}
+func (b *userBuilderImpl) canMakeAttributePrivate(attribute UserAttribute) UserBuilderCanMakeAttributePrivate {
+	return &userBuilderCanMakeAttributePrivate{builder: b, attribute: attribute}
 }
 
 func (b *userBuilderImpl) Key(value string) UserBuilder {
@@ -188,42 +188,42 @@ func (b *userBuilderImpl) Key(value string) UserBuilder {
 
 func (b *userBuilderImpl) Secondary(value string) UserBuilderCanMakeAttributePrivate {
 	b.secondary = ldvalue.NewOptionalString(value)
-	return b.canMakeAttributePrivate("secondary")
+	return b.canMakeAttributePrivate(SecondaryKeyAttribute)
 }
 
 func (b *userBuilderImpl) IP(value string) UserBuilderCanMakeAttributePrivate {
 	b.ip = ldvalue.NewOptionalString(value)
-	return b.canMakeAttributePrivate("ip")
+	return b.canMakeAttributePrivate(IPAttribute)
 }
 
 func (b *userBuilderImpl) Country(value string) UserBuilderCanMakeAttributePrivate {
 	b.country = ldvalue.NewOptionalString(value)
-	return b.canMakeAttributePrivate("country")
+	return b.canMakeAttributePrivate(CountryAttribute)
 }
 
 func (b *userBuilderImpl) Email(value string) UserBuilderCanMakeAttributePrivate {
 	b.email = ldvalue.NewOptionalString(value)
-	return b.canMakeAttributePrivate("email")
+	return b.canMakeAttributePrivate(EmailAttribute)
 }
 
 func (b *userBuilderImpl) FirstName(value string) UserBuilderCanMakeAttributePrivate {
 	b.firstName = ldvalue.NewOptionalString(value)
-	return b.canMakeAttributePrivate("firstName")
+	return b.canMakeAttributePrivate(FirstNameAttribute)
 }
 
 func (b *userBuilderImpl) LastName(value string) UserBuilderCanMakeAttributePrivate {
 	b.lastName = ldvalue.NewOptionalString(value)
-	return b.canMakeAttributePrivate("lastName")
+	return b.canMakeAttributePrivate(LastNameAttribute)
 }
 
 func (b *userBuilderImpl) Avatar(value string) UserBuilderCanMakeAttributePrivate {
 	b.avatar = ldvalue.NewOptionalString(value)
-	return b.canMakeAttributePrivate("avatar")
+	return b.canMakeAttributePrivate(AvatarAttribute)
 }
 
 func (b *userBuilderImpl) Name(value string) UserBuilderCanMakeAttributePrivate {
 	b.name = ldvalue.NewOptionalString(value)
-	return b.canMakeAttributePrivate("name")
+	return b.canMakeAttributePrivate(NameAttribute)
 }
 
 func (b *userBuilderImpl) Anonymous(value bool) UserBuilder {
@@ -231,57 +231,55 @@ func (b *userBuilderImpl) Anonymous(value bool) UserBuilder {
 	return b
 }
 
-func (b *userBuilderImpl) Custom(name string, value ldvalue.Value) UserBuilderCanMakeAttributePrivate {
+func (b *userBuilderImpl) Custom(attribute string, value ldvalue.Value) UserBuilderCanMakeAttributePrivate {
 	if b.custom == nil {
-		b.custom = make(map[string]ldvalue.Value)
+		b.custom = make(map[UserAttribute]ldvalue.Value)
 	}
-	b.custom[name] = value
-	return b.canMakeAttributePrivate(name)
+	b.custom[UserAttribute(attribute)] = value
+	return b.canMakeAttributePrivate(UserAttribute(attribute))
 }
 
 func (b *userBuilderImpl) Build() User {
 	u := User{
-		Key:       b.key,
-		Secondary: b.secondary,
-		Ip:        b.ip,
-		Country:   b.country,
-		Email:     b.email,
-		FirstName: b.firstName,
-		LastName:  b.lastName,
-		Avatar:    b.avatar,
-		Name:      b.name,
-		Anonymous: b.anonymous,
+		key:       b.key,
+		secondary: b.secondary,
+		ip:        b.ip,
+		country:   b.country,
+		email:     b.email,
+		firstName: b.firstName,
+		lastName:  b.lastName,
+		avatar:    b.avatar,
+		name:      b.name,
+		anonymous: b.anonymous,
 	}
 	if len(b.custom) > 0 {
-		c := make(map[string]ldvalue.Value, len(b.custom))
+		c := make(map[UserAttribute]ldvalue.Value, len(b.custom))
 		for k, v := range b.custom {
 			c[k] = v
 		}
-		u.Custom = c
+		u.custom = c
 	}
 	if len(b.privateAttrs) > 0 {
-		a := make([]string, 0, len(b.privateAttrs))
-		for key, value := range b.privateAttrs {
-			if value {
-				a = append(a, key)
-			}
+		p := make(map[UserAttribute]struct{}, len(b.privateAttrs))
+		for key := range b.privateAttrs {
+			p[key] = struct{}{}
 		}
-		u.PrivateAttributeNames = a
+		u.privateAttributes = p
 	}
 	return u
 }
 
 func (b *userBuilderCanMakeAttributePrivate) AsPrivateAttribute() UserBuilder {
 	if b.builder.privateAttrs == nil {
-		b.builder.privateAttrs = make(map[string]bool)
+		b.builder.privateAttrs = make(map[UserAttribute]struct{})
 	}
-	b.builder.privateAttrs[b.attrName] = true
+	b.builder.privateAttrs[b.attribute] = struct{}{}
 	return b.builder
 }
 
 func (b *userBuilderCanMakeAttributePrivate) AsNonPrivateAttribute() UserBuilder {
 	if b.builder.privateAttrs != nil {
-		delete(b.builder.privateAttrs, b.attrName)
+		delete(b.builder.privateAttrs, b.attribute)
 	}
 	return b.builder
 }
@@ -327,10 +325,10 @@ func (b *userBuilderCanMakeAttributePrivate) Anonymous(value bool) UserBuilder {
 }
 
 func (b *userBuilderCanMakeAttributePrivate) Custom(
-	name string,
+	attribute string,
 	value ldvalue.Value,
 ) UserBuilderCanMakeAttributePrivate {
-	return b.builder.Custom(name, value)
+	return b.builder.Custom(attribute, value)
 }
 
 func (b *userBuilderCanMakeAttributePrivate) Build() User {
