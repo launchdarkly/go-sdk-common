@@ -55,7 +55,7 @@ func (u User) MarshalJSON() ([]byte, error) {
 		Anonymous: u.anonymous,
 		Custom:    u.custom,
 	}
-	for a, _ := range u.privateAttributes {
+	for a := range u.privateAttributes {
 		ufs.PrivateAttributeNames = append(ufs.PrivateAttributeNames, a)
 	}
 	return json.Marshal(ufs)

@@ -170,7 +170,7 @@ func NewUserBuilderFromUser(fromUser User) UserBuilder {
 	}
 	if len(fromUser.privateAttributes) > 0 {
 		builder.privateAttrs = make(map[UserAttribute]struct{}, len(fromUser.privateAttributes))
-		for name, _ := range fromUser.privateAttributes {
+		for name := range fromUser.privateAttributes {
 			builder.privateAttrs[name] = struct{}{}
 		}
 	}
@@ -261,7 +261,7 @@ func (b *userBuilderImpl) Build() User {
 	}
 	if len(b.privateAttrs) > 0 {
 		p := make(map[UserAttribute]struct{}, len(b.privateAttrs))
-		for key, _ := range b.privateAttrs {
+		for key := range b.privateAttrs {
 			p[key] = struct{}{}
 		}
 		u.privateAttributes = p
