@@ -7,24 +7,25 @@ import (
 	"gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
 )
 
-// A User contains specific attributes of a user browsing your site. The only mandatory property property is the Key,
-// which must uniquely identify each user. For authenticated users, this may be a username or e-mail address. For anonymous users,
-// this could be an IP address or session ID.
+// A User contains specific attributes of a user browsing your site. The only mandatory property is the Key,
+// which must uniquely identify each user. For authenticated users, this may be a username or e-mail address.
+// For anonymous users, this could be an IP address or session ID.
 //
-// Besides the mandatory Key, User supports two kinds of optional attributes: interpreted attributes (e.g. Ip and Country)
-// and custom attributes.  LaunchDarkly can parse interpreted attributes and attach meaning to them. For example, from an IP address, LaunchDarkly can
-// do a geo IP lookup and determine the user's country.
+// Besides the mandatory Key, User supports two kinds of optional attributes: interpreted attributes (e.g.
+// Ip and Country) and custom attributes.  LaunchDarkly can parse interpreted attributes and attach meaning
+// to them. For example, from an IP address, LaunchDarkly can do a geo IP lookup and determine the user's
+// country.
 //
-// Custom attributes are not parsed by LaunchDarkly. They can be used in custom rules-- for example, a custom attribute such as "customer_ranking" can be used to
-// launch a feature to the top 10% of users on a site.
+// Custom attributes are not parsed by LaunchDarkly. They can be used in custom rules-- for example, a custom
+// attribute such as "customer_ranking" can be used to launch a feature to the top 10% of users on a site.
 //
 // User fields will be made private in the future, accessible only via getter methods, to prevent unsafe
 // modification of users after they are created. The preferred method of constructing a User is to use either
 // a simple constructor (NewUser, NewAnonymousUser) or the builder pattern with NewUserBuilder. If you do set
 // the User fields directly, it is important not to change any map/slice elements, and not change a string
 // that is pointed to by an existing pointer, after the User has been passed to any SDK methods; otherwise,
-// flag evaluations and analytics events may refer to the wrong user properties (or, in the case of a map, you
-// may even cause a concurrent modification panic).
+// flag evaluations and analytics events may refer to the wrong user properties (or, in the case of a map,
+// you may even cause a concurrent modification panic).
 type User struct {
 	// Key is the unique key of the user.
 	//
@@ -33,7 +34,8 @@ type User struct {
 	Key *string `json:"key,omitempty" bson:"key,omitempty"`
 	// SecondaryKey is the secondary key of the user.
 	//
-	// This affects feature flag targeting (https://docs.launchdarkly.com/docs/targeting-users#section-targeting-rules-based-on-user-attributes)
+	// This affects feature flag targeting
+	// (https://docs.launchdarkly.com/docs/targeting-users#section-targeting-rules-based-on-user-attributes)
 	// as follows: if you have chosen to bucket users by a specific attribute, the secondary key (if set)
 	// is used to further distinguish between users who are otherwise identical according to that attribute.
 	//
@@ -44,7 +46,7 @@ type User struct {
 	//
 	// Deprecated: Direct access to User fields is now deprecated in favor of UserBuilder. In a future version,
 	// User fields will be private and only accessible via getter methods.
-	Ip *string `json:"ip,omitempty" bson:"ip,omitempty"`
+	Ip *string `json:"ip,omitempty" bson:"ip,omitempty"` //nolint (nonstandard capitalization)
 	// Country is the country attribute of the user.
 	//
 	// Deprecated: Direct access to User fields is now deprecated in favor of UserBuilder. In a future version,
@@ -120,62 +122,63 @@ func (u User) GetKey() string {
 
 // GetSecondaryKey returns the secondary key of the user, if any.
 //
-// This affects feature flag targeting (https://docs.launchdarkly.com/docs/targeting-users#section-targeting-rules-based-on-user-attributes)
+// This affects feature flag targeting
+// (https://docs.launchdarkly.com/docs/targeting-users#section-targeting-rules-based-on-user-attributes)
 // as follows: if you have chosen to bucket users by a specific attribute, the secondary key (if set)
 // is used to further distinguish between users who are otherwise identical according to that attribute.
 func (u User) GetSecondaryKey() ldvalue.OptionalString {
 	return ldvalue.NewOptionalStringFromPointer(u.Secondary)
 }
 
-// GetIP() returns the IP address attribute of the user, if any.
+// GetIP returns the IP address attribute of the user, if any.
 func (u User) GetIP() ldvalue.OptionalString {
 	return ldvalue.NewOptionalStringFromPointer(u.Ip)
 }
 
-// GetCountry() returns the country attribute of the user, if any.
+// GetCountry returns the country attribute of the user, if any.
 func (u User) GetCountry() ldvalue.OptionalString {
 	return ldvalue.NewOptionalStringFromPointer(u.Country)
 }
 
-// GetEmail() returns the email address attribute of the user, if any.
+// GetEmail returns the email address attribute of the user, if any.
 func (u User) GetEmail() ldvalue.OptionalString {
 	return ldvalue.NewOptionalStringFromPointer(u.Email)
 }
 
-// GetFirstName() returns the first name attribute of the user, if any.
+// GetFirstName returns the first name attribute of the user, if any.
 func (u User) GetFirstName() ldvalue.OptionalString {
 	return ldvalue.NewOptionalStringFromPointer(u.FirstName)
 }
 
-// GetLastName() returns the last name attribute of the user, if any.
+// GetLastName returns the last name attribute of the user, if any.
 func (u User) GetLastName() ldvalue.OptionalString {
 	return ldvalue.NewOptionalStringFromPointer(u.LastName)
 }
 
-// GetAvatar() returns the avatar URL attribute of the user, if any.
+// GetAvatar returns the avatar URL attribute of the user, if any.
 func (u User) GetAvatar() ldvalue.OptionalString {
 	return ldvalue.NewOptionalStringFromPointer(u.Avatar)
 }
 
-// GetName() returns the full name attribute of the user, if any.
+// GetName returns the full name attribute of the user, if any.
 func (u User) GetName() ldvalue.OptionalString {
 	return ldvalue.NewOptionalStringFromPointer(u.Name)
 }
 
-// GetAnonymous() returns the anonymous attribute of the user.
+// GetAnonymous returns the anonymous attribute of the user.
 //
 // If a user is anonymous, the user key will not appear on your LaunchDarkly dashboard.
 func (u User) GetAnonymous() bool {
 	return u.Anonymous != nil && *u.Anonymous
 }
 
-// GetAnonymousOptional() returns the anonymous attribute of the user, with a second value indicating
+// GetAnonymousOptional returns the anonymous attribute of the user, with a second value indicating
 // whether that attribute was defined for the user or not.
 func (u User) GetAnonymousOptional() (bool, bool) {
 	return u.GetAnonymous(), u.Anonymous != nil
 }
 
-// GetCustom() returns a custom attribute of the user by name. The boolean second return value indicates
+// GetCustom returns a custom attribute of the user by name. The boolean second return value indicates
 // whether any value was set for this attribute or not.
 //
 // The value is returned using the ldvalue.Value type, which can contain any type supported by JSON:
@@ -196,7 +199,7 @@ func (u User) GetCustom(attrName string) (ldvalue.Value, bool) {
 	return ldvalue.UnsafeUseArbitraryValue(value), found //nolint (using deprecated method)
 }
 
-// GetCustomKeys() returns the keys of all custom attributes that have been set on this user.
+// GetCustomKeys returns the keys of all custom attributes that have been set on this user.
 func (u User) GetCustomKeys() []string {
 	if u.Custom == nil || len(*u.Custom) == 0 {
 		return nil
@@ -253,8 +256,10 @@ func (u User) Equal(other User) bool {
 
 // String returns a simple string representation of a user.
 func (u User) String() string {
-	bytes, _ := json.Marshal(u)
-	return string(bytes)
+	if bytes, err := json.Marshal(u); err == nil {
+		return string(bytes)
+	}
+	return ""
 }
 
 // Used internally in evaluations. The second return value is true if the attribute exists for this user,
@@ -298,8 +303,8 @@ func optionalStringAsEmptyInterface(os ldvalue.OptionalString) (interface{}, boo
 	return nil, false
 }
 
-// DerivedAttribute is an entry in a Derived attribute map and is for internal use by LaunchDarkly only. Derived attributes
-// sent to LaunchDarkly are ignored.
+// DerivedAttribute is an entry in a Derived attribute map and is for internal use by LaunchDarkly only.'
+// Derived attributes sent to LaunchDarkly are ignored.
 //
 // Deprecated: this type is for internal use and will be removed in a future version.
 type DerivedAttribute struct {
