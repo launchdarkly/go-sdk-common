@@ -4,13 +4,12 @@ import "gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
 
 // NewUser creates a new user identified by the given key.
 func NewUser(key string) User {
-	return User{Key: &key}
+	return User{Key: key}
 }
 
 // NewAnonymousUser creates a new anonymous user identified by the given key.
 func NewAnonymousUser(key string) User {
-	anonymous := true
-	return User{Key: &key, Anonymous: &anonymous}
+	return User{Key: key, Anonymous: ldvalue.Bool(true)}
 }
 
 // UserBuilder is a mutable object that uses the Builder pattern to specify properties for a User.
@@ -127,9 +126,8 @@ type userBuilderImpl struct {
 	lastName     ldvalue.OptionalString
 	avatar       ldvalue.OptionalString
 	name         ldvalue.OptionalString
-	anonymous    bool
-	hasAnonymous bool
-	custom       map[string]interface{}
+	anonymous    ldvalue.Value
+	custom       map[string]ldvalue.Value
 	privateAttrs map[string]bool
 }
 
@@ -150,25 +148,20 @@ func NewUserBuilder(key string) UserBuilder {
 // then call setter methods on the new UserBuilder to modify those attributes.
 func NewUserBuilderFromUser(fromUser User) UserBuilder {
 	builder := &userBuilderImpl{
-		secondary: fromUser.GetSecondaryKey(),
-		ip:        fromUser.GetIP(),
-		country:   fromUser.GetCountry(),
-		email:     fromUser.GetEmail(),
-		firstName: fromUser.GetFirstName(),
-		lastName:  fromUser.GetLastName(),
-		avatar:    fromUser.GetAvatar(),
-		name:      fromUser.GetName(),
-	}
-	if fromUser.Key != nil {
-		builder.key = *fromUser.Key
-	}
-	if fromUser.Anonymous != nil {
-		builder.anonymous = *fromUser.Anonymous
-		builder.hasAnonymous = true
+		key:       fromUser.Key,
+		secondary: fromUser.Secondary,
+		ip:        fromUser.Ip,
+		country:   fromUser.Country,
+		email:     fromUser.Email,
+		firstName: fromUser.FirstName,
+		lastName:  fromUser.LastName,
+		avatar:    fromUser.Avatar,
+		name:      fromUser.Name,
+		anonymous: fromUser.Anonymous,
 	}
 	if fromUser.Custom != nil {
-		builder.custom = make(map[string]interface{}, len(*fromUser.Custom))
-		for k, v := range *fromUser.Custom {
+		builder.custom = make(map[string]ldvalue.Value, len(fromUser.Custom))
+		for k, v := range fromUser.Custom {
 			builder.custom[k] = v
 		}
 	}
@@ -231,48 +224,37 @@ func (b *userBuilderImpl) Name(value string) UserBuilderCanMakeAttributePrivate 
 }
 
 func (b *userBuilderImpl) Anonymous(value bool) UserBuilder {
-	b.anonymous = value
-	b.hasAnonymous = true
+	b.anonymous = ldvalue.Bool(value)
 	return b
 }
 
 func (b *userBuilderImpl) Custom(name string, value ldvalue.Value) UserBuilderCanMakeAttributePrivate {
 	if b.custom == nil {
-		b.custom = make(map[string]interface{})
+		b.custom = make(map[string]ldvalue.Value)
 	}
-	// Note: since User.Custom is currently exported, and existing application code may expect to
-	// see only basic Go types in that map rather than ldvalue.Value instances, we are using a
-	// method that converts ldvalue.Value to a raw bool, string, map, etc. If it is a slice or a
-	// map, then it is mutable, which is undesirable; this is why direct access to User.Custom is
-	// deprecated. In a future version when backward compatibility is no longer an issue, a custom
-	// attribute will be stored as a completely immutable Value.
-	b.custom[name] = value.UnsafeArbitraryValue() //nolint (using deprecated method)
+	b.custom[name] = value
 	return b.canMakeAttributePrivate(name)
 }
 
 func (b *userBuilderImpl) Build() User {
-	key := b.key
 	u := User{
-		Key:       &key,
-		Secondary: b.secondary.AsPointer(),
-		Ip:        b.ip.AsPointer(),
-		Country:   b.country.AsPointer(),
-		Email:     b.email.AsPointer(),
-		FirstName: b.firstName.AsPointer(),
-		LastName:  b.lastName.AsPointer(),
-		Avatar:    b.avatar.AsPointer(),
-		Name:      b.name.AsPointer(),
-	}
-	if b.hasAnonymous {
-		value := b.anonymous
-		u.Anonymous = &value
+		Key:       b.key,
+		Secondary: b.secondary,
+		Ip:        b.ip,
+		Country:   b.country,
+		Email:     b.email,
+		FirstName: b.firstName,
+		LastName:  b.lastName,
+		Avatar:    b.avatar,
+		Name:      b.name,
+		Anonymous: b.anonymous,
 	}
 	if len(b.custom) > 0 {
-		c := make(map[string]interface{}, len(b.custom))
+		c := make(map[string]ldvalue.Value, len(b.custom))
 		for k, v := range b.custom {
 			c[k] = v
 		}
-		u.Custom = &c
+		u.Custom = c
 	}
 	if len(b.privateAttrs) > 0 {
 		a := make([]string, 0, len(b.privateAttrs))

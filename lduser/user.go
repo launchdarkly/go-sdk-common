@@ -2,7 +2,6 @@ package lduser
 
 import (
 	"encoding/json"
-	"time"
 
 	"gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
 )
@@ -30,7 +29,7 @@ type User struct {
 	//
 	// Deprecated: Direct access to User fields is now deprecated in favor of UserBuilder. In a future version,
 	// User fields will be private and only accessible via getter methods.
-	Key *string `json:"key,omitempty" bson:"key,omitempty"`
+	Key string `json:"key" bson:"key"`
 	// SecondaryKey is the secondary key of the user.
 	//
 	// This affects feature flag targeting (https://docs.launchdarkly.com/docs/targeting-users#section-targeting-rules-based-on-user-attributes)
@@ -39,59 +38,54 @@ type User struct {
 	//
 	// Deprecated: Direct access to User fields is now deprecated in favor of UserBuilder. In a future version,
 	// User fields will be private and only accessible via getter methods.
-	Secondary *string `json:"secondary,omitempty" bson:"secondary,omitempty"`
+	Secondary ldvalue.OptionalString `json:"secondary" bson:"secondary"`
 	// Ip is the IP address attribute of the user.
 	//
 	// Deprecated: Direct access to User fields is now deprecated in favor of UserBuilder. In a future version,
 	// User fields will be private and only accessible via getter methods.
-	Ip *string `json:"ip,omitempty" bson:"ip,omitempty"`
+	Ip ldvalue.OptionalString `json:"ip" bson:"ip"`
 	// Country is the country attribute of the user.
 	//
 	// Deprecated: Direct access to User fields is now deprecated in favor of UserBuilder. In a future version,
 	// User fields will be private and only accessible via getter methods.
-	Country *string `json:"country,omitempty" bson:"country,omitempty"`
+	Country ldvalue.OptionalString `json:"country" bson:"country"`
 	// Email is the email address attribute of the user.
 	//
 	// Deprecated: Direct access to User fields is now deprecated in favor of UserBuilder. In a future version,
 	// User fields will be private and only accessible via getter methods.
-	Email *string `json:"email,omitempty" bson:"email,omitempty"`
+	Email ldvalue.OptionalString `json:"email" bson:"email"`
 	// FirstName is the first name attribute of the user.
 	//
 	// Deprecated: Direct access to User fields is now deprecated in favor of UserBuilder. In a future version,
 	// User fields will be private and only accessible via getter methods.
-	FirstName *string `json:"firstName,omitempty" bson:"firstName,omitempty"`
+	FirstName ldvalue.OptionalString `json:"firstName" bson:"firstName"`
 	// LastName is the last name attribute of the user.
 	//
 	// Deprecated: Direct access to User fields is now deprecated in favor of UserBuilder. In a future version,
 	// User fields will be private and only accessible via getter methods.
-	LastName *string `json:"lastName,omitempty" bson:"lastName,omitempty"`
+	LastName ldvalue.OptionalString `json:"lastName" bson:"lastName"`
 	// Avatar is the avatar URL attribute of the user.
 	//
 	// Deprecated: Direct access to User fields is now deprecated in favor of UserBuilder. In a future version,
 	// User fields will be private and only accessible via getter methods.
-	Avatar *string `json:"avatar,omitempty" bson:"avatar,omitempty"`
+	Avatar ldvalue.OptionalString `json:"avatar" bson:"avatar"`
 	// Name is the name attribute of the user.
 	//
 	// Deprecated: Direct access to User fields is now deprecated in favor of UserBuilder. In a future version,
 	// User fields will be private and only accessible via getter methods.
-	Name *string `json:"name,omitempty" bson:"name,omitempty"`
+	Name ldvalue.OptionalString `json:"name" bson:"name"`
 	// Anonymous indicates whether the user is anonymous.
 	//
 	// If a user is anonymous, the user key will not appear on your LaunchDarkly dashboard.
 	//
 	// Deprecated: Direct access to User fields is now deprecated in favor of UserBuilder. In a future version,
 	// User fields will be private and only accessible via getter methods.
-	Anonymous *bool `json:"anonymous,omitempty" bson:"anonymous,omitempty"`
+	Anonymous ldvalue.Value `json:"anonymous,omitempty" bson:"anonymous,omitempty"`
 	// Custom is the user's map of custom attribute names and values.
 	//
 	// Deprecated: Direct access to User fields is now deprecated in favor of UserBuilder. In a future version,
 	// User fields will be private and only accessible via getter methods.
-	Custom *map[string]interface{} `json:"custom,omitempty" bson:"custom,omitempty"`
-	// Derived is used internally by the SDK.
-	//
-	// Deprecated: Direct access to User fields is now deprecated in favor of UserBuilder. In a future version,
-	// User fields will be private and only accessible via getter methods.
-	Derived map[string]*DerivedAttribute `json:"derived,omitempty" bson:"derived,omitempty"`
+	Custom map[string]ldvalue.Value `json:"custom,omitempty" bson:"custom,omitempty"`
 
 	// PrivateAttributes contains a list of attribute names that were included in the user,
 	// but were marked as private. As such, these attributes are not included in the fields above.
@@ -111,11 +105,7 @@ type User struct {
 
 // GetKey gets the unique key of the user.
 func (u User) GetKey() string {
-	// Key is only nullable for historical reasons - all users should have a key
-	if u.Key == nil {
-		return ""
-	}
-	return *u.Key
+	return u.Key
 }
 
 // GetSecondaryKey returns the secondary key of the user, if any.
@@ -124,55 +114,55 @@ func (u User) GetKey() string {
 // as follows: if you have chosen to bucket users by a specific attribute, the secondary key (if set)
 // is used to further distinguish between users who are otherwise identical according to that attribute.
 func (u User) GetSecondaryKey() ldvalue.OptionalString {
-	return ldvalue.NewOptionalStringFromPointer(u.Secondary)
+	return u.Secondary
 }
 
 // GetIP() returns the IP address attribute of the user, if any.
 func (u User) GetIP() ldvalue.OptionalString {
-	return ldvalue.NewOptionalStringFromPointer(u.Ip)
+	return u.Ip
 }
 
 // GetCountry() returns the country attribute of the user, if any.
 func (u User) GetCountry() ldvalue.OptionalString {
-	return ldvalue.NewOptionalStringFromPointer(u.Country)
+	return u.Country
 }
 
 // GetEmail() returns the email address attribute of the user, if any.
 func (u User) GetEmail() ldvalue.OptionalString {
-	return ldvalue.NewOptionalStringFromPointer(u.Email)
+	return u.Email
 }
 
 // GetFirstName() returns the first name attribute of the user, if any.
 func (u User) GetFirstName() ldvalue.OptionalString {
-	return ldvalue.NewOptionalStringFromPointer(u.FirstName)
+	return u.FirstName
 }
 
 // GetLastName() returns the last name attribute of the user, if any.
 func (u User) GetLastName() ldvalue.OptionalString {
-	return ldvalue.NewOptionalStringFromPointer(u.LastName)
+	return u.LastName
 }
 
 // GetAvatar() returns the avatar URL attribute of the user, if any.
 func (u User) GetAvatar() ldvalue.OptionalString {
-	return ldvalue.NewOptionalStringFromPointer(u.Avatar)
+	return u.Avatar
 }
 
 // GetName() returns the full name attribute of the user, if any.
 func (u User) GetName() ldvalue.OptionalString {
-	return ldvalue.NewOptionalStringFromPointer(u.Name)
+	return u.Name
 }
 
 // GetAnonymous() returns the anonymous attribute of the user.
 //
 // If a user is anonymous, the user key will not appear on your LaunchDarkly dashboard.
 func (u User) GetAnonymous() bool {
-	return u.Anonymous != nil && *u.Anonymous
+	return u.Anonymous.BoolValue()
 }
 
 // GetAnonymousOptional() returns the anonymous attribute of the user, with a second value indicating
 // whether that attribute was defined for the user or not.
 func (u User) GetAnonymousOptional() (bool, bool) {
-	return u.GetAnonymous(), u.Anonymous != nil
+	return u.Anonymous.BoolValue(), !u.Anonymous.IsNull()
 }
 
 // GetCustom() returns a custom attribute of the user by name. The boolean second return value indicates
@@ -183,26 +173,17 @@ func (u User) GetAnonymousOptional() (bool, bool) {
 // the desired type, rather than casting it. If the attribute did not exist, the value will be
 // ldvalue.Null() and the second return value will be false.
 func (u User) GetCustom(attrName string) (ldvalue.Value, bool) {
-	if u.Custom == nil {
-		return ldvalue.Null(), false
-	}
-	value, found := (*u.Custom)[attrName]
-	// Note: since the value is currently represented internally as interface{}, we are using a
-	// method that wraps the same interface{} in a Value, to avoid the overhead of a deep copy.
-	// This is designated as Unsafe because it is possible (using another Unsafe method) to access
-	// the interface{} value directly and, if it contains a slice or map, modify it. In a future
-	// version when the User fields are no longer exposed and backward compatibility is no longer
-	// necessary, a custom attribute will be stored as a completely immutable Value.
-	return ldvalue.UnsafeUseArbitraryValue(value), found //nolint (using deprecated method)
+	value, found := u.Custom[attrName]
+	return value, found
 }
 
 // GetCustomKeys() returns the keys of all custom attributes that have been set on this user.
 func (u User) GetCustomKeys() []string {
-	if u.Custom == nil || len(*u.Custom) == 0 {
+	if len(u.Custom) == 0 {
 		return nil
 	}
-	keys := make([]string, 0, len(*u.Custom))
-	for key := range *u.Custom {
+	keys := make([]string, 0, len(u.Custom))
+	for key := range u.Custom {
 		keys = append(keys, key)
 	}
 	return keys
@@ -214,32 +195,25 @@ func (u User) GetCustomKeys() []string {
 // maps. This method is faster than using reflect.DeepEqual(), and also correctly ignores
 // insignificant differences in the internal representation of the attributes.
 func (u User) Equal(other User) bool {
-	if u.GetKey() != other.GetKey() ||
-		u.GetSecondaryKey() != other.GetSecondaryKey() ||
-		u.GetIP() != other.GetIP() ||
-		u.GetCountry() != other.GetCountry() ||
-		u.GetEmail() != other.GetEmail() ||
-		u.GetFirstName() != other.GetFirstName() ||
-		u.GetLastName() != other.GetLastName() ||
-		u.GetAvatar() != other.GetAvatar() ||
-		u.GetName() != other.GetName() ||
-		u.GetAnonymous() != other.GetAnonymous() {
+	if u.Key != other.Key ||
+		u.Secondary != other.Secondary ||
+		u.Ip != other.Ip ||
+		u.Country != other.Country ||
+		u.Email != other.Email ||
+		u.FirstName != other.FirstName ||
+		u.LastName != other.LastName ||
+		u.Avatar != other.Avatar ||
+		u.Name != other.Name ||
+		!u.Anonymous.Equal(other.Anonymous) {
 		return false
 	}
-	if (u.Anonymous == nil) != (other.Anonymous == nil) ||
-		u.Anonymous != nil && *u.Anonymous != *other.Anonymous {
+	if len(u.Custom) != len(other.Custom) {
 		return false
 	}
-	if (u.Custom == nil) != (other.Custom == nil) ||
-		u.Custom != nil && len(*u.Custom) != len(*other.Custom) {
-		return false
-	}
-	if u.Custom != nil {
-		for k, v := range *u.Custom {
-			v1, ok := (*other.Custom)[k]
-			if !ok || v != v1 {
-				return false
-			}
+	for k, v := range u.Custom {
+		v1, ok := other.Custom[k]
+		if !ok || !v.Equal(v1) {
+			return false
 		}
 	}
 	if !stringSlicesEqual(u.PrivateAttributeNames, other.PrivateAttributeNames) {
@@ -259,52 +233,29 @@ func (u User) String() string {
 
 // Used internally in evaluations. The second return value is true if the attribute exists for this user,
 // false if not.
-func (u User) valueOf(attr string) (interface{}, bool) {
+func (u User) valueOf(attr string) (ldvalue.Value, bool) {
 	if attr == "key" {
-		if u.Key != nil {
-			return *u.Key, true
-		}
-		return nil, false
+		return ldvalue.String(u.Key), true
 	} else if attr == "ip" {
-		return optionalStringAsEmptyInterface(u.GetIP())
+		return u.Ip.AsValue(), u.Ip.IsDefined()
 	} else if attr == "country" {
-		return optionalStringAsEmptyInterface(u.GetCountry())
+		return u.Country.AsValue(), u.Country.IsDefined()
 	} else if attr == "email" {
-		return optionalStringAsEmptyInterface(u.GetEmail())
+		return u.Email.AsValue(), u.Email.IsDefined()
 	} else if attr == "firstName" {
-		return optionalStringAsEmptyInterface(u.GetFirstName())
+		return u.FirstName.AsValue(), u.FirstName.IsDefined()
 	} else if attr == "lastName" {
-		return optionalStringAsEmptyInterface(u.GetLastName())
+		return u.LastName.AsValue(), u.LastName.IsDefined()
 	} else if attr == "avatar" {
-		return optionalStringAsEmptyInterface(u.GetAvatar())
+		return u.Avatar.AsValue(), u.Avatar.IsDefined()
 	} else if attr == "name" {
-		return optionalStringAsEmptyInterface(u.GetName())
+		return u.Name.AsValue(), u.Name.IsDefined()
 	} else if attr == "anonymous" {
-		value, ok := u.GetAnonymousOptional()
-		return value, ok
+		return u.Anonymous, !u.Anonymous.IsNull()
 	}
 
 	// Select a custom attribute
-	value, ok := u.GetCustom(attr)
-	// Currently our evaluation logic still uses interface{} rather than Value; we can use the faster
-	// Unsafe method to avoid a deep copy in this context
-	return value.UnsafeArbitraryValue(), ok //nolint (using deprecated method)
-}
-
-func optionalStringAsEmptyInterface(os ldvalue.OptionalString) (interface{}, bool) {
-	if os.IsDefined() {
-		return os.StringValue(), true
-	}
-	return nil, false
-}
-
-// DerivedAttribute is an entry in a Derived attribute map and is for internal use by LaunchDarkly only. Derived attributes
-// sent to LaunchDarkly are ignored.
-//
-// Deprecated: this type is for internal use and will be removed in a future version.
-type DerivedAttribute struct {
-	Value       interface{} `json:"value" bson:"value"`
-	LastDerived time.Time   `json:"lastDerived" bson:"lastDerived"`
+	return u.GetCustom(attr)
 }
 
 func stringSlicesEqual(a []string, b []string) bool {
