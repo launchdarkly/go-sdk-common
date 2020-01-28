@@ -81,10 +81,6 @@ func TestNewUser(t *testing.T) {
 
 	assert.Equal(t, "some-key", user.GetKey())
 
-	k, ok := user.valueOf("key")
-	assert.True(t, ok)
-	assert.Equal(t, ldvalue.String("some-key"), k)
-
 	for _, p := range allUserStringProperties {
 		p.assertNotSet(t, user)
 	}
@@ -102,10 +98,6 @@ func TestNewAnonymousUser(t *testing.T) {
 
 	assert.Equal(t, "some-key", user.GetKey())
 
-	k, ok := user.valueOf("key")
-	assert.True(t, ok)
-	assert.Equal(t, ldvalue.String("some-key"), k)
-
 	for _, p := range allUserStringProperties {
 		p.assertNotSet(t, user)
 	}
@@ -122,9 +114,6 @@ func TestUserBuilderSetsOnlyKeyByDefault(t *testing.T) {
 	user := NewUserBuilder("some-key").Build()
 
 	assert.Equal(t, "some-key", user.GetKey())
-
-	k, _ := user.valueOf("key")
-	assert.Equal(t, ldvalue.String("some-key"), k)
 
 	for _, p := range allUserStringProperties {
 		p.assertNotSet(t, user)
@@ -150,20 +139,8 @@ func TestUserBuilderCanSetStringAttributes(t *testing.T) {
 			for _, p1 := range allUserStringProperties {
 				if p1.name == p.name {
 					assert.Equal(t, ldvalue.NewOptionalString("value"), p.getter(user), p.name)
-					v, ok := user.valueOf(p.name)
-					if p.name == "secondary" {
-						// this attribute is special in that it *can't* be used in evaluations
-						assert.False(t, ok, p.name)
-						assert.Equal(t, ldvalue.Null(), v, p.name)
-					} else {
-						assert.True(t, ok, p.name)
-						assert.Equal(t, ldvalue.String("value"), v)
-					}
 				} else {
 					p1.assertNotSet(t, user)
-					v, ok := user.valueOf(p1.name)
-					assert.False(t, ok, p1.name)
-					assert.Equal(t, ldvalue.Null(), v, p1.name)
 				}
 			}
 		})
