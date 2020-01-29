@@ -7,18 +7,18 @@ import (
 )
 
 type userForSerialization struct {
-	Key                   string                          `json:"key"`
-	Secondary             ldvalue.OptionalString          `json:"secondary"`
-	IP                    ldvalue.OptionalString          `json:"ip"`
-	Country               ldvalue.OptionalString          `json:"country"`
-	Email                 ldvalue.OptionalString          `json:"email"`
-	FirstName             ldvalue.OptionalString          `json:"firstName"`
-	LastName              ldvalue.OptionalString          `json:"lastName"`
-	Avatar                ldvalue.OptionalString          `json:"avatar"`
-	Name                  ldvalue.OptionalString          `json:"name"`
-	Anonymous             ldvalue.Value                   `json:"anonymous"`
-	Custom                map[UserAttribute]ldvalue.Value `json:"custom"`
-	PrivateAttributeNames []UserAttribute                 `json:"privateAttributeNames"`
+	Key                   string                 `json:"key"`
+	Secondary             ldvalue.OptionalString `json:"secondary"`
+	IP                    ldvalue.OptionalString `json:"ip"`
+	Country               ldvalue.OptionalString `json:"country"`
+	Email                 ldvalue.OptionalString `json:"email"`
+	FirstName             ldvalue.OptionalString `json:"firstName"`
+	LastName              ldvalue.OptionalString `json:"lastName"`
+	Avatar                ldvalue.OptionalString `json:"avatar"`
+	Name                  ldvalue.OptionalString `json:"name"`
+	Anonymous             ldvalue.Value          `json:"anonymous"`
+	Custom                ldvalue.Value          `json:"custom"`
+	PrivateAttributeNames []UserAttribute        `json:"privateAttributeNames"`
 }
 
 // String returns a simple string representation of a user.

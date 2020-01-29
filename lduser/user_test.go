@@ -57,8 +57,9 @@ func assertStringPropertiesNotSet(t *testing.T, user User) {
 
 func getCustomAttrs(user User) []string {
 	var ret []string
-	user.ForCustom(func(a string, v ldvalue.Value) {
+	user.GetAllCustom().Enumerate(func(i int, a string, v ldvalue.Value) bool {
 		ret = append(ret, a)
+		return true
 	})
 	sort.Strings(ret)
 	return ret
@@ -71,10 +72,11 @@ func getPrivateAttrs(user User) []string {
 			ret = append(ret, string(a))
 		}
 	}
-	user.ForCustom(func(a string, v ldvalue.Value) {
+	user.GetAllCustom().Enumerate(func(i int, a string, v ldvalue.Value) bool {
 		if user.IsPrivateAttribute(UserAttribute(a)) {
 			ret = append(ret, a)
 		}
+		return true
 	})
 	sort.Strings(ret)
 	return ret
@@ -95,6 +97,7 @@ func TestNewUser(t *testing.T) {
 
 	assert.Nil(t, getCustomAttrs(user))
 	assert.Nil(t, getPrivateAttrs(user))
+	assert.False(t, user.HasPrivateAttributes())
 }
 
 func TestNewAnonymousUser(t *testing.T) {
@@ -112,6 +115,7 @@ func TestNewAnonymousUser(t *testing.T) {
 
 	assert.Nil(t, getCustomAttrs(user))
 	assert.Nil(t, getPrivateAttrs(user))
+	assert.False(t, user.HasPrivateAttributes())
 }
 
 func TestUserBuilderSetsOnlyKeyByDefault(t *testing.T) {
@@ -129,6 +133,7 @@ func TestUserBuilderSetsOnlyKeyByDefault(t *testing.T) {
 
 	assert.Nil(t, getCustomAttrs(user))
 	assert.Nil(t, getPrivateAttrs(user))
+	assert.False(t, user.HasPrivateAttributes())
 }
 
 func TestUserBuilderCanSetStringAttributes(t *testing.T) {
@@ -196,6 +201,7 @@ func TestUserBuilderCanSetPrivateStringAttributes(t *testing.T) {
 
 			assert.Nil(t, getCustomAttrs(user))
 			assert.Equal(t, []string{string(a)}, getPrivateAttrs(user))
+			assert.True(t, user.HasPrivateAttributes())
 		})
 	}
 }
@@ -209,6 +215,7 @@ func TestUserBuilderCanMakeAttributeNonPrivate(t *testing.T) {
 	user := builder.Build()
 	assert.Equal(t, "f", user.GetEmail().StringValue())
 	assert.Equal(t, []string{"name"}, getPrivateAttrs(user))
+	assert.True(t, user.HasPrivateAttributes())
 }
 
 func TestUserBuilderCanSetCustomAttributes(t *testing.T) {
@@ -256,11 +263,12 @@ func TestUserBuilderCanSetAttributesAfterSettingAttributeThatCanBePrivate(t *tes
 	}
 }
 
-func TestIterateCustomAttributes(t *testing.T) {
+func TestEnumerateCustomAttributes(t *testing.T) {
 	user := NewUserBuilder("some-key").Custom("first", ldvalue.Int(1)).Custom("second", ldvalue.String("two")).Build()
 	m := make(map[string]ldvalue.Value)
-	user.ForCustom(func(a string, v ldvalue.Value) {
+	user.GetAllCustom().Enumerate(func(i int, a string, v ldvalue.Value) bool {
 		m[a] = v
+		return true
 	})
 	assert.Equal(t, map[string]ldvalue.Value{"first": ldvalue.Int(1), "second": ldvalue.String("two")}, m)
 }
@@ -296,6 +304,7 @@ func TestUserBuilderCanSetPrivateCustomAttributes(t *testing.T) {
 	assert.Equal(t, []string{"first", "second"}, getCustomAttrs(user))
 
 	assert.Equal(t, []string{"first"}, getPrivateAttrs(user))
+	assert.True(t, user.HasPrivateAttributes())
 }
 
 func TestUserBuilderCanCopyFromExistingUserWithOnlyKey(t *testing.T) {
@@ -307,6 +316,7 @@ func TestUserBuilderCanCopyFromExistingUserWithOnlyKey(t *testing.T) {
 	assertStringPropertiesNotSet(t, user1)
 	assert.Nil(t, getCustomAttrs(user1))
 	assert.Nil(t, getPrivateAttrs(user1))
+	assert.False(t, user1.HasPrivateAttributes())
 }
 
 func TestUserBuilderCanCopyFromExistingUserWithAllAttributes(t *testing.T) {
