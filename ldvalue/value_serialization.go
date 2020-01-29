@@ -28,7 +28,7 @@ func (v Value) JSONString() string {
 		return strconv.FormatFloat(v.numberValue, 'f', -1, 64)
 	}
 	// For all other types, we rely on our custom marshaller.
-	bytes, _ := json.Marshal(v)
+	bytes, _ := json.Marshal(v) //nolint:gosec // see comment below
 	// It shouldn't be possible for marshalling to fail, because Value can only contain
 	// JSON-compatible types. But if it somehow did fail, bytes will be nil and we'll return
 	// an empty tring.
