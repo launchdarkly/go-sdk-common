@@ -120,19 +120,9 @@ func (b *objectBuilderImpl) Build() Value {
 func (v Value) Count() int {
 	switch v.valueType {
 	case ArrayType:
-		if v.immutableArrayValue != nil {
-			return len(v.immutableArrayValue)
-		}
-		if a, ok := v.unsafeValueInstance.([]interface{}); ok {
-			return len(a)
-		}
+		return len(v.immutableArrayValue)
 	case ObjectType:
-		if v.immutableObjectValue != nil {
-			return len(v.immutableObjectValue)
-		}
-		if m, ok := v.unsafeValueInstance.(map[string]interface{}); ok {
-			return len(m)
-		}
+		return len(v.immutableObjectValue)
 	}
 	return 0
 }
@@ -151,14 +141,8 @@ func (v Value) GetByIndex(index int) Value {
 // If the value is not an array, or if the index is out of range, it returns (Null(), false).
 func (v Value) TryGetByIndex(index int) (Value, bool) {
 	if v.valueType == ArrayType {
-		if v.immutableArrayValue != nil {
-			if index >= 0 && index < len(v.immutableArrayValue) {
-				return v.immutableArrayValue[index], true
-			}
-		} else if a, ok := v.unsafeValueInstance.([]interface{}); ok {
-			if index >= 0 && index < len(a) {
-				return CopyArbitraryValue(a[index]), true
-			}
+		if index >= 0 && index < len(v.immutableArrayValue) {
+			return v.immutableArrayValue[index], true
 		}
 	}
 	return Null(), false
@@ -169,24 +153,13 @@ func (v Value) TryGetByIndex(index int) (Value, bool) {
 // The method copies the keys. If the value is not an object, it returns an empty slice.
 func (v Value) Keys() []string {
 	if v.valueType == ObjectType {
-		if v.immutableObjectValue != nil {
-			ret := make([]string, len(v.immutableObjectValue))
-			i := 0
-			for key := range v.immutableObjectValue {
-				ret[i] = key
-				i++
-			}
-			return ret
+		ret := make([]string, len(v.immutableObjectValue))
+		i := 0
+		for key := range v.immutableObjectValue {
+			ret[i] = key
+			i++
 		}
-		if m, ok := v.unsafeValueInstance.(map[string]interface{}); ok {
-			ret := make([]string, len(m))
-			i := 0
-			for key := range m {
-				ret[i] = key
-				i++
-			}
-			return ret
-		}
+		return ret
 	}
 	return nil
 }
@@ -205,15 +178,8 @@ func (v Value) GetByKey(name string) Value {
 // If the value is not an object, or if the key is not found, it returns (Null(), false).
 func (v Value) TryGetByKey(name string) (Value, bool) {
 	if v.valueType == ObjectType {
-		if v.immutableObjectValue != nil {
-			ret, ok := v.immutableObjectValue[name]
-			return ret, ok
-		}
-		if m, ok := v.unsafeValueInstance.(map[string]interface{}); ok {
-			if innerValue, ok := m[name]; ok {
-				return CopyArbitraryValue(innerValue), true
-			}
-		}
+		ret, ok := v.immutableObjectValue[name]
+		return ret, ok
 	}
 	return Null(), false
 }
