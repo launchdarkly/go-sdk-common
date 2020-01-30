@@ -20,7 +20,9 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		{Float64(1), "1"},
 		{Float64(2.5), "2.5"},
 		{String("x"), `"x"`},
+		{ArrayOf(), `[]`},
 		{ArrayBuild().Add(Bool(true)).Add(String("x")).Build(), `[true,"x"]`},
+		{ObjectBuild().Build(), `{}`},
 		{ObjectBuild().Set("a", Bool(true)).Build(), `{"a":true}`},
 	}
 	for _, item := range items {

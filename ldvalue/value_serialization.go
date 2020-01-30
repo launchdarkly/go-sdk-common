@@ -57,8 +57,14 @@ func (v Value) MarshalJSON() ([]byte, error) {
 	case StringType:
 		return json.Marshal(v.stringValue)
 	case ArrayType:
+		if v.immutableArrayValue == nil {
+			return json.Marshal([]Value{})
+		}
 		return json.Marshal(v.immutableArrayValue)
 	case ObjectType:
+		if v.immutableObjectValue == nil {
+			return json.Marshal(map[string]Value{})
+		}
 		return json.Marshal(v.immutableObjectValue)
 	case RawType:
 		return []byte(v.stringValue), nil
@@ -100,6 +106,9 @@ func (v *Value) UnmarshalJSON(data []byte) error {
 		var a []Value
 		e := json.Unmarshal(data, &a)
 		if e == nil {
+			if len(a) == 0 {
+				a = nil // don't need to retain an empty array
+			}
 			*v = Value{valueType: ArrayType, immutableArrayValue: a}
 		}
 		return e
@@ -107,6 +116,9 @@ func (v *Value) UnmarshalJSON(data []byte) error {
 		var o map[string]Value
 		e := json.Unmarshal(data, &o)
 		if e == nil {
+			if len(o) == 0 {
+				o = nil // don't need to retain an empty map
+			}
 			*v = Value{valueType: ObjectType, immutableObjectValue: o}
 		}
 		return e
