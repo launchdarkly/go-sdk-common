@@ -28,14 +28,10 @@ func (v Value) JSONString() string {
 		return strconv.FormatFloat(v.numberValue, 'f', -1, 64)
 	}
 	// For all other types, we rely on our custom marshaller.
-	bytes, err := json.Marshal(v)
-	if err != nil {
-		// It shouldn't be possible for marshalling to fail, because Value should only contain
-		// JSON-compatible types. However, UnsafeUserArbitraryValue and UnsafeArbitraryValue do
-		// allow a badly behaved application to put an incompatible type into an array or map.
-		// In that case we simply discard the value.
-		return ""
-	}
+	bytes, _ := json.Marshal(v) //nolint:gosec // see comment below
+	// It shouldn't be possible for marshalling to fail, because Value can only contain
+	// JSON-compatible types. But if it somehow did fail, bytes will be nil and we'll return
+	// an empty tring.
 	return string(bytes)
 }
 
@@ -61,21 +57,10 @@ func (v Value) MarshalJSON() ([]byte, error) {
 	case StringType:
 		return json.Marshal(v.stringValue)
 	case ArrayType:
-		if v.immutableArrayValue != nil {
-			return json.Marshal(v.immutableArrayValue)
-		}
-		return json.Marshal(v.unsafeValueInstance)
+		return json.Marshal(v.immutableArrayValue)
 	case ObjectType:
-		if v.immutableObjectValue != nil {
-			return json.Marshal(v.immutableObjectValue)
-		}
-		return json.Marshal(v.unsafeValueInstance)
+		return json.Marshal(v.immutableObjectValue)
 	case RawType:
-		if v.unsafeValueInstance != nil {
-			if o, ok := v.unsafeValueInstance.(json.RawMessage); ok {
-				return o, nil
-			}
-		}
 		return []byte(v.stringValue), nil
 	}
 	return nil, errors.New("unknown data type") // should not be possible
