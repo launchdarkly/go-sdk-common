@@ -58,7 +58,7 @@ type User struct {
 	avatar            ldvalue.OptionalString
 	name              ldvalue.OptionalString
 	anonymous         ldvalue.Value
-	custom            map[UserAttribute]ldvalue.Value
+	custom            ldvalue.Value
 	privateAttributes map[UserAttribute]struct{}
 }
 
@@ -92,7 +92,7 @@ func (u User) GetAttribute(attribute UserAttribute) ldvalue.Value {
 	case AnonymousAttribute:
 		return u.anonymous
 	default:
-		value, _ := u.GetCustom(attribute)
+		value, _ := u.GetCustom(string(attribute))
 		return value
 	}
 }
@@ -167,20 +167,16 @@ func (u User) GetAnonymousOptional() (bool, bool) {
 // boolean, number, string, array (slice), or object (map). Use Value methods to access the value as
 // the desired type, rather than casting it. If the attribute did not exist, the value will be
 // ldvalue.Null() and the second return value will be false.
-func (u User) GetCustom(attribute UserAttribute) (ldvalue.Value, bool) {
-	value, found := u.custom[attribute]
-	return value, found
+func (u User) GetCustom(attribute string) (ldvalue.Value, bool) {
+	return u.custom.TryGetByKey(attribute)
 }
 
-// ForCustom iterates through all custom attributes that have been set on this user.
+// GetAllCustom returns all of the user's custom attributes.
 //
-// The specified function receives each custom attribute name and the corresponding value. This avoids
-// the overhead of returning the attributes as a map, since to preserve immutability the map would
-// have to be copied.
-func (u User) ForCustom(fn func(string, ldvalue.Value)) {
-	for key, value := range u.custom {
-		fn(string(key), value)
-	}
+// These are represented as a Value that is either an object (with a key-value pair for each attribute)
+// or Null() if there are no custom attributes.
+func (u User) GetAllCustom() ldvalue.Value {
+	return u.custom
 }
 
 // IsPrivateAttribute tests whether the given attribute is private for this user.
@@ -189,6 +185,11 @@ func (u User) ForCustom(fn func(string, ldvalue.Value)) {
 func (u User) IsPrivateAttribute(attribute UserAttribute) bool {
 	_, ok := u.privateAttributes[attribute]
 	return ok
+}
+
+// HasPrivateAttributes returns true if any attribute were marked private or this user.
+func (u User) HasPrivateAttributes() bool {
+	return len(u.privateAttributes) > 0
 }
 
 // Equal tests whether two users have equal attributes.
@@ -209,14 +210,8 @@ func (u User) Equal(other User) bool {
 		!u.anonymous.Equal(other.anonymous) {
 		return false
 	}
-	if len(u.custom) != len(other.custom) {
+	if !u.custom.Equal(other.custom) {
 		return false
-	}
-	for k, v := range u.custom {
-		v1, ok := other.custom[k]
-		if !ok || !v.Equal(v1) {
-			return false
-		}
 	}
 	if len(u.privateAttributes) != len(other.privateAttributes) {
 		return false

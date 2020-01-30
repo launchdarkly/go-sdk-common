@@ -130,7 +130,7 @@ type userBuilderImpl struct {
 	avatar       ldvalue.OptionalString
 	name         ldvalue.OptionalString
 	anonymous    ldvalue.Value
-	custom       map[UserAttribute]ldvalue.Value
+	custom       ldvalue.ObjectBuilder
 	privateAttrs map[UserAttribute]struct{}
 }
 
@@ -162,11 +162,12 @@ func NewUserBuilderFromUser(fromUser User) UserBuilder {
 		name:      fromUser.name,
 		anonymous: fromUser.anonymous,
 	}
-	if fromUser.custom != nil {
-		builder.custom = make(map[UserAttribute]ldvalue.Value, len(fromUser.custom))
-		for k, v := range fromUser.custom {
-			builder.custom[k] = v
-		}
+	if fromUser.custom.Count() > 0 {
+		builder.custom = ldvalue.ObjectBuildWithCapacity(fromUser.custom.Count())
+		fromUser.custom.Enumerate(func(index int, key string, value ldvalue.Value) bool {
+			builder.custom.Set(key, value)
+			return true
+		})
 	}
 	if len(fromUser.privateAttributes) > 0 {
 		builder.privateAttrs = make(map[UserAttribute]struct{}, len(fromUser.privateAttributes))
@@ -233,9 +234,9 @@ func (b *userBuilderImpl) Anonymous(value bool) UserBuilder {
 
 func (b *userBuilderImpl) Custom(attribute string, value ldvalue.Value) UserBuilderCanMakeAttributePrivate {
 	if b.custom == nil {
-		b.custom = make(map[UserAttribute]ldvalue.Value)
+		b.custom = ldvalue.ObjectBuild()
 	}
-	b.custom[UserAttribute(attribute)] = value
+	b.custom.Set(attribute, value)
 	return b.canMakeAttributePrivate(UserAttribute(attribute))
 }
 
@@ -252,12 +253,8 @@ func (b *userBuilderImpl) Build() User {
 		name:      b.name,
 		anonymous: b.anonymous,
 	}
-	if len(b.custom) > 0 {
-		c := make(map[UserAttribute]ldvalue.Value, len(b.custom))
-		for k, v := range b.custom {
-			c[k] = v
-		}
-		u.custom = c
+	if b.custom != nil {
+		u.custom = b.custom.Build()
 	}
 	if len(b.privateAttrs) > 0 {
 		p := make(map[UserAttribute]struct{}, len(b.privateAttrs))
