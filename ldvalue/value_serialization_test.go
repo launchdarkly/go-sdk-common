@@ -20,7 +20,9 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		{Float64(1), "1"},
 		{Float64(2.5), "2.5"},
 		{String("x"), `"x"`},
+		{ArrayOf(), `[]`},
 		{ArrayBuild().Add(Bool(true)).Add(String("x")).Build(), `[true,"x"]`},
+		{ObjectBuild().Build(), `{}`},
 		{ObjectBuild().Set("a", Bool(true)).Build(), `{"a":true}`},
 	}
 	for _, item := range items {
@@ -39,4 +41,11 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 			assert.Equal(t, item.value, v)
 		})
 	}
+}
+
+func TestUnmarshalErrorConditions(t *testing.T) {
+	var v Value
+	assert.Error(t, json.Unmarshal(nil, &v))
+	assert.Error(t, json.Unmarshal([]byte{}, &v))
+	assert.Error(t, json.Unmarshal([]byte("what"), &v))
 }

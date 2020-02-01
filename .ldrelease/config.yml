@@ -1,10 +1,15 @@
 repo:
-  public: go-server-sdk-core
-  private: go-server-sdk-core-private
+  public: go-sdk-common
+  private: go-sdk-common-private
 
 releasableBranches:
   - name: v1
+    description: 1.x - for Go SDK 4.x
 
 publications:
-  - url: https://godoc.org/github.com/launchdarkly/go-server-sdk-core
+  - url: https://godoc.org/gopkg.in/launchdarkly/go-sdk-common.v1
     description: documentation
+
+repo:
+  public: dotnet-sdk-common
+  private: dotnet-sdk-common-private

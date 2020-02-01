@@ -1,44 +1,16 @@
-// Package ldvalue provides an abstraction of the LaunchDarkly SDK's general value type. LaunchDarkly
-// supports the standard JSON data types of null, boolean, number, string, array, and object (map), for
-// any feature flag variation or custom user attribute. The ldvalue.Value type can contain any of these.
-//
-// For backward compatibility, some SDK methods and types still represent these values with the general
-// Go type "interface{}". Whenever there is an alternative that uses ldvalue.Value, that is preferred;
-// in the next major version release of the SDK, the uses of interface{} will be removed. There are two
-// reasons. First, interface{} can contain values that have no JSON encoding. Second, interface{} could
-// be an array, slice, or map, all of which are passed by reference and could be modified in one place
-// causing unexpected effects in another place. Value is guaranteed to be immutable and to contain only
-// JSON-compatible types as long as you do not use the UnsafeUseArbitraryValue() and
-// UnsafeArbitraryValue() methods (which will be removed in the future).
 package ldvalue
 
 import (
 	"encoding/json"
 )
 
-// Notes for future implementation changes:
-// In a future major version release, we will eliminate usage of interface{} as a flag value type and
-// user custom attribute type in the public API. At that point, we can also make the following changes:
-// - Replace interface{} with Value in all data model structs that are parsed from JSON (we may need to
-//   find a better parser implementation for this).
-// - Remove UnsafeUseArbitraryValue, UnsafeArbitraryValue, and the unsafeValueInstance field.
-
 // Value represents any of the data types supported by JSON, all of which can be used for a LaunchDarkly
 // feature flag variation or a custom user attribute.
 //
 // You cannot compare Value instances with the == operator, because the struct may contain a slice.
-// Value has an Equal method for this purpose; reflect.DeepEqual should not be used because it may not
-// always work correctly (see below).
+// Value has an Equal method for this purpose; reflect.DeepEqual will also work.
 //
-// Values constructed with the regular constructors in this package are immutable. However, in the
-// current implementation, the SDK may also return a Value that is a wrapper for an interface{} value
-// that was parsed from JSON, which could be a mutable slice or map. For backward compatibility with
-// code that expects to be able to get the interface{} value without an extra deep-copy step, this
-// value is accessible directly with the UnsafeArbitraryValue method. Application code should not use
-// the Unsafe methods and does not need to be concerned with the difference between these two kinds of
-// Value, except that it is the reason why reflect.DeepEqual should not be used (that is, two Values
-// that are logically equal might not have exactly the same fields internally because one might be a
-// wrapper for an interface{}).
+// Value instances are immutable when used by code outside of this package.
 type Value struct {
 	valueType ValueType
 	// Used when the value is a boolean.
@@ -53,9 +25,6 @@ type Value struct {
 	// Used when the value is an object, if it was not created from an interface{}. We never expose
 	// this slice externally.
 	immutableObjectValue map[string]Value
-	// Representation of the value as an interface{}. We *only* set this if the value was originally
-	// produced from an interface{} with UnsafeUseArbitraryValue.
-	unsafeValueInstance interface{}
 }
 
 // ValueType indicates which JSON type is contained in a Value.
@@ -235,44 +204,53 @@ func (v Value) IsInt() bool {
 	return false
 }
 
-// AsBool returns the Value as a boolean.
+// BoolValue returns the Value as a boolean.
 //
 // If the Value is not a boolean, it returns false.
-func (v Value) AsBool() bool {
+func (v Value) BoolValue() bool {
 	return v.valueType == BoolType && v.boolValue
 }
 
-// AsInt returns the value as an int.
+// IntValue returns the value as an int.
 //
 // If the Value is not numeric, it returns zero. If the value is a number but not an integer, it is
 // rounded toward zero (truncated).
-func (v Value) AsInt() int {
+func (v Value) IntValue() int {
 	if v.valueType == NumberType {
 		return int(v.numberValue)
 	}
 	return 0
 }
 
-// AsFloat64 returns the value as a float64.
+// Float64Value returns the value as a float64.
 //
 // If the Value is not numeric, it returns zero.
-func (v Value) AsFloat64() float64 {
+func (v Value) Float64Value() float64 {
 	if v.valueType == NumberType {
 		return v.numberValue
 	}
 	return 0
 }
 
-// AsString returns the value as a string.
+// StringValue returns the value as a string.
 //
 // If the value is not a string, it returns an empty string.
 //
 // This is different from String(), which returns a concise string representation of any value type.
-func (v Value) AsString() string {
+func (v Value) StringValue() string {
 	if v.valueType == StringType {
 		return v.stringValue
 	}
 	return ""
+}
+
+// AsOptionalString converts the value to the OptionalString type, which contains either a string
+// value or nothing if the original value was not a string.
+func (v Value) AsOptionalString() OptionalString {
+	if v.valueType == StringType {
+		return NewOptionalString(v.stringValue)
+	}
+	return OptionalString{}
 }
 
 // AsRaw returns the value as a json.RawMessage.
@@ -310,50 +288,27 @@ func (v Value) AsArbitraryValue() interface{} {
 	case StringType:
 		return v.stringValue
 	case ArrayType:
-		if v.immutableArrayValue != nil {
-			ret := make([]interface{}, len(v.immutableArrayValue))
-			for i, element := range v.immutableArrayValue {
-				ret[i] = element.AsArbitraryValue()
-			}
-			return ret
+		ret := make([]interface{}, len(v.immutableArrayValue))
+		for i, element := range v.immutableArrayValue {
+			ret[i] = element.AsArbitraryValue()
 		}
-		return deepCopyArbitraryValue(v.unsafeValueInstance)
+		return ret
 	case ObjectType:
-		if v.immutableObjectValue != nil {
-			ret := make(map[string]interface{}, len(v.immutableObjectValue))
-			for key, element := range v.immutableObjectValue {
-				ret[key] = element.AsArbitraryValue()
-			}
-			return ret
+		ret := make(map[string]interface{}, len(v.immutableObjectValue))
+		for key, element := range v.immutableObjectValue {
+			ret[key] = element.AsArbitraryValue()
 		}
-		return deepCopyArbitraryValue(v.unsafeValueInstance)
+		return ret
 	case RawType:
 		return v.AsRaw()
 	}
-	return nil
-}
-
-func deepCopyArbitraryValue(value interface{}) interface{} {
-	switch o := value.(type) {
-	case []interface{}:
-		ret := make([]interface{}, len(o))
-		for i, element := range o {
-			ret[i] = deepCopyArbitraryValue(element)
-		}
-		return ret
-	case map[string]interface{}:
-		ret := make(map[string]interface{}, len(o))
-		for key, element := range o {
-			ret[key] = deepCopyArbitraryValue(element)
-		}
-	}
-	return value
+	return nil // should not be possible
 }
 
 // String converts the value to a string representation, equivalent to JSONString().
 //
-// This is different from AsString, which returns the actual string for a string value or an empty
-// string for anything else. For instance, Int(2).String() returns "2" and String("x").String()
+// This is different from StringValue, which returns the actual string for a string value or an empty
+// string for anything else. For instance, Int(2).StringValue() returns "2" and String("x").StringValue()
 // returns "\"x\"", whereas Int(2).AsString() returns "" and String("x").AsString() returns
 // "x".
 //
@@ -366,9 +321,8 @@ func (v Value) String() string {
 
 // Equal tests whether this Value is equal to another, in both type and value.
 //
-// For arrays and objects, this is a deep equality test. Do not use reflect.DeepEqual with
-// Value; it currently is not guaranteed to work due to possible differences in how the same
-// value may be represented internally.
+// For arrays and objects, this is a deep equality test. This method behaves the same as
+// reflect.DeepEqual, but is slightly more efficient.
 func (v Value) Equal(other Value) bool {
 	if v.valueType == other.valueType {
 		switch v.valueType {
@@ -406,4 +360,21 @@ func (v Value) Equal(other Value) bool {
 		}
 	}
 	return false
+}
+
+// AsPointer returns either a pointer to a copy of this Value, or nil if it is a null value.
+//
+// This may be desirable if you are serializing a struct that contains a Value, and you want
+// that field to be completely omitted if the Value is null; since the "omitempty" tag only
+// works for pointers, you can declare the field as a *Value like so:
+//
+//     type MyJsonStruct struct {
+//         AnOptionalField *Value `json:"anOptionalField,omitempty"`
+//     }
+//     s := MyJsonStruct{AnOptionalField: someValue.AsPointer()}
+func (v Value) AsPointer() *Value {
+	if v.IsNull() {
+		return nil
+	}
+	return &v
 }

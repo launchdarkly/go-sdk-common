@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 )
 
 // This file contains methods for converting Value to and from JSON.
@@ -29,18 +28,18 @@ func (v Value) JSONString() string {
 		return strconv.FormatFloat(v.numberValue, 'f', -1, 64)
 	}
 	// For all other types, we rely on our custom marshaller.
-	bytes, err := json.Marshal(v)
-	if err != nil {
-		// It shouldn't be possible for marshalling to fail, because Value should only contain
-		// JSON-compatible types. However, UnsafeUserArbitraryValue and UnsafeArbitraryValue do
-		// allow a badly behaved application to put an incompatible type into an array or map.
-		// In that case we simply discard the value.
-		return ""
-	}
+	bytes, _ := json.Marshal(v) //nolint:gosec // see comment below
+	// It shouldn't be possible for marshalling to fail, because Value can only contain
+	// JSON-compatible types. But if it somehow did fail, bytes will be nil and we'll return
+	// an empty tring.
 	return string(bytes)
 }
 
 // MarshalJSON converts the Value to its JSON representation.
+//
+// Note that the "omitempty" tag for a struct field will not cause an empty Value field to be
+// omitted; it will be output as null. If you want to completely omit a JSON property when there
+// is no value, it must be a pointer; use AsPointer().
 func (v Value) MarshalJSON() ([]byte, error) {
 	switch v.valueType {
 	case NullType:
@@ -58,29 +57,24 @@ func (v Value) MarshalJSON() ([]byte, error) {
 	case StringType:
 		return json.Marshal(v.stringValue)
 	case ArrayType:
-		if v.immutableArrayValue != nil {
-			return json.Marshal(v.immutableArrayValue)
+		if v.immutableArrayValue == nil {
+			return json.Marshal([]Value{})
 		}
-		return json.Marshal(v.unsafeValueInstance)
+		return json.Marshal(v.immutableArrayValue)
 	case ObjectType:
-		if v.immutableObjectValue != nil {
-			return json.Marshal(v.immutableObjectValue)
+		if v.immutableObjectValue == nil {
+			return json.Marshal(map[string]Value{})
 		}
-		return json.Marshal(v.unsafeValueInstance)
+		return json.Marshal(v.immutableObjectValue)
 	case RawType:
-		if v.unsafeValueInstance != nil {
-			if o, ok := v.unsafeValueInstance.(json.RawMessage); ok {
-				return o, nil
-			}
-		}
 		return []byte(v.stringValue), nil
 	}
-	return nil, errors.New("unknown data type")
+	return nil, errors.New("unknown data type") // should not be possible
 }
 
 // UnmarshalJSON parses a Value from JSON.
 func (v *Value) UnmarshalJSON(data []byte) error {
-	if len(data) == 0 {
+	if len(data) == 0 { // should not be possible, the parser doesn't pass empty slices to UnmarshalJSON
 		return errors.New("cannot parse empty data")
 	}
 	firstCh := data[0]
@@ -103,34 +97,38 @@ func (v *Value) UnmarshalJSON(data []byte) error {
 		}
 	case '"':
 		var s string
-		if e := json.Unmarshal(data, &s); e != nil {
-			return e
+		e := json.Unmarshal(data, &s)
+		if e == nil {
+			*v = String(s)
 		}
-		*v = String(s)
-		return nil
+		return e
 	case '[':
 		var a []Value
-		if e := json.Unmarshal(data, &a); e != nil {
-			return e
+		e := json.Unmarshal(data, &a)
+		if e == nil {
+			if len(a) == 0 {
+				a = nil // don't need to retain an empty array
+			}
+			*v = Value{valueType: ArrayType, immutableArrayValue: a}
 		}
-		*v = Value{valueType: ArrayType, immutableArrayValue: a}
-		return nil
+		return e
 	case '{':
 		var o map[string]Value
-		if e := json.Unmarshal(data, &o); e != nil {
-			return e
+		e := json.Unmarshal(data, &o)
+		if e == nil {
+			if len(o) == 0 {
+				o = nil // don't need to retain an empty map
+			}
+			*v = Value{valueType: ObjectType, immutableObjectValue: o}
 		}
-		*v = Value{valueType: ObjectType, immutableObjectValue: o}
-		return nil
-	case '.', '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+		return e
+	case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9': // note, JSON does not allow a leading '.'
 		var n float64
-		if e := json.Unmarshal(data, &n); e != nil {
-			return e
+		e := json.Unmarshal(data, &n)
+		if e == nil {
+			*v = Value{valueType: NumberType, numberValue: n}
 		}
-		*v = Value{valueType: NumberType, numberValue: n}
-		return nil
-	case ' ', '\t', '\r', '\n':
-		return v.UnmarshalJSON([]byte(strings.TrimSpace(string(data))))
+		return e
 	}
 	return fmt.Errorf("unknown JSON token: %s", data)
 }
