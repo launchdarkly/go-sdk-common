@@ -1,11 +1,10 @@
 repo:
-    public: go-sdk-common
-    private: go-sdk-common-private
-  
-  releasableBranches:
-    - name: v1
-  
-  publications:
-    - url: https://godoc.org/gopkg.in/launchdarkly/go-sdk-common.v1
-      description: documentation
-  
+  public: go-sdk-common
+  private: go-sdk-common-private
+
+releasableBranches:
+  - name: v1
+
+publications:
+  - url: https://godoc.org/gopkg.in/launchdarkly/go-sdk-common.v1
+    description: documentation
