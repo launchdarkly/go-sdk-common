@@ -9,7 +9,3 @@ releasableBranches:
 publications:
   - url: https://godoc.org/gopkg.in/launchdarkly/go-sdk-common.v1
     description: documentation
-
-repo:
-  public: dotnet-sdk-common
-  private: dotnet-sdk-common-private
