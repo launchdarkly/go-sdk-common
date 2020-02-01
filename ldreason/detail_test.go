@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/launchdarkly/go-server-sdk-core.v1/ldvalue"
+	"gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
 )
 
 func TestDetailConstructor(t *testing.T) {
