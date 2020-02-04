@@ -6,7 +6,8 @@ linters:
   enable-all: true
   disable:
     - goconst
-    - maligned
+    - gomnd
+    - wsl
   fast: false
 
 linter-settings:
