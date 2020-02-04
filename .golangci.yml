@@ -6,6 +6,7 @@ linters:
   enable-all: true
   disable:
     - goconst
+    - maligned
   fast: false
 
 linter-settings:
