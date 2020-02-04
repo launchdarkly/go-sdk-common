@@ -9,22 +9,10 @@ workflows:
       - go-test:
           name: Go 1.13
           docker-image: circleci/golang:1.13
+          run-lint: true
       - go-test:
           name: Go 1.12
           docker-image: circleci/golang:1.12
-      - go-test:
-          name: Go 1.11
-          docker-image: circleci/golang:1.11
-          run-lint: true  # we only need to run lint once, and it doesn't work for 1.12+
-      - go-test:
-          name: Go 1.10
-          docker-image: circleci/golang:1.10
-      - go-test:
-          name: Go 1.9
-          docker-image: circleci/golang:1.9
-      - go-test:
-          name: Go 1.8
-          docker-image: circleci/golang:1.8
       - go-test-windows:
           name: Windows
 
