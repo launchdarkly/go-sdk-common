@@ -1,0 +1,18 @@
+run:
+  deadline: 120s
+  tests: false
+
+linters:
+  enable-all: true
+  disable:
+    - goconst
+  fast: false
+
+linter-settings:
+  gofmt:
+    simplify: false
+
+issues:
+  exclude-use-default: false
+  max-same-issues: 1000
+  max-per-linter: 1000
