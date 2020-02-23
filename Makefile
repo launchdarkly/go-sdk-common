@@ -14,8 +14,7 @@ clean:
 	go clean
 
 test:
-	@# Note, we need to specify all these packages individually for go test in order to remain 1.8-compatible
-	go test -race -v ./ldvalue ./ldreason ./lduser
+	go test -race -v ./...
 
 $(LINTER_VERSION_FILE):
 	rm -f $(LINTER)
