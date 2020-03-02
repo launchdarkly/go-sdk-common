@@ -7,6 +7,9 @@ workflows:
   workflow:
     jobs:
       - go-test:
+          name: Go 1.14
+          docker-image: circleci/golang:1.14
+      - go-test:
           name: Go 1.13
           docker-image: circleci/golang:1.13
       - go-test:
