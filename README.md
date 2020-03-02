@@ -12,7 +12,7 @@ Note that the base import path is `gopkg.in/launchdarkly/go-sdk-common.v1` (to e
 
 ## Supported Go versions
 
-This version of the project has been tested with Go 1.8 through 1.13.
+This version of the project has been tested with Go 1.8 through 1.14.
 
 ## Learn more
 
