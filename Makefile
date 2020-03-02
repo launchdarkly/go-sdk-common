@@ -1,5 +1,5 @@
 
-GOLANGCI_LINT_VERSION=v1.22.2
+GOLANGCI_LINT_VERSION=v1.23.7
 
 LINTER=./bin/golangci-lint
 LINTER_VERSION_FILE=./bin/.golangci-lint-version-$(GOLANGCI_LINT_VERSION)
@@ -13,7 +13,8 @@ build:
 clean:
 	go clean
 
-test:
+test: build
+	go get -t ./...
 	go test -race -v ./...
 
 $(LINTER_VERSION_FILE):
