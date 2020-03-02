@@ -12,10 +12,6 @@ workflows:
       - go-test:
           name: Go 1.13
           docker-image: circleci/golang:1.13
-          run-lint: true
-      - go-test:
-          name: Go 1.12
-          docker-image: circleci/golang:1.12
       - go-test-windows:
           name: Windows
 
@@ -24,7 +20,9 @@ jobs:
     parameters:
       run-lint:
         type: boolean
-        default: false
+        default: true
+        # We are currently linting in all Go versions, but this parameter lets us turn it off for some, in
+        # case we need to support more versions than a single version of golangci-lint is compatible with
       docker-image:
         type: string
 
