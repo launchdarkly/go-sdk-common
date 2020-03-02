@@ -13,7 +13,8 @@ build:
 clean:
 	go clean
 
-test:
+test: build
+	go get -t ./...
 	go test -race -v ./...
 
 $(LINTER_VERSION_FILE):

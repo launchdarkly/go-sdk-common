@@ -44,7 +44,6 @@ jobs:
           condition: <<parameters.run-lint>>
           steps:
             - run: make lint
-      - run: go get -t ./...
       - run: go build ./...
       
       - run:
