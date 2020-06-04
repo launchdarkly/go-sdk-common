@@ -31,19 +31,21 @@ jobs:
         environment:
           CIRCLE_TEST_REPORTS: /tmp/circle-reports
           CIRCLE_ARTIFACTS: /tmp/circle-artifacts
-          COMMON_GO_PACKAGES: >
-            github.com/golang/dep/cmd/dep
-            github.com/jstemmer/go-junit-report
 
     steps:
       - checkout
-      - run: go get -u $COMMON_GO_PACKAGES
-      - when:
-          condition: <<parameters.run-lint>>
-          steps:
-            - run: make lint
-      - run: go build ./...
       
+      - run:
+          name: install go-junit-report
+          command: go get -u github.com/jstemmer/go-junit-report
+      
+      - run: go build ./...
+
+      - when:
+        condition: <<parameters.run-lint>>
+        steps:
+          - run: make lint    
+
       - run:
           name: Run tests
           command: |
