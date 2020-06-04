@@ -42,9 +42,9 @@ jobs:
       - run: go build ./...
 
       - when:
-        condition: <<parameters.run-lint>>
-        steps:
-          - run: make lint    
+          condition: <<parameters.run-lint>>
+          steps:
+            - run: make lint    
 
       - run:
           name: Run tests
