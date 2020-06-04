@@ -13,7 +13,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		value Value
 		json  string
 	}{
-		{Null(), "null"},
+		{Null(), nullAsJSON},
 		{Bool(true), "true"},
 		{Bool(false), "false"},
 		{Int(1), "1"},

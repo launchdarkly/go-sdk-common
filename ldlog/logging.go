@@ -83,7 +83,7 @@ type levelLogger struct {
 	overrideLogger bool
 }
 
-var nullLog = levelLogger{enabled: false}
+var nullLog = levelLogger{enabled: false} //nolint:gochecknoglobals
 
 // NewDisabledLoggers returns a Loggers instance that will never generate output.
 func NewDisabledLoggers() Loggers {
@@ -126,7 +126,7 @@ func (l Loggers) Warnf(format string, values ...interface{}) {
 	l.ForLevel(Warn).Printf(format, values...)
 }
 
-// Debug logs a message at Debug level, if that level is enabled. It calls the BaseLogger's Println.
+// Error logs a message at Error level, if that level is enabled. It calls the BaseLogger's Println.
 func (l Loggers) Error(values ...interface{}) {
 	l.ForLevel(Error).Println(values...)
 }

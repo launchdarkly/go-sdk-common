@@ -63,7 +63,7 @@ func TestOptionalStringAsStringer(t *testing.T) {
 func TestOptionalStringMarshalling(t *testing.T) {
 	bytes, err := json.Marshal(OptionalString{})
 	assert.NoError(t, err)
-	assert.Equal(t, "null", string(bytes))
+	assert.Equal(t, nullAsJSON, string(bytes))
 
 	bytes, err = json.Marshal(NewOptionalString(`a "good" string`))
 	assert.NoError(t, err)
@@ -77,7 +77,7 @@ func TestOptionalStringMarshalling(t *testing.T) {
 
 func TestOptionalStringUnmarshalling(t *testing.T) {
 	var o OptionalString
-	err := json.Unmarshal([]byte("null"), &o)
+	err := json.Unmarshal([]byte(nullAsJSON), &o)
 	assert.NoError(t, err)
 	assert.False(t, o.IsDefined())
 
