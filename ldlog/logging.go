@@ -83,7 +83,7 @@ type levelLogger struct {
 	overrideLogger bool
 }
 
-var nullLog = levelLogger{enabled: false}
+var nullLog = levelLogger{enabled: false} //nolint:gochecknoglobals
 
 // NewDisabledLoggers returns a Loggers instance that will never generate output.
 func NewDisabledLoggers() Loggers {
