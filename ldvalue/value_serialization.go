@@ -15,7 +15,7 @@ func (v Value) JSONString() string {
 	// converting between byte arrays and strings.
 	switch v.valueType {
 	case NullType:
-		return "null"
+		return nullAsJSON
 	case BoolType:
 		if v.boolValue {
 			return "true"
@@ -28,14 +28,10 @@ func (v Value) JSONString() string {
 		return strconv.FormatFloat(v.numberValue, 'f', -1, 64)
 	}
 	// For all other types, we rely on our custom marshaller.
-	bytes, err := json.Marshal(v)
-	if err != nil {
-		// It shouldn't be possible for marshalling to fail, because Value should only contain
-		// JSON-compatible types. However, UnsafeUserArbitraryValue and UnsafeArbitraryValue do
-		// allow a badly behaved application to put an incompatible type into an array or map.
-		// In that case we simply discard the value.
-		return ""
-	}
+	bytes, _ := json.Marshal(v)
+	// It shouldn't be possible for marshalling to fail, because Value can only contain
+	// JSON-compatible types. But if it somehow did fail, bytes will be nil and we'll return
+	// an empty tring.
 	return string(bytes)
 }
 
@@ -47,7 +43,7 @@ func (v Value) JSONString() string {
 func (v Value) MarshalJSON() ([]byte, error) {
 	switch v.valueType {
 	case NullType:
-		return []byte("null"), nil
+		return []byte(nullAsJSON), nil
 	case BoolType:
 		if v.boolValue {
 			return []byte("true"), nil
@@ -61,28 +57,23 @@ func (v Value) MarshalJSON() ([]byte, error) {
 	case StringType:
 		return json.Marshal(v.stringValue)
 	case ArrayType:
-		if v.immutableArrayValue != nil {
-			return json.Marshal(v.immutableArrayValue)
+		if v.immutableArrayValue == nil {
+			return json.Marshal([]Value{})
 		}
-		return json.Marshal(v.unsafeValueInstance)
+		return json.Marshal(v.immutableArrayValue)
 	case ObjectType:
-		if v.immutableObjectValue != nil {
-			return json.Marshal(v.immutableObjectValue)
+		if v.immutableObjectValue == nil {
+			return json.Marshal(map[string]Value{})
 		}
-		return json.Marshal(v.unsafeValueInstance)
+		return json.Marshal(v.immutableObjectValue)
 	case RawType:
-		if v.unsafeValueInstance != nil {
-			if o, ok := v.unsafeValueInstance.(json.RawMessage); ok {
-				return o, nil
-			}
-		}
 		return []byte(v.stringValue), nil
 	}
 	return nil, errors.New("unknown data type") // should not be possible
 }
 
 // UnmarshalJSON parses a Value from JSON.
-func (v *Value) UnmarshalJSON(data []byte) error {
+func (v *Value) UnmarshalJSON(data []byte) error { //nolint:funlen // yes, we know it's a long function
 	if len(data) == 0 { // should not be possible, the parser doesn't pass empty slices to UnmarshalJSON
 		return errors.New("cannot parse empty data")
 	}
@@ -115,6 +106,9 @@ func (v *Value) UnmarshalJSON(data []byte) error {
 		var a []Value
 		e := json.Unmarshal(data, &a)
 		if e == nil {
+			if len(a) == 0 {
+				a = nil // don't need to retain an empty array
+			}
 			*v = Value{valueType: ArrayType, immutableArrayValue: a}
 		}
 		return e
@@ -122,6 +116,9 @@ func (v *Value) UnmarshalJSON(data []byte) error {
 		var o map[string]Value
 		e := json.Unmarshal(data, &o)
 		if e == nil {
+			if len(o) == 0 {
+				o = nil // don't need to retain an empty map
+			}
 			*v = Value{valueType: ObjectType, immutableObjectValue: o}
 		}
 		return e
