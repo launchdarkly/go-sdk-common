@@ -7,14 +7,12 @@ LINTER_VERSION_FILE=./bin/.golangci-lint-version-$(GOLANGCI_LINT_VERSION)
 .PHONY: build clean test lint
 
 build:
-	go get ./...
 	go build ./...
 
 clean:
 	go clean
 
 test: build
-	go get -t ./...
 	go test -race -v ./...
 
 $(LINTER_VERSION_FILE):
