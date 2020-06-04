@@ -35,8 +35,6 @@ jobs:
             github.com/golang/dep/cmd/dep
             github.com/jstemmer/go-junit-report
 
-    working_directory: /go/src/gopkg.in/launchdarkly/go-sdk-common.v2
-
     steps:
       - checkout
       - run: go get -u $COMMON_GO_PACKAGES
@@ -67,20 +65,10 @@ jobs:
 
     environment:
       GOPATH: C:\Users\VssAdministrator\go
-      PACKAGE_PATH: gopkg.in\launchdarkly\go-sdk-common.v2
 
     steps:
       - checkout
       - run: go version
       - run:
-          name: move source
-          command: |
-            go env GOPATH
-            mkdir ${env:GOPATH}\src\${env:PACKAGE_PATH}
-            mv * ${env:GOPATH}\src\${env:PACKAGE_PATH}\
-      - run:
           name: build and test
-          command: |
-            cd ${env:GOPATH}\src\${env:PACKAGE_PATH}
-            go get -t ./...
-            go test -race ./...
+          command: go test -race ./...
