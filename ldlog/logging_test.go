@@ -28,6 +28,9 @@ func TestCanWriteToUnconfiguredLogger(t *testing.T) {
 func TestLevelIsInfoByDefault(t *testing.T) {
 	ls := logSink{}
 	l := Loggers{}
+	assert.Equal(t, Info, l.GetMinLevel())
+	assert.False(t, l.IsDebugEnabled())
+
 	l.SetBaseLogger(&ls)
 	l.Debug("0")
 	l.Debugf("%s!", "1")
@@ -37,14 +40,19 @@ func TestLevelIsInfoByDefault(t *testing.T) {
 	l.Warnf("%s!", "5")
 	l.Error("6")
 	l.Errorf("%s!", "7")
+
 	assert.Equal(t, []string{"INFO: 2", "INFO: 3!", "WARN: 4", "WARN: 5!", "ERROR: 6", "ERROR: 7!"}, ls.output)
 }
 
 func TestCanSetLevel(t *testing.T) {
 	ls := logSink{}
 	l := Loggers{}
+
 	l.SetBaseLogger(&ls)
 	l.SetMinLevel(Error)
+	assert.Equal(t, Error, l.GetMinLevel())
+	assert.False(t, l.IsDebugEnabled())
+
 	l.Debug("0")
 	l.Debugf("%s!", "1")
 	l.Info("2")
@@ -54,7 +62,11 @@ func TestCanSetLevel(t *testing.T) {
 	l.Error("6")
 	l.Errorf("%s!", "7")
 	assert.Equal(t, []string{"ERROR: 6", "ERROR: 7!"}, ls.output)
+
 	l.SetMinLevel(Debug)
+	assert.Equal(t, Debug, l.GetMinLevel())
+	assert.True(t, l.IsDebugEnabled())
+
 	l.Debug("8")
 	l.Debugf("%s!", "9")
 	assert.Equal(t, []string{"ERROR: 6", "ERROR: 7!", "DEBUG: 8", "DEBUG: 9!"}, ls.output)
