@@ -8,7 +8,7 @@ import (
 )
 
 func TestValueTypes(t *testing.T) {
-	assert.Equal(t, "null", NullType.String())
+	assert.Equal(t, nullAsJSON, NullType.String())
 	assert.Equal(t, "bool", BoolType.String())
 	assert.Equal(t, "number", NumberType.String())
 	assert.Equal(t, "string", StringType.String())
