@@ -168,7 +168,7 @@ func (r EvaluationReason) MarshalJSON() ([]byte, error) {
 func (r *EvaluationReason) UnmarshalJSON(data []byte) error {
 	var erm evaluationReasonForMarshaling
 	if err := json.Unmarshal(data, &erm); err != nil {
-		return nil
+		return err
 	}
 	*r = EvaluationReason{
 		kind:            erm.Kind,

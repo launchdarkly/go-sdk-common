@@ -2,6 +2,7 @@ package ldvalue
 
 import (
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -337,4 +338,15 @@ func TestValueAsPointer(t *testing.T) {
 	assert.Equal(t, &v, v.AsPointer())
 
 	assert.Nil(t, Null().AsPointer())
+}
+
+func TestConvertArbitraryValueThatFailsToSerialize(t *testing.T) {
+	v := CopyArbitraryValue(unserializableValue{})
+	assert.Equal(t, Null(), v)
+}
+
+type unserializableValue struct{}
+
+func (u unserializableValue) MarshalJSON() ([]byte, error) {
+	return nil, errors.New("no")
 }

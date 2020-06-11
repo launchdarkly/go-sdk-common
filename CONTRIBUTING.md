@@ -41,3 +41,22 @@ To build and run all unit tests:
 ```
 make test
 ```
+
+## Coding best practices
+
+### Test coverage
+
+It is important to keep unit test coverage as close to 100% as possible in this project. You can view the latest code coverage report in CircleCI, as `coverage.html` and `coverage.txt` in the artifacts. You can also generate this information locally with `make test-coverage`.
+
+The build will fail if there are any uncovered blocks of code, unless you explicitly add an override by placing a comment that starts with `// COVERAGE` somewhere within that block. Sometimes a gap in coverage is unavoidable, usually because the compiler requires us to provide a code path for some condition that in practice can't happen and can't be tested. Exclude these paths with a `// COVERAGE` comment.
+
+### Avoid heap allocations
+
+Many of these types and methods are used very frequently from Go SDK code. For performance and to avoid unwanted heap churn, it is highly desirable to avoid allocating data on the heap if it could instead be passed as a value type.
+
+Go's memory model uses a mix of stack and heap allocations, with the compiler transparently choosing the most appropriate strategy based on various type and scope rules. It is always preferable, when possible, to keep ephemeral values on the stack rather than on the heap to avoid creating extra work for the garbage collector.
+
+- The most obvious rule is that anything explicitly allocated by reference (`x := &SomeType{}`), or returned by reference (`return &x`), will be allocated on the heap. Avoid this unless the object has mutable state that must be shared.
+- Casting a value type to an interface causes it to be allocated on the heap, since an interface is really a combination of a type identifier and a hidden pointer.
+- A closure that references any variables outside of its scope (including the method receiver, if it is inside a method) causes an object to be allocated on the heap containing the values or addresses of those variables.
+- Treating a method as an anonymous function (`myFunc := someReceiver.SomeMethod`) is equivalent to a closure.

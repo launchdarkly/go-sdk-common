@@ -74,7 +74,7 @@ func (v Value) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON parses a Value from JSON.
 func (v *Value) UnmarshalJSON(data []byte) error { //nolint:funlen // yes, we know it's a long function
-	if len(data) == 0 { // should not be possible, the parser doesn't pass empty slices to UnmarshalJSON
+	if len(data) == 0 { // COVERAGE: should not be possible, parser doesn't pass empty slices to UnmarshalJSON
 		return errors.New("cannot parse empty data")
 	}
 	firstCh := data[0]
@@ -130,5 +130,5 @@ func (v *Value) UnmarshalJSON(data []byte) error { //nolint:funlen // yes, we kn
 		}
 		return e
 	}
-	return fmt.Errorf("unknown JSON token: %s", data)
+	return fmt.Errorf("unknown JSON token: %s", data) // COVERAGE: never happens, parser rejects the token earlier
 }

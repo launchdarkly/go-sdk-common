@@ -26,10 +26,8 @@ type userForSerialization struct {
 // This currently uses the same JSON string representation as User.MarshalJSON(). Do not rely on this
 // specific behavior of String(); it is intended for convenience in debugging.
 func (u User) String() string {
-	if bytes, err := json.Marshal(u); err == nil {
-		return string(bytes)
-	}
-	return ""
+	bytes, _ := json.Marshal(u)
+	return string(bytes)
 }
 
 // MarshalJSON provides JSON serialization for User when using json.MarshalJSON.

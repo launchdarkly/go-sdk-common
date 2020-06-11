@@ -120,7 +120,7 @@ func (o OptionalString) MarshalJSON() ([]byte, error) {
 //
 // The input must be either a JSON string or null.
 func (o *OptionalString) UnmarshalJSON(data []byte) error {
-	if len(data) == 0 { // should not be possible, the parser doesn't pass empty slices to UnmarshalJSON
+	if len(data) == 0 { // COVERAGE: should not be possible, parser doesn't pass empty slices to UnmarshalJSON
 		return errors.New("cannot parse empty data")
 	}
 	firstCh := data[0]
