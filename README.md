@@ -1,6 +1,6 @@
 # LaunchDarkly Go SDK Core Packages
 
-[![Circle CI](https://circleci.com/gh/launchdarkly/go-sdk-common.svg?style=svg)](https://circleci.com/gh/launchdarkly/go-sdk-common)
+[![Circle CI](https://circleci.com/gh/launchdarkly/go-sdk-common.svg?style=svg)](https://circleci.com/gh/launchdarkly/go-sdk-common) [![Documentation](https://godoc.org/gopkg.in/launchdarkly/go-sdk-common.v2?status.svg)](https://godoc.org/gopkg.in/launchdarkly/go-sdk-common.v2)
 
 ## This is a prerelease branch
 
@@ -8,11 +8,13 @@ The `v2` branch currently contains prerelease code to support development of Go 
 
 ## Overview
 
-This repository contains packages that are shared between the [LaunchDarkly Go SDK](https://github.com/launchdarkly/go-server-sdk) and other LaunchDarkly Go components.
+This repository contains packages and types that are shared between the [LaunchDarkly Go SDK](https://github.com/launchdarkly/go-server-sdk) and other LaunchDarkly Go components.
 
-Applications using the LaunchDarkly Go SDK will usually not need to reference these packages directly. If you do (for instance, if you are using the SDK's JSONVariation method, which returns the type `Value` from the `ldvalue` package), you should import the same major version of the package that is imported by the SDK. See the SDK documentation for more details.
+Applications using the LaunchDarkly Go SDK will generally use the `lduser` subpackage, which contains the `User` type, and may also use the `ldvalue` package, which contains the `Value` type that represents arbitrary JSON values. Other packages are less frequently used.
 
-Note that the base import path is `gopkg.in/launchdarkly/go-sdk-common.v2` (to ensure that you receive the latest release of major version 2.x), not `github.com/launchdarkly/go-sdk-common`. Also, unlike `go-server-sdk` this does not have `server` in the name, because nothing in this repository is specific to the LaunchDarkly server-side model; it could be used in a client-side context.
+Note that the base import path is `gopkg.in/launchdarkly/go-sdk-common.v2`, not `github.com/launchdarkly/go-sdk-common`. This ensures that the package can be referenced not only as a Go module, but also by projects that use older tools like `dep` and `govendor`, because the 5.x release of the Go SDK supports either module or non-module usage. Future releases of this package, and of the Go SDK, may drop support for non-module usage.
+
+Also, unlike `go-server-sdk` this does not have `server` in the name, because nothing in this repository is specific to the LaunchDarkly server-side model; it could be used in a client-side context.
 
 ## Supported Go versions
 
