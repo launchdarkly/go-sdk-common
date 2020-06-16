@@ -42,6 +42,11 @@ To build and run all unit tests:
 make test
 ```
 
+To run benchmarks:
+```
+make benchmarks
+```
+
 ## Coding best practices
 
 ### Test coverage
@@ -60,3 +65,7 @@ Go's memory model uses a mix of stack and heap allocations, with the compiler tr
 - Casting a value type to an interface causes it to be allocated on the heap, since an interface is really a combination of a type identifier and a hidden pointer.
 - A closure that references any variables outside of its scope (including the method receiver, if it is inside a method) causes an object to be allocated on the heap containing the values or addresses of those variables.
 - Treating a method as an anonymous function (`myFunc := someReceiver.SomeMethod`) is equivalent to a closure.
+
+Allocations are counted in the benchmark output: "5 allocs/op" means that a total of 5 heap objects were allocated during each run of the benchmark. This does not mean that the objects were retained, only that they were allocated at some point.
+
+For methods that should be guaranteed _not_ to do any heap allocations, such as the `ldvalue.Value` constructors, the corresponding benchmarks should have names ending in `NoAlloc`. The `make benchmarks` target will automatically fail if allocations are detected in any benchmarks that have this name suffix.

@@ -15,6 +15,7 @@ workflows:
           docker-image: circleci/golang:1.13
       - go-test-windows:
           name: Windows
+      - benchmarks
 
 jobs:
   go-test:
@@ -93,3 +94,21 @@ jobs:
       - run:
           name: build and test
           command: go test -race ./...
+
+  benchmarks:
+    docker:
+      - image: circleci/golang:1.14
+        environment:
+          CIRCLE_ARTIFACTS: /tmp/circle-artifacts
+
+    steps:
+      - checkout
+      - run: go build ./...      
+      - run:
+          name: Run benchmarks
+          command: |
+            mkdir -p $CIRCLE_ARTIFACTS
+            make benchmarks | tee $CIRCLE_ARTIFACTS/benchmarks.txt
+
+      - store_artifacts:
+          path: /tmp/circle-artifacts
