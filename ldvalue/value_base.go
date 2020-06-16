@@ -92,58 +92,152 @@ func Raw(value json.RawMessage) Value {
 // []Value), it is deep-copied to an array value. If it is a map of strings to values
 // (map[string]interface{} or map[string]Value), it is deep-copied to an object value.
 //
+// If it is a pointer to any of the above types, then it is dereferenced and treated the same as above,
+// unless the pointer is nil, in which case it becomes Null().
+//
 // For all other types, the value is marshaled to JSON and then converted to the corresponding
 // Value type (unless marshalling returns an error, in which case it becomes Null()). This is
 // somewhat inefficient since it involves parsing the marshaled JSON.
-func CopyArbitraryValue(valueAsInterface interface{}) Value { //nolint:funlen // yes, we know it's a long function
+func CopyArbitraryValue(valueAsInterface interface{}) Value { //nolint:gocyclo // yes, we know it's a long function
 	if valueAsInterface == nil {
 		return Null()
+		// Note that an interface value can be nil in two ways: nil with no type at all, which is this case,
+		// or a nil pointer of some specific pointer type, which we have to check for separately below.
 	}
 	switch o := valueAsInterface.(type) {
 	case Value:
 		return o
+	case *Value:
+		if o == nil {
+			return Null()
+		}
+		return *o
+	case OptionalString:
+		return o.AsValue()
+	case *OptionalString:
+		if o == nil {
+			return Null()
+		}
+		return o.AsValue()
 	case bool:
 		return Bool(o)
+	case *bool:
+		if o == nil {
+			return Null()
+		}
+		return Bool(*o)
 	case int8:
 		return Float64(float64(o))
+	case *int8:
+		if o == nil {
+			return Null()
+		}
+		return Float64(float64(*o))
 	case uint8:
 		return Float64(float64(o))
+	case *uint8:
+		if o == nil {
+			return Null()
+		}
+		return Float64(float64(*o))
 	case int16:
 		return Float64(float64(o))
+	case *int16:
+		if o == nil {
+			return Null()
+		}
+		return Float64(float64(*o))
 	case uint16:
 		return Float64(float64(o))
+	case *uint16:
+		if o == nil {
+			return Null()
+		}
+		return Float64(float64(*o))
 	case int:
 		return Float64(float64(o))
+	case *int:
+		if o == nil {
+			return Null()
+		}
+		return Float64(float64(*o))
 	case uint:
 		return Float64(float64(o))
+	case *uint:
+		if o == nil {
+			return Null()
+		}
+		return Float64(float64(*o))
 	case int32:
 		return Float64(float64(o))
+	case *int32:
+		if o == nil {
+			return Null()
+		}
+		return Float64(float64(*o))
 	case uint32:
 		return Float64(float64(o))
+	case *uint32:
+		if o == nil {
+			return Null()
+		}
+		return Float64(float64(*o))
 	case float32:
 		return Float64(float64(o))
+	case *float32:
+		if o == nil {
+			return Null()
+		}
+		return Float64(float64(*o))
 	case float64:
 		return Float64(o)
+	case *float64:
+		if o == nil {
+			return Null()
+		}
+		return Float64(*o)
 	case string:
 		return String(o)
-	case []interface{}:
-		a := make([]Value, len(o))
-		for i, v := range o {
-			a[i] = CopyArbitraryValue(v)
+	case *string:
+		if o == nil {
+			return Null()
 		}
-		return Value{valueType: ArrayType, immutableArrayValue: a}
+		return String(*o)
+	case []interface{}:
+		return copyArbitraryValueArray(o)
+	case *[]interface{}:
+		if o == nil {
+			return Null()
+		}
+		return copyArbitraryValueArray(*o)
 	case []Value:
 		return ArrayOf(o...)
-	case map[string]interface{}:
-		m := make(map[string]Value, len(o))
-		for k, v := range o {
-			m[k] = CopyArbitraryValue(v)
+	case *[]Value:
+		if o == nil {
+			return Null()
 		}
-		return Value{valueType: ObjectType, immutableObjectValue: m}
+		return ArrayOf((*o)...)
+	case map[string]interface{}:
+		return copyArbitraryValueMap(o)
+	case *map[string]interface{}:
+		if o == nil {
+			return Null()
+		}
+		return copyArbitraryValueMap(*o)
 	case map[string]Value:
 		return CopyObject(o)
+	case *map[string]Value:
+		if o == nil {
+			return Null()
+		}
+		return CopyObject(*o)
 	case json.RawMessage:
 		return Raw(o)
+	case *json.RawMessage:
+		if o == nil {
+			return Null()
+		}
+		return Raw(*o)
 	default:
 		jsonBytes, err := json.Marshal(valueAsInterface)
 		if err == nil {
@@ -157,6 +251,22 @@ func CopyArbitraryValue(valueAsInterface interface{}) Value { //nolint:funlen //
 	}
 }
 
+func copyArbitraryValueArray(o []interface{}) Value {
+	a := make([]Value, len(o))
+	for i, v := range o {
+		a[i] = CopyArbitraryValue(v)
+	}
+	return Value{valueType: ArrayType, immutableArrayValue: a}
+}
+
+func copyArbitraryValueMap(o map[string]interface{}) Value {
+	m := make(map[string]Value, len(o))
+	for k, v := range o {
+		m[k] = CopyArbitraryValue(v)
+	}
+	return Value{valueType: ObjectType, immutableObjectValue: m}
+}
+
 // Type returns the ValueType of the Value.
 func (v Value) Type() ValueType {
 	return v.valueType
@@ -165,6 +275,11 @@ func (v Value) Type() ValueType {
 // IsNull returns true if the Value is a null.
 func (v Value) IsNull() bool {
 	return v.valueType == NullType
+}
+
+// IsBool returns true if the Value is a boolean.
+func (v Value) IsBool() bool {
+	return v.valueType == BoolType
 }
 
 // IsNumber returns true if the Value is numeric.
@@ -182,6 +297,11 @@ func (v Value) IsInt() bool {
 		return v.numberValue == float64(int(v.numberValue))
 	}
 	return false
+}
+
+// IsString returns true if the Value is a string.
+func (v Value) IsString() bool {
+	return v.valueType == StringType
 }
 
 // BoolValue returns the Value as a boolean.
