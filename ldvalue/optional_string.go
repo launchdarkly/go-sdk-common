@@ -55,6 +55,12 @@ func (o OptionalString) StringValue() string {
 	return o.value
 }
 
+// Get is a combination of StringValue and IsDefined. If the OptionalString contains a string value,
+// it returns that value and true; otherwise it returns an empty string and false.
+func (o OptionalString) Get() (string, bool) {
+	return o.value, o.hasValue
+}
+
 // OrElse returns the OptionalString's value if it has one, or else the specified fallback value.
 func (o OptionalString) OrElse(valueIfEmpty string) string {
 	if o.hasValue {

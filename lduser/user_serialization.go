@@ -6,7 +6,28 @@ import (
 	"gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
 )
 
+// These temporary structs allow us to do JSON marshalling and unmarshalling as efficiently as possible
+// while not requiring the User's internal representation to be constrained by the behavior of json.Marshal.
+// When serializing, we will use pointers (that are only pointers to local variables, so the values won't
+// escape to the heap) so unset attributes won't be serialized at all. When deserializing, we'll unmarshal
+// directly to the ldvalue.Value type so no interim pointers are necessary.
+
 type userForSerialization struct {
+	Key                   string          `json:"key"`
+	Secondary             *string         `json:"secondary,omitempty"`
+	IP                    *string         `json:"ip,omitempty"`
+	Country               *string         `json:"country,omitempty"`
+	Email                 *string         `json:"email,omitempty"`
+	FirstName             *string         `json:"firstName,omitempty"`
+	LastName              *string         `json:"lastName,omitempty"`
+	Avatar                *string         `json:"avatar,omitempty"`
+	Name                  *string         `json:"name,omitempty"`
+	Anonymous             *bool           `json:"anonymous,omitempty"`
+	Custom                *ldvalue.Value  `json:"custom,omitempty"`
+	PrivateAttributeNames []UserAttribute `json:"privateAttributeNames,omitempty"`
+}
+
+type userForDeserialization struct {
 	Key                   string                 `json:"key"`
 	Secondary             ldvalue.OptionalString `json:"secondary"`
 	IP                    ldvalue.OptionalString `json:"ip"`
@@ -33,25 +54,71 @@ func (u User) String() string {
 // MarshalJSON provides JSON serialization for User when using json.MarshalJSON.
 //
 // This is LaunchDarkly's standard JSON representation for user properties, in which all of the built-in
-// properties are at the top level along with a "custom" property that is an object containing all of
-// the custom properties.
+// user attributes are at the top level along with a "custom" property that is an object containing all of
+// the custom attributes.
 //
-// It does not produce the most compact representation possible: top-level properties that have not been
-// set will have "propertyName":null instead of being entirely omitted, and if there are no custom
-// properties there will be an empty "custom":{}.
+// In order for the representation to be as compact as possible, any top-level attributes for which no
+// value has been set (as opposed to being set to an empty string) will be completely omitted, rather
+// than including "attributeName":null in the JSON output. Similarly, if there are no custom attributes,
+// there will be no "custom" property (rather than "custom":{}). This distinction does not matter to
+// LaunchDarkly services-- they will treat an explicit null value in JSON data the same as an unset
+// attribute, and treat an omitted "custom" the same as an empty "custom" map.
 func (u User) MarshalJSON() ([]byte, error) {
-	ufs := userForSerialization{
-		Key:       u.key,
-		Secondary: u.secondary,
-		IP:        u.ip,
-		Country:   u.country,
-		Email:     u.email,
-		FirstName: u.firstName,
-		LastName:  u.lastName,
-		Avatar:    u.avatar,
-		Name:      u.name,
-		Anonymous: u.anonymous,
-		Custom:    u.custom,
+	// We want to be able to use string pointers here so we can take advantage of "omitempty", but we
+	// don't want to cause any heap allocations. Go will allow us to take the address of a string without
+	// having it escape to the heap if it's done within the same scope where it is used, so we need to go
+	// through a somewhat repetitive process here to copy these values into local variables. If we used
+	// OptionalString.AsPointer(), the strings would escape to the heap.
+	secondary, hasSecondary := u.secondary.Get()
+	ip, hasIP := u.ip.Get()
+	country, hasCountry := u.country.Get()
+	email, hasEmail := u.email.Get()
+	firstName, hasFirstName := u.firstName.Get()
+	lastName, hasLastName := u.lastName.Get()
+	avatar, hasAvatar := u.avatar.Get()
+	name, hasName := u.name.Get()
+	anon := u.anonymous.BoolValue()
+	// _, hasSecondary := u.secondary.Get()
+	// _, hasIP := u.ip.Get()
+	// _, hasCountry := u.country.Get()
+	// _, hasEmail := u.email.Get()
+	// _, hasFirstName := u.firstName.Get()
+	// _, hasLastName := u.lastName.Get()
+	// _, hasAvatar := u.avatar.Get()
+	// _, hasName := u.name.Get()
+	// anon := u.anonymous.BoolValue()
+	custom := u.custom
+
+	ufs := userForSerialization{Key: u.key}
+	if hasSecondary {
+		ufs.Secondary = &secondary
+	}
+	if hasIP {
+		ufs.IP = &ip
+	}
+	if hasCountry {
+		ufs.Country = &country
+	}
+	if hasEmail {
+		ufs.Email = &email
+	}
+	if hasFirstName {
+		ufs.FirstName = &firstName
+	}
+	if hasLastName {
+		ufs.LastName = &lastName
+	}
+	if hasAvatar {
+		ufs.Avatar = &avatar
+	}
+	if hasName {
+		ufs.Name = &name
+	}
+	if !u.anonymous.IsNull() {
+		ufs.Anonymous = &anon
+	}
+	if custom.Count() > 0 {
+		ufs.Custom = &custom
 	}
 	for a := range u.privateAttributes {
 		ufs.PrivateAttributeNames = append(ufs.PrivateAttributeNames, a)
@@ -63,9 +130,9 @@ func (u User) MarshalJSON() ([]byte, error) {
 //
 // This is LaunchDarkly's standard JSON representation for user properties, in which all of the built-in
 // properties are at the top level along with a "custom" property that is an object containing all of
-// the custom properties. Omitted properties are treated as empty.
+// the custom properties. Omitted properties are treated as unset.
 func (u *User) UnmarshalJSON(data []byte) error {
-	var ufs userForSerialization
+	var ufs userForDeserialization
 	if err := json.Unmarshal(data, &ufs); err != nil {
 		return err
 	}
