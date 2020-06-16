@@ -73,6 +73,27 @@ type UserBuilder interface {
 	//         Build()
 	Custom(attribute string, value ldvalue.Value) UserBuilderCanMakeAttributePrivate
 
+	// SetAttribute sets any attribute of the user being built, specified as a UserAttribute, to a value
+	// of type ldvalue.Value.
+	//
+	// This method corresponds to the GetAttribute method of User. It is intended for cases where user
+	// properties are being constructed generically, such as from a list of key-value pairs. Since not
+	// all attributes have the same semantics, its behavior is as follows:
+	//
+	// 1. For built-in attributes, if the value is not of a type that is supported for that attribute,
+	// the method has no effect. For Key, the only supported type is string; for Anonymous, the
+	// supported types are boolean or null; and for all other built-ins, the supported types are
+	// string or null. Custom attributes may be of any type.
+	//
+	// 2. Setting an attribute to null (ldvalue.Null() or ldvalue.Value{}) is the same as the attribute
+	// not being set in the first place.
+	//
+	// 3. The method always returns the type UserBuilderCanMakeAttributePrivate, so that you can make
+	// the attribute private if that is appropriate by calling AsPrivateAttribute(). For attributes
+	// that cannot be made private (Key and Anonymous), calling AsPrivateAttribute() on this return
+	// value will have no effect.
+	SetAttribute(attribute UserAttribute, value ldvalue.Value) UserBuilderCanMakeAttributePrivate
+
 	// Build creates a User from the current UserBuilder properties.
 	//
 	// The User is independent of the UserBuilder once you have called Build(); modifying the UserBuilder
@@ -235,6 +256,55 @@ func (b *userBuilderImpl) Custom(attribute string, value ldvalue.Value) UserBuil
 	}
 	b.custom.Set(attribute, value)
 	return b.canMakeAttributePrivate(UserAttribute(attribute))
+}
+
+func (b *userBuilderImpl) SetAttribute(
+	attribute UserAttribute,
+	value ldvalue.Value,
+) UserBuilderCanMakeAttributePrivate {
+	okPrivate := true
+	setOptString := func(s *ldvalue.OptionalString) {
+		if value.IsString() {
+			*s = ldvalue.NewOptionalString(value.StringValue())
+		} else if value.IsNull() {
+			*s = ldvalue.OptionalString{}
+		}
+	}
+	switch attribute {
+	case KeyAttribute:
+		if value.IsString() {
+			b.key = value.StringValue()
+		}
+		okPrivate = false
+	case SecondaryKeyAttribute:
+		setOptString(&b.secondary)
+	case IPAttribute:
+		setOptString(&b.ip)
+	case CountryAttribute:
+		setOptString(&b.country)
+	case EmailAttribute:
+		setOptString(&b.email)
+	case FirstNameAttribute:
+		setOptString(&b.firstName)
+	case LastNameAttribute:
+		setOptString(&b.lastName)
+	case AvatarAttribute:
+		setOptString(&b.avatar)
+	case NameAttribute:
+		setOptString(&b.name)
+	case AnonymousAttribute:
+		if value.IsBool() || value.IsNull() {
+			b.anonymous = value
+		}
+		okPrivate = false
+	default:
+		return b.Custom(string(attribute), value)
+	}
+	if okPrivate {
+		return b.canMakeAttributePrivate(attribute)
+	}
+	b.lastAttributeCanMakePrivate = ""
+	return b
 }
 
 func (b *userBuilderImpl) Build() User {
