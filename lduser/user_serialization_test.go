@@ -35,6 +35,13 @@ func TestUserStringIsJSONRepresentation(t *testing.T) {
 	assert.Equal(t, string(bytes), user.String())
 }
 
+func TestJSONMarshalProducesCompactRepresentationWhenAttributesAreUnset(t *testing.T) {
+	user := NewUser("some-key")
+	bytes, err := json.Marshal(user)
+	require.NoError(t, err)
+	assert.Equal(t, `{"key":"some-key"}`, string(bytes))
+}
+
 func TestJSONMarshalStringAttributes(t *testing.T) {
 	for a, setter := range optionalStringSetters {
 		t.Run(string(a), func(t *testing.T) {
@@ -48,7 +55,9 @@ func TestJSONMarshalStringAttributes(t *testing.T) {
 
 			for a1, _ := range optionalStringSetters {
 				if a1 != a {
-					assert.Nil(t, props[string(a1)])
+					unwantedValue, found := props[string(a1)]
+					assert.False(t, found)
+					assert.Nil(t, unwantedValue)
 				}
 			}
 		})
