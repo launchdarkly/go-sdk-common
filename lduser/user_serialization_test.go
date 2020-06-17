@@ -13,8 +13,12 @@ import (
 func getJSONAsMap(t *testing.T, thing interface{}) map[string]interface{} {
 	bytes, err := json.Marshal(thing)
 	require.NoError(t, err)
+	return parseJSONAsMap(t, bytes)
+}
+
+func parseJSONAsMap(t *testing.T, bytes []byte) map[string]interface{} {
 	var props map[string]interface{}
-	err = json.Unmarshal(bytes, &props)
+	err := json.Unmarshal(bytes, &props)
 	require.NoError(t, err)
 	return props
 }
@@ -32,7 +36,7 @@ func TestUserStringIsJSONRepresentation(t *testing.T) {
 	user := newUserBuilderWithAllPropertiesSet("some-key").Build()
 	bytes, err := json.Marshal(user)
 	require.NoError(t, err)
-	assert.Equal(t, string(bytes), user.String())
+	assert.Equal(t, parseJSONAsMap(t, bytes), parseJSONAsMap(t, []byte(user.String())))
 }
 
 func TestJSONMarshalProducesCompactRepresentationWhenAttributesAreUnset(t *testing.T) {

@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
 )
 
 func TestReasonKind(t *testing.T) {
@@ -85,6 +87,12 @@ func TestReasonSerializationAndDeserialization(t *testing.T) {
 		assert.Equal(t, param.reason, r1)
 
 		assert.Equal(t, param.stringRep, param.reason.String())
+
+		var buf jsonstream.JSONBuffer
+		param.reason.WriteToJSONBuffer(&buf)
+		bytes, err := buf.Get()
+		assert.NoError(t, err)
+		assert.JSONEq(t, param.expectedJSON, string(bytes))
 	}
 
 	var r EvaluationReason

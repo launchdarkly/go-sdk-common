@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -39,13 +41,38 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 			err = json.Unmarshal([]byte(item.json), &v)
 			assert.NoError(t, err)
 			assert.Equal(t, item.value, v)
+
+			assert.Equal(t, item.value, Parse([]byte(item.json)))
+
+			var buf jsonstream.JSONBuffer
+			item.value.WriteToJSONBuffer(&buf)
+			bytes, err := buf.Get()
+			assert.NoError(t, err)
+			assert.Equal(t, item.json, string(bytes))
 		})
 	}
 }
 
+func TestMarshalRaw(t *testing.T) {
+	// This is separate from the MarshalUnmarshal test because you never get a Raw when you unmarshal.
+	s := `{"a":1}`
+	value := Raw(json.RawMessage(s))
+
+	bytes, err := json.Marshal(value)
+	assert.NoError(t, err)
+	assert.Equal(t, s, string(bytes))
+
+	var buf jsonstream.JSONBuffer
+	value.WriteToJSONBuffer(&buf)
+	bytes, err = buf.Get()
+	assert.NoError(t, err)
+	assert.Equal(t, s, string(bytes))
+}
+
 func TestUnmarshalErrorConditions(t *testing.T) {
 	var v Value
-	assert.Error(t, json.Unmarshal(nil, &v))
-	assert.Error(t, json.Unmarshal([]byte{}, &v))
-	assert.Error(t, json.Unmarshal([]byte("what"), &v))
+	for _, data := range [][]byte{nil, []byte{}, []byte("what")} {
+		assert.Error(t, json.Unmarshal(data, &v))
+		assert.Equal(t, Null(), Parse(data))
+	}
 }

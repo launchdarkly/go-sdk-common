@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
 )
 
 // OptionalString represents a string that may or may not have a value. This is similar to using a
@@ -148,4 +150,16 @@ func (o *OptionalString) UnmarshalJSON(data []byte) error {
 	}
 	*o = OptionalString{}
 	return fmt.Errorf("unknown JSON token: %s", data)
+}
+
+// WriteToJSONBuffer provides JSON serialization for OptionalString with the jsonstream API.
+//
+// The JSON output format is identical to what is produced by json.Marshal, but this implementation is
+// more efficient when building output with JSONBuffer. See the jsonstream package for more details.
+func (o OptionalString) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
+	if o.hasValue {
+		j.WriteString(o.value)
+	} else {
+		j.WriteNull()
+	}
 }

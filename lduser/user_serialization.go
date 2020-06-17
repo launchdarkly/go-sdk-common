@@ -3,29 +3,12 @@ package lduser
 import (
 	"encoding/json"
 
+	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
 	"gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
 )
 
-// These temporary structs allow us to do JSON marshalling and unmarshalling as efficiently as possible
-// while not requiring the User's internal representation to be constrained by the behavior of json.Marshal.
-// When serializing, we will use pointers (that are only pointers to local variables, so the values won't
-// escape to the heap) so unset attributes won't be serialized at all. When deserializing, we'll unmarshal
-// directly to the ldvalue.Value type so no interim pointers are necessary.
-
-type userForSerialization struct {
-	Key                   string          `json:"key"`
-	Secondary             *string         `json:"secondary,omitempty"`
-	IP                    *string         `json:"ip,omitempty"`
-	Country               *string         `json:"country,omitempty"`
-	Email                 *string         `json:"email,omitempty"`
-	FirstName             *string         `json:"firstName,omitempty"`
-	LastName              *string         `json:"lastName,omitempty"`
-	Avatar                *string         `json:"avatar,omitempty"`
-	Name                  *string         `json:"name,omitempty"`
-	Anonymous             *bool           `json:"anonymous,omitempty"`
-	Custom                *ldvalue.Value  `json:"custom,omitempty"`
-	PrivateAttributeNames []UserAttribute `json:"privateAttributeNames,omitempty"`
-}
+// This temporary structs allows us to do JSON unmarshalling as efficiently as possible while not requiring
+// the User's internal representation to be constrained by the behavior of json.Unmarshal.
 
 type userForDeserialization struct {
 	Key                   string                 `json:"key"`
@@ -64,66 +47,9 @@ func (u User) String() string {
 // LaunchDarkly services-- they will treat an explicit null value in JSON data the same as an unset
 // attribute, and treat an omitted "custom" the same as an empty "custom" map.
 func (u User) MarshalJSON() ([]byte, error) {
-	// We want to be able to use string pointers here so we can take advantage of "omitempty", but we
-	// don't want to cause any heap allocations. Go will allow us to take the address of a string without
-	// having it escape to the heap if it's done within the same scope where it is used, so we need to go
-	// through a somewhat repetitive process here to copy these values into local variables. If we used
-	// OptionalString.AsPointer(), the strings would escape to the heap.
-	secondary, hasSecondary := u.secondary.Get()
-	ip, hasIP := u.ip.Get()
-	country, hasCountry := u.country.Get()
-	email, hasEmail := u.email.Get()
-	firstName, hasFirstName := u.firstName.Get()
-	lastName, hasLastName := u.lastName.Get()
-	avatar, hasAvatar := u.avatar.Get()
-	name, hasName := u.name.Get()
-	anon := u.anonymous.BoolValue()
-	// _, hasSecondary := u.secondary.Get()
-	// _, hasIP := u.ip.Get()
-	// _, hasCountry := u.country.Get()
-	// _, hasEmail := u.email.Get()
-	// _, hasFirstName := u.firstName.Get()
-	// _, hasLastName := u.lastName.Get()
-	// _, hasAvatar := u.avatar.Get()
-	// _, hasName := u.name.Get()
-	// anon := u.anonymous.BoolValue()
-	custom := u.custom
-
-	ufs := userForSerialization{Key: u.key}
-	if hasSecondary {
-		ufs.Secondary = &secondary
-	}
-	if hasIP {
-		ufs.IP = &ip
-	}
-	if hasCountry {
-		ufs.Country = &country
-	}
-	if hasEmail {
-		ufs.Email = &email
-	}
-	if hasFirstName {
-		ufs.FirstName = &firstName
-	}
-	if hasLastName {
-		ufs.LastName = &lastName
-	}
-	if hasAvatar {
-		ufs.Avatar = &avatar
-	}
-	if hasName {
-		ufs.Name = &name
-	}
-	if !u.anonymous.IsNull() {
-		ufs.Anonymous = &anon
-	}
-	if custom.Count() > 0 {
-		ufs.Custom = &custom
-	}
-	for a := range u.privateAttributes {
-		ufs.PrivateAttributeNames = append(ufs.PrivateAttributeNames, a)
-	}
-	return json.Marshal(ufs)
+	var buf jsonstream.JSONBuffer
+	u.WriteToJSONBuffer(&buf)
+	return buf.Get()
 }
 
 // UnmarshalJSON provides JSON deserialization for User when using json.UnmarshalJSON.
@@ -156,4 +82,52 @@ func (u *User) UnmarshalJSON(data []byte) error {
 		}
 	}
 	return nil
+}
+
+// WriteToJSONBuffer provides JSON serialization for User with the jsonstream API.
+//
+// The JSON output format is identical to what is produced by json.Marshal, but this implementation is
+// more efficient when building output with JSONBuffer. See the jsonstream package for more details.
+func (u User) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
+	j.BeginObject()
+	j.WriteName("key")
+	j.WriteString(u.key)
+	maybeWriteStringProperty(j, "secondary", u.secondary)
+	maybeWriteStringProperty(j, "ip", u.ip)
+	maybeWriteStringProperty(j, "country", u.country)
+	maybeWriteStringProperty(j, "email", u.email)
+	maybeWriteStringProperty(j, "firstName", u.firstName)
+	maybeWriteStringProperty(j, "lastName", u.lastName)
+	maybeWriteStringProperty(j, "avatar", u.avatar)
+	maybeWriteStringProperty(j, "name", u.name)
+	if !u.anonymous.IsNull() {
+		j.WriteName("anonymous")
+		j.WriteBool(u.anonymous.BoolValue())
+	}
+	if u.custom.Count() > 0 {
+		j.WriteName("custom")
+		j.BeginObject()
+		u.custom.Enumerate(func(i int, key string, value ldvalue.Value) bool {
+			j.WriteName(key)
+			value.WriteToJSONBuffer(j)
+			return true
+		})
+		j.EndObject()
+	}
+	if len(u.privateAttributes) > 0 {
+		j.WriteName("privateAttributeNames")
+		j.BeginArray()
+		for name := range u.privateAttributes {
+			j.WriteString(string(name))
+		}
+		j.EndArray()
+	}
+	j.EndObject()
+}
+
+func maybeWriteStringProperty(j *jsonstream.JSONBuffer, name string, value ldvalue.OptionalString) {
+	if value.IsDefined() {
+		j.WriteName(name)
+		j.WriteString(value.StringValue())
+	}
 }

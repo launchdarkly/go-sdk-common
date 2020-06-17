@@ -3,6 +3,8 @@ package ldreason
 import (
 	"encoding/json"
 	"fmt"
+
+	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
 )
 
 // EvalReasonKind defines the possible values of the Kind property of EvaluationReason.
@@ -139,7 +141,14 @@ func NewEvalReasonError(errorKind EvalErrorKind) EvaluationReason {
 	return EvaluationReason{kind: EvalReasonError, errorKind: errorKind}
 }
 
-type evaluationReasonForMarshaling struct {
+// MarshalJSON implements custom JSON serialization for EvaluationReason.
+func (r EvaluationReason) MarshalJSON() ([]byte, error) {
+	var buf jsonstream.JSONBuffer
+	r.WriteToJSONBuffer(&buf)
+	return buf.Get()
+}
+
+type evaluationReasonForUnmarshaling struct {
 	Kind            EvalReasonKind `json:"kind"`
 	RuleIndex       *int           `json:"ruleIndex,omitempty"`
 	RuleID          string         `json:"ruleId,omitempty"`
@@ -147,26 +156,9 @@ type evaluationReasonForMarshaling struct {
 	ErrorKind       EvalErrorKind  `json:"errorKind,omitempty"`
 }
 
-// MarshalJSON implements custom JSON serialization for EvaluationReason.
-func (r EvaluationReason) MarshalJSON() ([]byte, error) {
-	if r.kind == "" {
-		return []byte("null"), nil
-	}
-	erm := evaluationReasonForMarshaling{
-		Kind:            r.kind,
-		RuleID:          r.ruleID,
-		PrerequisiteKey: r.prerequisiteKey,
-		ErrorKind:       r.errorKind,
-	}
-	if r.kind == EvalReasonRuleMatch {
-		erm.RuleIndex = &r.ruleIndex
-	}
-	return json.Marshal(erm)
-}
-
 // UnmarshalJSON implements custom JSON deserialization for EvaluationReason.
 func (r *EvaluationReason) UnmarshalJSON(data []byte) error {
-	var erm evaluationReasonForMarshaling
+	var erm evaluationReasonForUnmarshaling
 	if err := json.Unmarshal(data, &erm); err != nil {
 		return err
 	}
@@ -180,4 +172,35 @@ func (r *EvaluationReason) UnmarshalJSON(data []byte) error {
 		r.ruleIndex = *erm.RuleIndex
 	}
 	return nil
+}
+
+// WriteToJSONBuffer provides JSON serialization for EvaluationReason with the jsonstream API.
+//
+// The JSON output format is identical to what is produced by json.Marshal, but this implementation is
+// more efficient when building output with JSONBuffer. See the jsonstream package for more details.
+func (r EvaluationReason) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
+	if r.kind == "" {
+		j.WriteNull()
+		return
+	}
+	j.BeginObject()
+	j.WriteName("kind")
+	j.WriteString(string(r.kind))
+	if r.kind == EvalReasonRuleMatch {
+		j.WriteName("ruleIndex")
+		j.WriteInt(r.ruleIndex)
+		if r.ruleID != "" {
+			j.WriteName("ruleId")
+			j.WriteString(r.ruleID)
+		}
+	}
+	if r.kind == EvalReasonPrerequisiteFailed {
+		j.WriteName("prerequisiteKey")
+		j.WriteString(r.prerequisiteKey)
+	}
+	if r.kind == EvalReasonError {
+		j.WriteName("errorKind")
+		j.WriteString(string(r.errorKind))
+	}
+	j.EndObject()
 }

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -73,6 +75,14 @@ func TestOptionalStringMarshalling(t *testing.T) {
 	bytes, err = json.Marshal(swos)
 	assert.NoError(t, err)
 	assert.Equal(t, `{"s1":"yes","s2":null,"s3":null}`, string(bytes))
+
+	var j jsonstream.JSONBuffer
+	j.SetSeparator([]byte(","))
+	NewOptionalString(`a "good" string`).WriteToJSONBuffer(&j)
+	OptionalString{}.WriteToJSONBuffer(&j)
+	bytes, err = j.Get()
+	assert.NoError(t, err)
+	assert.Equal(t, `"a \"good\" string",null`, string(bytes))
 }
 
 func TestOptionalStringUnmarshalling(t *testing.T) {
