@@ -113,29 +113,34 @@ func TestWriteArray(t *testing.T) {
 		j.EndArray()
 	})
 
-	testEncoding(t, "single", "[1]", func(j *JSONBuffer) {
-		j.BeginArray()
-		j.WriteInt(1)
-		j.EndArray()
-	})
+	for _, test := range allValueTests {
+		ve := test.encoding
+		t.Run("value = "+test.name, func(t *testing.T) {
+			testEncoding(t, "single", `[`+ve+`]`, func(j *JSONBuffer) {
+				j.BeginArray()
+				test.action(j)
+				j.EndArray()
+			})
 
-	testEncoding(t, "multiple", "[1,2]", func(j *JSONBuffer) {
-		j.BeginArray()
-		j.WriteInt(1)
-		j.WriteInt(2)
-		j.EndArray()
-	})
+			testEncoding(t, "multiple", `[`+ve+`,`+ve+`]`, func(j *JSONBuffer) {
+				j.BeginArray()
+				test.action(j)
+				test.action(j)
+				j.EndArray()
+			})
 
-	testEncoding(t, "nested", "[1,[2,3],4]", func(j *JSONBuffer) {
-		j.BeginArray()
-		j.WriteInt(1)
-		j.BeginArray()
-		j.WriteInt(2)
-		j.WriteInt(3)
-		j.EndArray()
-		j.WriteInt(4)
-		j.EndArray()
-	})
+			testEncoding(t, "nested", `[`+ve+`,[`+ve+`,`+ve+`],`+ve+`]`, func(j *JSONBuffer) {
+				j.BeginArray()
+				test.action(j)
+				j.BeginArray()
+				test.action(j)
+				test.action(j)
+				j.EndArray()
+				test.action(j)
+				j.EndArray()
+			})
+		})
+	}
 }
 
 func TestWriteObject(t *testing.T) {
@@ -144,35 +149,40 @@ func TestWriteObject(t *testing.T) {
 		j.EndObject()
 	})
 
-	testEncoding(t, "single", `{"a":1}`, func(j *JSONBuffer) {
-		j.BeginObject()
-		j.WriteName("a")
-		j.WriteInt(1)
-		j.EndObject()
-	})
+	for _, test := range allValueTests {
+		ve := test.encoding
+		t.Run("value = "+test.name, func(t *testing.T) {
+			testEncoding(t, "single", `{"a":`+ve+`}`, func(j *JSONBuffer) {
+				j.BeginObject()
+				j.WriteName("a")
+				test.action(j)
+				j.EndObject()
+			})
 
-	testEncoding(t, "multiple", `{"a":1,"b":2}`, func(j *JSONBuffer) {
-		j.BeginObject()
-		j.WriteName("a")
-		j.WriteInt(1)
-		j.WriteName("b")
-		j.WriteInt(2)
-		j.EndObject()
-	})
+			testEncoding(t, "multiple", `{"a":`+ve+`,"b":`+ve+`}`, func(j *JSONBuffer) {
+				j.BeginObject()
+				j.WriteName("a")
+				test.action(j)
+				j.WriteName("b")
+				test.action(j)
+				j.EndObject()
+			})
 
-	testEncoding(t, "nested", `{"a":{"b":1,"c":2},"d":3}`, func(j *JSONBuffer) {
-		j.BeginObject()
-		j.WriteName("a")
-		j.BeginObject()
-		j.WriteName("b")
-		j.WriteInt(1)
-		j.WriteName("c")
-		j.WriteInt(2)
-		j.EndObject()
-		j.WriteName("d")
-		j.WriteInt(3)
-		j.EndObject()
-	})
+			testEncoding(t, "nested", `{"a":{"b":`+ve+`,"c":`+ve+`},"d":`+ve+`}`, func(j *JSONBuffer) {
+				j.BeginObject()
+				j.WriteName("a")
+				j.BeginObject()
+				j.WriteName("b")
+				test.action(j)
+				j.WriteName("c")
+				test.action(j)
+				j.EndObject()
+				j.WriteName("d")
+				test.action(j)
+				j.EndObject()
+			})
+		})
+	}
 }
 
 func TestWriteMultipleValues(t *testing.T) {

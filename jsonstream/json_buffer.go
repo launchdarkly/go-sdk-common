@@ -142,12 +142,11 @@ func (j *JSONBuffer) WriteInt(value int) {
 
 	if value == 0 {
 		j.buf.WriteRune('0')
-		return
+	} else {
+		byteSlice := make([]byte, 0, 11) // preallocate on stack with room for any numeric string of this size
+		byteSlice = strconv.AppendInt(byteSlice, int64(value), 10)
+		j.buf.Write(byteSlice)
 	}
-
-	byteSlice := make([]byte, 0, 11) // preallocate on stack with room for any numeric string of this size
-	byteSlice = strconv.AppendInt(byteSlice, int64(value), 10)
-	j.buf.Write(byteSlice)
 
 	j.afterValue()
 }
@@ -160,12 +159,11 @@ func (j *JSONBuffer) WriteUint64(value uint64) {
 
 	if value == 0 {
 		j.buf.WriteRune('0')
-		return
+	} else {
+		byteSlice := make([]byte, 0, 25) // preallocate on stack with room for any numeric string of this size
+		byteSlice = strconv.AppendUint(byteSlice, value, 10)
+		j.buf.Write(byteSlice)
 	}
-
-	byteSlice := make([]byte, 0, 25) // preallocate on stack with room for any numeric string of this size
-	byteSlice = strconv.AppendUint(byteSlice, value, 10)
-	j.buf.Write(byteSlice)
 
 	j.afterValue()
 }
@@ -178,14 +176,13 @@ func (j *JSONBuffer) WriteFloat64(value float64) {
 
 	if value == 0 {
 		j.buf.WriteRune('0')
-		return
+	} else {
+		byteSlice := make([]byte, 0, 30) // preallocate on stack with room for most numeric strings of this size
+		// (due to how append works, if it happens *not* to be big enough, byteSlice will just escape to the heap)
+
+		byteSlice = strconv.AppendFloat(byteSlice, value, 'f', -1, 64)
+		j.buf.Write(byteSlice)
 	}
-
-	byteSlice := make([]byte, 0, 30) // preallocate on stack with room for most numeric strings of this size
-	// (due to how append works, if it happens *not* to be big enough, byteSlice will just escape to the heap)
-
-	byteSlice = strconv.AppendFloat(byteSlice, value, 'f', -1, 64)
-	j.buf.Write(byteSlice)
 
 	j.afterValue()
 }
