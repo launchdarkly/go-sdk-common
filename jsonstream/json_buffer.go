@@ -73,7 +73,6 @@ func (j *JSONBuffer) Get() ([]byte, error) {
 // Writer.
 func (j *JSONBuffer) GetError() error {
 	return j.err
-
 }
 
 // GetPartial returns the data written to the buffer so far, regardless of whether it is in a failed or
