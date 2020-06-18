@@ -51,9 +51,6 @@ func NewJSONBuffer() *JSONBuffer {
 // If the buffer is in a failed state from a previous invalid operation, or cannot be ended at this point
 // because of an unfinished array or object, Get() returns a nil slice and the error. In that case, the
 // data written so far can be accessed with GetPartial().
-//
-// If this is a streaming buffer created with NewStreamingJSONBuffer, the return value of Get() is
-// undefined.
 func (j *JSONBuffer) Get() ([]byte, error) {
 	if j.err != nil {
 		return nil, j.err
@@ -67,19 +64,12 @@ func (j *JSONBuffer) Get() ([]byte, error) {
 
 // GetError returns an error if the buffer is in a failed state from a previous invalid operation, or
 // nil otherwise.
-//
-// If this is a streaming buffer created with NewStreamingJSONBuffer, the error could be either the
-// result of performing an invalid sequence of operations, or an error returned by the underlying
-// Writer.
 func (j *JSONBuffer) GetError() error {
 	return j.err
 }
 
 // GetPartial returns the data written to the buffer so far, regardless of whether it is in a failed or
 // incomplete state.
-//
-// If this is a streaming buffer created with NewStreamingJSONBuffer, the return value of GetPartial()
-// is undefined.
 func (j *JSONBuffer) GetPartial() []byte {
 	return j.buf.Bytes()
 }
