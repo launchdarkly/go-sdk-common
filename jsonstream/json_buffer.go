@@ -1,9 +1,9 @@
 package jsonstream
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
-	"io"
 	"strconv"
 	"unicode/utf8"
 )
@@ -34,7 +34,7 @@ var (
 //     buf.EndObject()
 //     bytes, err := buf.Get() // bytes == []byte(`{"a":2}`)
 type JSONBuffer struct {
-	buf       streamableBuffer
+	buf       bytes.Buffer
 	state     stateStack
 	separator []byte
 	err       error
@@ -44,26 +44,6 @@ type JSONBuffer struct {
 // value of JSONBuffer{} will also work.
 func NewJSONBuffer() *JSONBuffer {
 	return &JSONBuffer{}
-}
-
-// NewStreamingJSONBuffer creates a JSONBuffer that, instead of accumulating all of the output in memory,
-// writes it in chunks to the specified Writer.
-//
-// In this mode, operations that write data to the JSONBuffer will accumulate the output in memory until
-// either at least chunkSize bytes have been written, or Flush() is called. At that point, the buffered
-// output is written to the Writer, and then the buffer is cleared. The amount of data written at a time
-// may be more than chunkSize bytes, but will not be less unless you force a Flush().
-//
-// If the Writer returns an error at any point, the JSONBuffer enters a failed state and will not try to
-// write any more data. The error can be checked by calling GetError().
-//
-// It is important to call Flush() after you are done with the JSONBuffer to ensure that everything has
-// been written to the Writer.
-func NewStreamingJSONBuffer(w io.Writer, chunkSize int) *JSONBuffer {
-	j := &JSONBuffer{}
-	j.buf.Grow(chunkSize)
-	j.buf.SetStreamingWriter(w, chunkSize)
-	return j
 }
 
 // Get returns the full encoded byte slice.
@@ -92,10 +72,8 @@ func (j *JSONBuffer) Get() ([]byte, error) {
 // result of performing an invalid sequence of operations, or an error returned by the underlying
 // Writer.
 func (j *JSONBuffer) GetError() error {
-	if j.err != nil {
-		return j.err
-	}
-	return j.buf.GetWriterError()
+	return j.err
+
 }
 
 // GetPartial returns the data written to the buffer so far, regardless of whether it is in a failed or
@@ -111,12 +89,6 @@ func (j *JSONBuffer) GetPartial() []byte {
 // on a bytes.Buffer.
 func (j *JSONBuffer) Grow(n int) {
 	j.buf.Grow(n)
-}
-
-// Flush writes any remaining in-memory output to the underlying Writer, if this is a streaming buffer
-// created with NewStreamingJSONBuffer. It has no effect otherwise.
-func (j *JSONBuffer) Flush() {
-	j.buf.Flush()
 }
 
 // SetSeparator specifies a byte sequence that should be added to the buffer in between values if more
