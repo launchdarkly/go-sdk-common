@@ -12,3 +12,9 @@ func TestUnixMillisFromTime(t *testing.T) {
 	ut := UnixMillisFromTime(tt)
 	assert.Equal(t, uint64(62000), uint64(ut))
 }
+
+func TestUnixMillisNow(t *testing.T) {
+	tn := time.Now()
+	un := UnixMillisNow()
+	assert.GreaterOrEqual(t, uint64(un), uint64(UnixMillisFromTime(tn)))
+}

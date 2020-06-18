@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
 )
 
 // OptionalString represents a string that may or may not have a value. This is similar to using a
@@ -53,6 +55,12 @@ func (o OptionalString) IsDefined() bool {
 // StringValue returns the OptionalString's value, or an empty string if it has no value.
 func (o OptionalString) StringValue() string {
 	return o.value
+}
+
+// Get is a combination of StringValue and IsDefined. If the OptionalString contains a string value,
+// it returns that value and true; otherwise it returns an empty string and false.
+func (o OptionalString) Get() (string, bool) {
+	return o.value, o.hasValue
 }
 
 // OrElse returns the OptionalString's value if it has one, or else the specified fallback value.
@@ -120,7 +128,7 @@ func (o OptionalString) MarshalJSON() ([]byte, error) {
 //
 // The input must be either a JSON string or null.
 func (o *OptionalString) UnmarshalJSON(data []byte) error {
-	if len(data) == 0 { // should not be possible, the parser doesn't pass empty slices to UnmarshalJSON
+	if len(data) == 0 { // COVERAGE: should not be possible, parser doesn't pass empty slices to UnmarshalJSON
 		return errors.New("cannot parse empty data")
 	}
 	firstCh := data[0]
@@ -142,4 +150,16 @@ func (o *OptionalString) UnmarshalJSON(data []byte) error {
 	}
 	*o = OptionalString{}
 	return fmt.Errorf("unknown JSON token: %s", data)
+}
+
+// WriteToJSONBuffer provides JSON serialization for OptionalString with the jsonstream API.
+//
+// The JSON output format is identical to what is produced by json.Marshal, but this implementation is
+// more efficient when building output with JSONBuffer. See the jsonstream package for more details.
+func (o OptionalString) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
+	if o.hasValue {
+		j.WriteString(o.value)
+	} else {
+		j.WriteNull()
+	}
 }

@@ -5,9 +5,23 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+
+	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
 )
 
 // This file contains methods for converting Value to and from JSON.
+
+// Parse returns a Value parsed from a JSON string, or Null if it cannot be parsed.
+//
+// This is simply a shortcut for calling json.Unmarshal and disregarding errors. It is meant for
+// use in test scenarios where malformed data is not a concern.
+func Parse(jsonData []byte) Value {
+	var v Value
+	if err := json.Unmarshal(jsonData, &v); err != nil {
+		return Null()
+	}
+	return v
+}
 
 // JSONString returns the JSON representation of the value.
 func (v Value) JSONString() string {
@@ -74,7 +88,7 @@ func (v Value) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON parses a Value from JSON.
 func (v *Value) UnmarshalJSON(data []byte) error { //nolint:funlen // yes, we know it's a long function
-	if len(data) == 0 { // should not be possible, the parser doesn't pass empty slices to UnmarshalJSON
+	if len(data) == 0 { // COVERAGE: should not be possible, parser doesn't pass empty slices to UnmarshalJSON
 		return errors.New("cannot parse empty data")
 	}
 	firstCh := data[0]
@@ -130,5 +144,37 @@ func (v *Value) UnmarshalJSON(data []byte) error { //nolint:funlen // yes, we kn
 		}
 		return e
 	}
-	return fmt.Errorf("unknown JSON token: %s", data)
+	return fmt.Errorf("unknown JSON token: %s", data) // COVERAGE: never happens, parser rejects the token earlier
+}
+
+// WriteToJSONBuffer provides JSON serialization for Value with the jsonstream API.
+//
+// The JSON output format is identical to what is produced by json.Marshal, but this implementation is
+// more efficient when building output with JSONBuffer. See the jsonstream package for more details.
+func (v Value) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
+	switch v.valueType {
+	case NullType:
+		j.WriteNull()
+	case BoolType:
+		j.WriteBool(v.boolValue)
+	case NumberType:
+		j.WriteFloat64(v.numberValue)
+	case StringType:
+		j.WriteString(v.stringValue)
+	case ArrayType:
+		j.BeginArray()
+		for _, vv := range v.immutableArrayValue {
+			vv.WriteToJSONBuffer(j)
+		}
+		j.EndArray()
+	case ObjectType:
+		j.BeginObject()
+		for k, vv := range v.immutableObjectValue {
+			j.WriteName(k)
+			vv.WriteToJSONBuffer(j)
+		}
+		j.EndObject()
+	case RawType:
+		j.WriteRaw([]byte(v.stringValue))
+	}
 }

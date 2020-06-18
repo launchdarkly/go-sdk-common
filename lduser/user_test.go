@@ -264,6 +264,106 @@ func TestUserBuilderCanSetAttributesAfterSettingAttributeThatCanBePrivate(t *tes
 	}
 }
 
+func TestUserBuilderGenericSetAttribute(t *testing.T) {
+	t.Run("key", func(t *testing.T) {
+		builder := NewUserBuilder("some-key")
+		value := "value"
+
+		builder.SetAttribute(KeyAttribute, ldvalue.String(value))
+		assert.Equal(t, value, builder.Build().GetKey())
+
+		builder.SetAttribute(KeyAttribute, ldvalue.Null())
+		assert.Equal(t, value, builder.Build().GetKey())
+
+		builder.SetAttribute(KeyAttribute, ldvalue.Bool(true))
+		assert.Equal(t, value, builder.Build().GetKey())
+
+		builder.SetAttribute(KeyAttribute, ldvalue.Int(1))
+		assert.Equal(t, value, builder.Build().GetKey())
+
+		builder.SetAttribute(KeyAttribute, ldvalue.String(value)).AsPrivateAttribute()
+		assert.Len(t, getPrivateAttrs(builder.Build()), 0)
+	})
+
+	for a, getter := range optionalStringGetters {
+		t.Run(string(a), func(t *testing.T) {
+			builder := NewUserBuilder("some-key")
+			valueStr := ldvalue.NewOptionalString("value")
+			value := valueStr.AsValue()
+
+			builder.SetAttribute(a, value)
+			assert.Equal(t, valueStr, getter(builder.Build()))
+
+			for a1, _ := range optionalStringGetters {
+				if a1 != a {
+					assertStringAttrNotSet(t, a1, builder.Build())
+				}
+			}
+
+			assert.Len(t, getPrivateAttrs(builder.Build()), 0)
+
+			builder.SetAttribute(a, ldvalue.Bool(true))
+			assert.Equal(t, valueStr, getter(builder.Build()))
+
+			builder.SetAttribute(a, ldvalue.Int(1))
+			assert.Equal(t, valueStr, getter(builder.Build()))
+
+			builder.SetAttribute(a, ldvalue.Null())
+			assert.Equal(t, ldvalue.OptionalString{}, getter(builder.Build()))
+
+			builder.SetAttribute(a, value).AsPrivateAttribute()
+
+			assert.Equal(t, []string{string(a)}, getPrivateAttrs(builder.Build()))
+		})
+	}
+
+	t.Run("anonymous", func(t *testing.T) {
+		builder := NewUserBuilder("some-key")
+
+		builder.SetAttribute(AnonymousAttribute, ldvalue.Bool(false))
+		value, ok := builder.Build().GetAnonymousOptional()
+		assert.True(t, ok)
+		assert.False(t, value)
+		assert.False(t, builder.Build().GetAnonymous())
+		builder.SetAttribute(AnonymousAttribute, ldvalue.Int(1))
+		assert.False(t, builder.Build().GetAnonymous())
+
+		builder.SetAttribute(AnonymousAttribute, ldvalue.Bool(true))
+		value, ok = builder.Build().GetAnonymousOptional()
+		assert.True(t, ok)
+		assert.True(t, value)
+		assert.True(t, builder.Build().GetAnonymous())
+		builder.SetAttribute(AnonymousAttribute, ldvalue.Int(1))
+		assert.True(t, builder.Build().GetAnonymous())
+
+		builder.SetAttribute(AnonymousAttribute, ldvalue.Null())
+		assert.False(t, builder.Build().GetAnonymous())
+		value, ok = builder.Build().GetAnonymousOptional()
+		assert.False(t, ok)
+		assert.False(t, value)
+
+		builder.SetAttribute(AnonymousAttribute, ldvalue.Bool(true)).AsPrivateAttribute()
+		assert.Len(t, getPrivateAttrs(builder.Build()), 0)
+	})
+
+	t.Run("custom", func(t *testing.T) {
+		builder := NewUserBuilder("some-key")
+		a := UserAttribute("thing")
+		value := ldvalue.Int(2)
+
+		builder.SetAttribute(a, value)
+		assert.Equal(t, value, builder.Build().GetAttribute(a))
+
+		assert.Len(t, getPrivateAttrs(builder.Build()), 0)
+
+		builder.SetAttribute(a, ldvalue.Null())
+		assert.Equal(t, ldvalue.Null(), builder.Build().GetAttribute(a))
+
+		builder.SetAttribute(a, value).AsPrivateAttribute()
+		assert.Equal(t, []string{string(a)}, getPrivateAttrs(builder.Build()))
+	})
+}
+
 func TestEnumerateCustomAttributes(t *testing.T) {
 	user := NewUserBuilder("some-key").Custom("first", ldvalue.Int(1)).Custom("second", ldvalue.String("two")).Build()
 	m := make(map[string]ldvalue.Value)

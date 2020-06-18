@@ -73,6 +73,27 @@ type UserBuilder interface {
 	//         Build()
 	Custom(attribute string, value ldvalue.Value) UserBuilderCanMakeAttributePrivate
 
+	// SetAttribute sets any attribute of the user being built, specified as a UserAttribute, to a value
+	// of type ldvalue.Value.
+	//
+	// This method corresponds to the GetAttribute method of User. It is intended for cases where user
+	// properties are being constructed generically, such as from a list of key-value pairs. Since not
+	// all attributes have the same semantics, its behavior is as follows:
+	//
+	// 1. For built-in attributes, if the value is not of a type that is supported for that attribute,
+	// the method has no effect. For Key, the only supported type is string; for Anonymous, the
+	// supported types are boolean or null; and for all other built-ins, the supported types are
+	// string or null. Custom attributes may be of any type.
+	//
+	// 2. Setting an attribute to null (ldvalue.Null() or ldvalue.Value{}) is the same as the attribute
+	// not being set in the first place.
+	//
+	// 3. The method always returns the type UserBuilderCanMakeAttributePrivate, so that you can make
+	// the attribute private if that is appropriate by calling AsPrivateAttribute(). For attributes
+	// that cannot be made private (Key and Anonymous), calling AsPrivateAttribute() on this return
+	// value will have no effect.
+	SetAttribute(attribute UserAttribute, value ldvalue.Value) UserBuilderCanMakeAttributePrivate
+
 	// Build creates a User from the current UserBuilder properties.
 	//
 	// The User is independent of the UserBuilder once you have called Build(); modifying the UserBuilder
@@ -120,23 +141,19 @@ type UserBuilderCanMakeAttributePrivate interface {
 }
 
 type userBuilderImpl struct {
-	key          string
-	secondary    ldvalue.OptionalString
-	ip           ldvalue.OptionalString
-	country      ldvalue.OptionalString
-	email        ldvalue.OptionalString
-	firstName    ldvalue.OptionalString
-	lastName     ldvalue.OptionalString
-	avatar       ldvalue.OptionalString
-	name         ldvalue.OptionalString
-	anonymous    ldvalue.Value
-	custom       ldvalue.ObjectBuilder
-	privateAttrs map[UserAttribute]struct{}
-}
-
-type userBuilderCanMakeAttributePrivate struct {
-	builder   *userBuilderImpl
-	attribute UserAttribute
+	key                         string
+	secondary                   ldvalue.OptionalString
+	ip                          ldvalue.OptionalString
+	country                     ldvalue.OptionalString
+	email                       ldvalue.OptionalString
+	firstName                   ldvalue.OptionalString
+	lastName                    ldvalue.OptionalString
+	avatar                      ldvalue.OptionalString
+	name                        ldvalue.OptionalString
+	anonymous                   ldvalue.Value
+	custom                      ldvalue.ObjectBuilder
+	privateAttrs                map[UserAttribute]struct{}
+	lastAttributeCanMakePrivate UserAttribute
 }
 
 // NewUserBuilder constructs a new UserBuilder, specifying the user key.
@@ -179,7 +196,8 @@ func NewUserBuilderFromUser(fromUser User) UserBuilder {
 }
 
 func (b *userBuilderImpl) canMakeAttributePrivate(attribute UserAttribute) UserBuilderCanMakeAttributePrivate {
-	return &userBuilderCanMakeAttributePrivate{builder: b, attribute: attribute}
+	b.lastAttributeCanMakePrivate = attribute
+	return b
 }
 
 func (b *userBuilderImpl) Key(value string) UserBuilder {
@@ -240,6 +258,55 @@ func (b *userBuilderImpl) Custom(attribute string, value ldvalue.Value) UserBuil
 	return b.canMakeAttributePrivate(UserAttribute(attribute))
 }
 
+func (b *userBuilderImpl) SetAttribute(
+	attribute UserAttribute,
+	value ldvalue.Value,
+) UserBuilderCanMakeAttributePrivate {
+	okPrivate := true
+	setOptString := func(s *ldvalue.OptionalString) {
+		if value.IsString() {
+			*s = ldvalue.NewOptionalString(value.StringValue())
+		} else if value.IsNull() {
+			*s = ldvalue.OptionalString{}
+		}
+	}
+	switch attribute {
+	case KeyAttribute:
+		if value.IsString() {
+			b.key = value.StringValue()
+		}
+		okPrivate = false
+	case SecondaryKeyAttribute:
+		setOptString(&b.secondary)
+	case IPAttribute:
+		setOptString(&b.ip)
+	case CountryAttribute:
+		setOptString(&b.country)
+	case EmailAttribute:
+		setOptString(&b.email)
+	case FirstNameAttribute:
+		setOptString(&b.firstName)
+	case LastNameAttribute:
+		setOptString(&b.lastName)
+	case AvatarAttribute:
+		setOptString(&b.avatar)
+	case NameAttribute:
+		setOptString(&b.name)
+	case AnonymousAttribute:
+		if value.IsBool() || value.IsNull() {
+			b.anonymous = value
+		}
+		okPrivate = false
+	default:
+		return b.Custom(string(attribute), value)
+	}
+	if okPrivate {
+		return b.canMakeAttributePrivate(attribute)
+	}
+	b.lastAttributeCanMakePrivate = ""
+	return b
+}
+
 func (b *userBuilderImpl) Build() User {
 	u := User{
 		key:       b.key,
@@ -266,68 +333,21 @@ func (b *userBuilderImpl) Build() User {
 	return u
 }
 
-func (b *userBuilderCanMakeAttributePrivate) AsPrivateAttribute() UserBuilder {
-	if b.builder.privateAttrs == nil {
-		b.builder.privateAttrs = make(map[UserAttribute]struct{})
+func (b *userBuilderImpl) AsPrivateAttribute() UserBuilder {
+	if b.lastAttributeCanMakePrivate != "" {
+		if b.privateAttrs == nil {
+			b.privateAttrs = make(map[UserAttribute]struct{})
+		}
+		b.privateAttrs[b.lastAttributeCanMakePrivate] = struct{}{}
 	}
-	b.builder.privateAttrs[b.attribute] = struct{}{}
-	return b.builder
+	return b
 }
 
-func (b *userBuilderCanMakeAttributePrivate) AsNonPrivateAttribute() UserBuilder {
-	if b.builder.privateAttrs != nil {
-		delete(b.builder.privateAttrs, b.attribute)
+func (b *userBuilderImpl) AsNonPrivateAttribute() UserBuilder {
+	if b.lastAttributeCanMakePrivate != "" {
+		if b.privateAttrs != nil {
+			delete(b.privateAttrs, b.lastAttributeCanMakePrivate)
+		}
 	}
-	return b.builder
-}
-
-func (b *userBuilderCanMakeAttributePrivate) Key(value string) UserBuilder {
-	return b.builder.Key(value)
-}
-
-func (b *userBuilderCanMakeAttributePrivate) Secondary(value string) UserBuilderCanMakeAttributePrivate {
-	return b.builder.Secondary(value)
-}
-
-func (b *userBuilderCanMakeAttributePrivate) IP(value string) UserBuilderCanMakeAttributePrivate {
-	return b.builder.IP(value)
-}
-
-func (b *userBuilderCanMakeAttributePrivate) Country(value string) UserBuilderCanMakeAttributePrivate {
-	return b.builder.Country(value)
-}
-
-func (b *userBuilderCanMakeAttributePrivate) Email(value string) UserBuilderCanMakeAttributePrivate {
-	return b.builder.Email(value)
-}
-
-func (b *userBuilderCanMakeAttributePrivate) FirstName(value string) UserBuilderCanMakeAttributePrivate {
-	return b.builder.FirstName(value)
-}
-
-func (b *userBuilderCanMakeAttributePrivate) LastName(value string) UserBuilderCanMakeAttributePrivate {
-	return b.builder.LastName(value)
-}
-
-func (b *userBuilderCanMakeAttributePrivate) Avatar(value string) UserBuilderCanMakeAttributePrivate {
-	return b.builder.Avatar(value)
-}
-
-func (b *userBuilderCanMakeAttributePrivate) Name(value string) UserBuilderCanMakeAttributePrivate {
-	return b.builder.Name(value)
-}
-
-func (b *userBuilderCanMakeAttributePrivate) Anonymous(value bool) UserBuilder {
-	return b.builder.Anonymous(value)
-}
-
-func (b *userBuilderCanMakeAttributePrivate) Custom(
-	attribute string,
-	value ldvalue.Value,
-) UserBuilderCanMakeAttributePrivate {
-	return b.builder.Custom(attribute, value)
-}
-
-func (b *userBuilderCanMakeAttributePrivate) Build() User {
-	return b.builder.Build()
+	return b
 }

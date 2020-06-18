@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -11,6 +13,11 @@ func TestEmptyOptionalString(t *testing.T) {
 	o := OptionalString{}
 	assert.False(t, o.IsDefined())
 	assert.Equal(t, "", o.StringValue())
+
+	s, ok := o.Get()
+	assert.Equal(t, "", s)
+	assert.False(t, ok)
+
 	assert.Equal(t, "no", o.OrElse("no"))
 	assert.Nil(t, o.AsPointer())
 	assert.Equal(t, Null(), o.AsValue())
@@ -21,6 +28,11 @@ func TestOptionalStringWithValue(t *testing.T) {
 	o := NewOptionalString("value")
 	assert.True(t, o.IsDefined())
 	assert.Equal(t, "value", o.StringValue())
+
+	s, ok := o.Get()
+	assert.Equal(t, "value", s)
+	assert.True(t, ok)
+
 	assert.Equal(t, "value", o.OrElse("no"))
 	assert.NotNil(t, o.AsPointer())
 	assert.Equal(t, "value", *o.AsPointer())
@@ -31,12 +43,6 @@ func TestOptionalStringWithValue(t *testing.T) {
 
 func TestOptionalStringFromNilPointer(t *testing.T) {
 	o := NewOptionalStringFromPointer(nil)
-	assert.False(t, o.IsDefined())
-	assert.Equal(t, "", o.StringValue())
-	assert.Equal(t, "no", o.OrElse("no"))
-	assert.Nil(t, o.AsPointer())
-	assert.Equal(t, Null(), o.AsValue())
-	assert.True(t, o == o)
 	assert.True(t, o == OptionalString{})
 }
 
@@ -44,14 +50,10 @@ func TestOptionalStringFromNonNilPointer(t *testing.T) {
 	v := "value"
 	p := &v
 	o := NewOptionalStringFromPointer(p)
-	assert.True(t, o.IsDefined())
-	assert.Equal(t, "value", o.StringValue())
-	assert.NotNil(t, o.AsPointer())
+	assert.True(t, o == NewOptionalString("value"))
+
 	assert.Equal(t, "value", *o.AsPointer())
 	assert.False(t, p == o.AsPointer()) // should not be the same pointer, just the same underlying string
-	assert.Equal(t, String("value"), o.AsValue())
-	assert.True(t, o == o)
-	assert.True(t, o == NewOptionalString("value"))
 }
 
 func TestOptionalStringAsStringer(t *testing.T) {
@@ -73,6 +75,14 @@ func TestOptionalStringMarshalling(t *testing.T) {
 	bytes, err = json.Marshal(swos)
 	assert.NoError(t, err)
 	assert.Equal(t, `{"s1":"yes","s2":null,"s3":null}`, string(bytes))
+
+	var j jsonstream.JSONBuffer
+	j.SetSeparator([]byte(","))
+	NewOptionalString(`a "good" string`).WriteToJSONBuffer(&j)
+	OptionalString{}.WriteToJSONBuffer(&j)
+	bytes, err = j.Get()
+	assert.NoError(t, err)
+	assert.Equal(t, `"a \"good\" string",null`, string(bytes))
 }
 
 func TestOptionalStringUnmarshalling(t *testing.T) {

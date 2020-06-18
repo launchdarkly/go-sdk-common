@@ -293,6 +293,9 @@ func TestEnumerateObject(t *testing.T) {
 		enumerateParams{0, "a", Int(1)},
 		enumerateParams{0, "b", Int(2)},
 	}, e1)
+
+	e2 := recordEnumerateCalls(o1, func(p enumerateParams) bool { return true })
+	assert.Len(t, e2, 1)
 }
 
 func TestTransformSimpleTypes(t *testing.T) {
@@ -420,4 +423,25 @@ func TestTransformObject(t *testing.T) {
 	o4 := ObjectBuild().Set("a", Int(2)).Set("b", Int(4)).Build()
 	assert.Equal(t, ObjectBuild().Set("a", String("a=2")).Set("b", String("b=4")).Build(),
 		o4.Transform(fnTransformUsingKey))
+
+	// Case where we guarantee that the first element we iterated through is *not* modified - map
+	// iteration order is nondeterministic, we just want to verify that we've hit all code paths
+	n := 0
+	fnTransformUsingKeyButNotFirst := func(index int, key string, value Value) (Value, bool) {
+		n++
+		if n > 1 {
+			return fnTransformUsingKey(index, key, value)
+		}
+		return value, true
+	}
+	o5 := o4.Transform(fnTransformUsingKeyButNotFirst)
+	assert.NotEqual(t, o4, o5)
+	assert.Equal(t, o4.Count(), o5.Count())
+	if o5.GetByKey("a").IsNumber() {
+		assert.Equal(t, Int(2), o5.GetByKey("a"))
+		assert.Equal(t, String("b=4"), o5.GetByKey("b"))
+	} else {
+		assert.Equal(t, String("a=2"), o5.GetByKey("a"))
+		assert.Equal(t, Int(4), o5.GetByKey("b"))
+	}
 }

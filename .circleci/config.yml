@@ -9,23 +9,28 @@ workflows:
       - go-test:
           name: Go 1.14
           docker-image: circleci/golang:1.14
+          with-coverage: true
       - go-test:
           name: Go 1.13
           docker-image: circleci/golang:1.13
       - go-test-windows:
           name: Windows
+      - benchmarks
 
 jobs:
   go-test:
     parameters:
+      docker-image:
+        type: string
       run-lint:
         type: boolean
         default: true
         # We are currently linting in all Go versions, but this parameter lets us turn it off for some, in
         # case we need to support more versions than a single version of golangci-lint is compatible with
-      docker-image:
-        type: string
-
+      with-coverage:
+        type: boolean
+        default: false
+    
     docker:
       - image: <<parameters.docker-image>>
         environment:
@@ -51,9 +56,24 @@ jobs:
           command: |
             mkdir -p $CIRCLE_TEST_REPORTS
             mkdir -p $CIRCLE_ARTIFACTS
-            trap "go-junit-report < $CIRCLE_ARTIFACTS/report.txt > $CIRCLE_TEST_REPORTS/junit.xml" EXIT
             make test | tee $CIRCLE_ARTIFACTS/report.txt
-
+    
+      - run:
+          name: Process test results
+          command: go-junit-report < $CIRCLE_ARTIFACTS/report.txt > $CIRCLE_TEST_REPORTS/junit.xml
+          when: always
+      
+      - when:
+          condition: <<parameters.with-coverage>>
+          steps:
+            - run:
+                name: Verify test coverage
+                command: make test-coverage
+            - run:
+                name: Store coverage results
+                command: cp build/coverage* /tmp/circle-artifacts
+                when: always
+          
       - store_test_results:
           path: /tmp/circle-reports
 
@@ -74,3 +94,21 @@ jobs:
       - run:
           name: build and test
           command: go test -race ./...
+
+  benchmarks:
+    docker:
+      - image: circleci/golang:1.14
+        environment:
+          CIRCLE_ARTIFACTS: /tmp/circle-artifacts
+
+    steps:
+      - checkout
+      - run: go build ./...      
+      - run:
+          name: Run benchmarks
+          command: |
+            mkdir -p $CIRCLE_ARTIFACTS
+            make benchmarks | tee $CIRCLE_ARTIFACTS/benchmarks.txt
+
+      - store_artifacts:
+          path: /tmp/circle-artifacts

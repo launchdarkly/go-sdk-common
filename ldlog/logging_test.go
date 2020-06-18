@@ -84,6 +84,16 @@ func TestCanSetLoggerForSpecificLevel(t *testing.T) {
 	assert.Equal(t, []string{"WARN: b"}, lsWarn.output)
 }
 
+func TestCanGetLoggerForSpecificLevel(t *testing.T) {
+	ls := logSink{}
+	l := Loggers{}
+	l.SetBaseLogger(&ls)
+	l.ForLevel(Info).Println("a")
+	l.ForLevel(Warn).Println("b")
+	l.ForLevel(LogLevel(99)).Println("ignore")
+	assert.Equal(t, []string{"INFO: a", "WARN: b"}, ls.output)
+}
+
 func TestSetBaseLoggerForLevelWithNilReferenceRestoresMainBaseLogger(t *testing.T) {
 	lsMain := logSink{}
 	lsWarn := logSink{}

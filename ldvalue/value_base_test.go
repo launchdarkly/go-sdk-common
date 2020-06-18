@@ -2,9 +2,12 @@ package ldvalue
 
 import (
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	helpers "github.com/launchdarkly/go-test-helpers"
 )
 
 func TestValueTypes(t *testing.T) {
@@ -23,8 +26,10 @@ func TestNullValue(t *testing.T) {
 
 	assert.Equal(t, NullType, v.Type())
 	assert.True(t, v.IsNull())
+	assert.False(t, v.IsBool())
 	assert.False(t, v.IsNumber())
 	assert.False(t, v.IsInt())
+	assert.False(t, v.IsString())
 
 	assert.Equal(t, Null(), v)
 	assert.Equal(t, Value{}, v)
@@ -46,8 +51,10 @@ func TestBoolValue(t *testing.T) {
 	assert.Equal(t, BoolType, tv.Type())
 	assert.True(t, tv.BoolValue())
 	assert.False(t, tv.IsNull())
+	assert.True(t, tv.IsBool())
 	assert.False(t, tv.IsNumber())
 	assert.False(t, tv.IsInt())
+	assert.False(t, tv.IsString())
 
 	assert.Equal(t, Bool(true), tv)
 	assert.NotEqual(t, Bool(false), tv)
@@ -80,8 +87,10 @@ func TestIntValue(t *testing.T) {
 	assert.Equal(t, 2, v.IntValue())
 	assert.Equal(t, float64(2), v.Float64Value())
 	assert.False(t, v.IsNull())
+	assert.False(t, v.IsBool())
 	assert.True(t, v.IsNumber())
 	assert.True(t, v.IsInt())
+	assert.False(t, v.IsString())
 
 	assert.Equal(t, Int(2), v)
 	assert.Equal(t, Float64(2), v)
@@ -103,8 +112,10 @@ func TestFloat64Value(t *testing.T) {
 	assert.Equal(t, 2, v.IntValue())
 	assert.Equal(t, 2.75, v.Float64Value())
 	assert.False(t, v.IsNull())
+	assert.False(t, v.IsBool())
 	assert.True(t, v.IsNumber())
 	assert.False(t, v.IsInt())
+	assert.False(t, v.IsString())
 
 	floatButReallyInt := Float64(2.0)
 	assert.Equal(t, NumberType, floatButReallyInt.Type())
@@ -133,8 +144,10 @@ func TestStringValue(t *testing.T) {
 	assert.Equal(t, "abc", v.StringValue())
 	assert.Equal(t, NewOptionalString("abc"), v.AsOptionalString())
 	assert.False(t, v.IsNull())
+	assert.False(t, v.IsBool())
 	assert.False(t, v.IsNumber())
 	assert.False(t, v.IsInt())
+	assert.True(t, v.IsString())
 	assert.Equal(t, v, String("abc"))
 
 	assert.Equal(t, String("abc"), v)
@@ -156,8 +169,10 @@ func TestRawValue(t *testing.T) {
 	assert.Equal(t, RawType, v.Type())
 	assert.Equal(t, rawJson, v.AsRaw())
 	assert.False(t, v.IsNull())
+	assert.False(t, v.IsBool())
 	assert.False(t, v.IsNumber())
 	assert.False(t, v.IsInt())
+	assert.False(t, v.IsString())
 
 	// conversion of other types to Raw is covered in value_serialization_test
 
@@ -174,87 +189,123 @@ func TestRawValue(t *testing.T) {
 
 func TestConvertPrimitivesFromArbitraryValue(t *testing.T) {
 	t.Run("nil", func(t *testing.T) {
-		v := CopyArbitraryValue(nil)
-		assert.Equal(t, Null(), v)
+		assert.Equal(t, Null(), CopyArbitraryValue(nil))
 	})
 	t.Run("Value", func(t *testing.T) {
 		originalValue := Int(1)
 		assert.Equal(t, originalValue, CopyArbitraryValue(originalValue))
+		assert.Equal(t, originalValue, CopyArbitraryValue(&originalValue))
+		assert.Equal(t, Null(), CopyArbitraryValue((*Value)(nil)))
+	})
+	t.Run("OptionalString", func(t *testing.T) {
+		s := NewOptionalString("value")
+		sv := String("value")
+		assert.Equal(t, sv, CopyArbitraryValue(s))
+		assert.Equal(t, sv, CopyArbitraryValue(&s))
+		assert.Equal(t, Null(), CopyArbitraryValue(OptionalString{}))
+		assert.Equal(t, Null(), CopyArbitraryValue(&OptionalString{}))
+		assert.Equal(t, Null(), CopyArbitraryValue((*OptionalString)(nil)))
 	})
 	t.Run("bool", func(t *testing.T) {
-		tv := CopyArbitraryValue(true)
-		assert.Equal(t, Bool(true), tv)
-
-		fv := CopyArbitraryValue(false)
-		assert.Equal(t, Bool(false), fv)
+		assert.Equal(t, Bool(true), CopyArbitraryValue(true))
+		assert.Equal(t, Bool(false), CopyArbitraryValue(false))
+		assert.Equal(t, Bool(true), CopyArbitraryValue(helpers.BoolPtr(true)))
+		assert.Equal(t, Bool(false), CopyArbitraryValue(helpers.BoolPtr(false)))
+		assert.Equal(t, Null(), CopyArbitraryValue((*bool)(nil)))
 	})
 	t.Run("int8", func(t *testing.T) {
-		v := CopyArbitraryValue(int8(1))
-		assert.Equal(t, Int(1), v)
-		assert.Equal(t, Float64(1), v)
+		var n int8 = 1
+		assert.Equal(t, Int(1), CopyArbitraryValue(n))
+		assert.Equal(t, Int(1), CopyArbitraryValue(&n))
+		assert.Equal(t, Null(), CopyArbitraryValue((*int8)(nil)))
 	})
 	t.Run("uint8", func(t *testing.T) {
-		v := CopyArbitraryValue(uint8(1))
-		assert.Equal(t, Int(1), v)
-		assert.Equal(t, Float64(1), v)
+		var n uint8 = 1
+		assert.Equal(t, Int(1), CopyArbitraryValue(n))
+		assert.Equal(t, Int(1), CopyArbitraryValue(&n))
+		assert.Equal(t, Null(), CopyArbitraryValue((*uint8)(nil)))
 	})
 	t.Run("int16", func(t *testing.T) {
-		v := CopyArbitraryValue(int16(1))
-		assert.Equal(t, Int(1), v)
-		assert.Equal(t, Float64(1), v)
+		var n int16 = 1
+		assert.Equal(t, Int(1), CopyArbitraryValue(n))
+		assert.Equal(t, Int(1), CopyArbitraryValue(&n))
+		assert.Equal(t, Null(), CopyArbitraryValue((*int16)(nil)))
 	})
 	t.Run("uint16", func(t *testing.T) {
-		v := CopyArbitraryValue(uint16(1))
-		assert.Equal(t, Int(1), v)
-		assert.Equal(t, Float64(1), v)
+		var n uint16 = 1
+		assert.Equal(t, Int(1), CopyArbitraryValue(n))
+		assert.Equal(t, Int(1), CopyArbitraryValue(&n))
+		assert.Equal(t, Null(), CopyArbitraryValue((*uint16)(nil)))
 	})
 	t.Run("int", func(t *testing.T) {
-		v := CopyArbitraryValue(int(1))
-		assert.Equal(t, Int(1), v)
-		assert.Equal(t, Float64(1), v)
+		var n int = 1
+		assert.Equal(t, Int(1), CopyArbitraryValue(n))
+		assert.Equal(t, Int(1), CopyArbitraryValue(&n))
+		assert.Equal(t, Null(), CopyArbitraryValue((*int)(nil)))
 	})
 	t.Run("uint", func(t *testing.T) {
-		v := CopyArbitraryValue(uint(1))
-		assert.Equal(t, Int(1), v)
-		assert.Equal(t, Float64(1), v)
+		var n uint = 1
+		assert.Equal(t, Int(1), CopyArbitraryValue(n))
+		assert.Equal(t, Int(1), CopyArbitraryValue(&n))
+		assert.Equal(t, Null(), CopyArbitraryValue((*uint)(nil)))
 	})
 	t.Run("int32", func(t *testing.T) {
-		v := CopyArbitraryValue(int32(1))
-		assert.Equal(t, Int(1), v)
-		assert.Equal(t, Float64(1), v)
+		var n int32 = 1
+		assert.Equal(t, Int(1), CopyArbitraryValue(n))
+		assert.Equal(t, Int(1), CopyArbitraryValue(&n))
+		assert.Equal(t, Null(), CopyArbitraryValue((*int32)(nil)))
 	})
 	t.Run("uint32", func(t *testing.T) {
-		v := CopyArbitraryValue(uint32(1))
-		assert.Equal(t, Int(1), v)
-		assert.Equal(t, Float64(1), v)
+		var n uint32 = 1
+		assert.Equal(t, Int(1), CopyArbitraryValue(n))
+		assert.Equal(t, Int(1), CopyArbitraryValue(&n))
+		assert.Equal(t, Null(), CopyArbitraryValue((*uint32)(nil)))
 	})
 	t.Run("float32", func(t *testing.T) {
-		v := CopyArbitraryValue(float32(2.5))
-		assert.Equal(t, Float64(2.5), v)
+		var n float32 = 2.5
+		assert.Equal(t, Float64(2.5), CopyArbitraryValue(n))
+		assert.Equal(t, Float64(2.5), CopyArbitraryValue(&n))
+		assert.Equal(t, Null(), CopyArbitraryValue((*float32)(nil)))
 	})
 	t.Run("float64", func(t *testing.T) {
-		v := CopyArbitraryValue(float64(2.5))
-		assert.Equal(t, Float64(2.5), v)
+		var n float64 = 2.5
+		assert.Equal(t, Float64(2.5), CopyArbitraryValue(n))
+		assert.Equal(t, Float64(2.5), CopyArbitraryValue(&n))
+		assert.Equal(t, Null(), CopyArbitraryValue((*float64)(nil)))
 	})
 	t.Run("string", func(t *testing.T) {
-		v := CopyArbitraryValue("x")
-		assert.Equal(t, String("x"), v)
+		s := "x"
+		assert.Equal(t, String(s), CopyArbitraryValue(s))
+		assert.Equal(t, String(s), CopyArbitraryValue(&s))
+		assert.Equal(t, Null(), CopyArbitraryValue((*string)(nil)))
 	})
 	t.Run("[]interface{}", func(t *testing.T) {
-		v := CopyArbitraryValue([]interface{}{2, []interface{}{"x"}})
-		assert.Equal(t, ArrayOf(Int(2), ArrayOf(String("x"))), v)
+		a := []interface{}{2, []interface{}{"x"}}
+		av := ArrayOf(Int(2), ArrayOf(String("x")))
+		assert.Equal(t, av, CopyArbitraryValue(a))
+		assert.Equal(t, av, CopyArbitraryValue(&a))
+		assert.Equal(t, Null(), CopyArbitraryValue((*[]interface{})(nil)))
 	})
 	t.Run("[]Value", func(t *testing.T) {
-		v := CopyArbitraryValue([]Value{Int(2), ArrayOf(String("x"))})
-		assert.Equal(t, ArrayOf(Int(2), ArrayOf(String("x"))), v)
+		a := []Value{Int(2), ArrayOf(String("x"))}
+		av := ArrayOf(Int(2), ArrayOf(String("x")))
+		assert.Equal(t, av, CopyArbitraryValue(a))
+		assert.Equal(t, av, CopyArbitraryValue(&a))
+		assert.Equal(t, Null(), CopyArbitraryValue((*[]Value)(nil)))
 	})
 	t.Run("map[string]interface{}", func(t *testing.T) {
-		v := CopyArbitraryValue(map[string]interface{}{"x": []interface{}{2}})
-		assert.Equal(t, ObjectBuild().Set("x", ArrayOf(Int(2))).Build(), v)
+		m := map[string]interface{}{"x": []interface{}{2}}
+		mv := ObjectBuild().Set("x", ArrayOf(Int(2))).Build()
+		assert.Equal(t, mv, CopyArbitraryValue(m))
+		assert.Equal(t, mv, CopyArbitraryValue(&m))
+		assert.Equal(t, Null(), CopyArbitraryValue((*map[string]interface{})(nil)))
 	})
 	t.Run("map[string]Value", func(t *testing.T) {
-		v := CopyArbitraryValue(map[string]Value{"x": ArrayOf(Int(2))})
-		assert.Equal(t, ObjectBuild().Set("x", ArrayOf(Int(2))).Build(), v)
+		m := map[string]Value{"x": ArrayOf(Int(2))}
+		mv := ObjectBuild().Set("x", ArrayOf(Int(2))).Build()
+		assert.Equal(t, mv, CopyArbitraryValue(m))
+		assert.Equal(t, mv, CopyArbitraryValue(&m))
+		assert.Equal(t, Null(), CopyArbitraryValue((*map[string]Value)(nil)))
 	})
 	t.Run("arbitrary struct", func(t *testing.T) {
 		s := struct {
@@ -264,8 +315,11 @@ func TestConvertPrimitivesFromArbitraryValue(t *testing.T) {
 		assert.Equal(t, ObjectBuild().Set("x", Int(2)).Build(), v)
 	})
 	t.Run("raw", func(t *testing.T) {
-		v := CopyArbitraryValue(json.RawMessage("[3]"))
-		assert.Equal(t, Raw(json.RawMessage("[3]")), v)
+		j := json.RawMessage("[3]")
+		jv := Raw(json.RawMessage("[3]"))
+		assert.Equal(t, jv, CopyArbitraryValue(j))
+		assert.Equal(t, jv, CopyArbitraryValue(&j))
+		assert.Equal(t, Null(), CopyArbitraryValue((*json.RawMessage)(nil)))
 	})
 }
 
@@ -337,4 +391,15 @@ func TestValueAsPointer(t *testing.T) {
 	assert.Equal(t, &v, v.AsPointer())
 
 	assert.Nil(t, Null().AsPointer())
+}
+
+func TestConvertArbitraryValueThatFailsToSerialize(t *testing.T) {
+	v := CopyArbitraryValue(unserializableValue{})
+	assert.Equal(t, Null(), v)
+}
+
+type unserializableValue struct{}
+
+func (u unserializableValue) MarshalJSON() ([]byte, error) {
+	return nil, errors.New("no")
 }
