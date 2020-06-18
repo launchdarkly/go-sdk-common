@@ -1,7 +1,9 @@
 package jsonstream
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -44,12 +46,14 @@ var allValueTests = []valueTest{
 }
 
 type escapeTest struct {
-	ch rune
-	s  string
+	decoded string
+	encoded string
 }
 
-var allEscapeTests = []escapeTest{
-	{'\b', `\b`}, {'\t', `\t`}, {'\n', `\n`}, {'\f', `\f`}, {'\r', `\r`}, {'"', `\"`}, {'\\', `\\`},
+var basicEscapeTests = []escapeTest{
+	{"\b", `\b`}, {"\t", `\t`}, {"\n", `\n`}, {"\f", `\f`}, {"\r", `\r`}, {`"`, `\"`}, {`\`, `\\`},
+	{"\x05", `\u0005`}, {"\x1c", `\u001c`},
+	{"🦜🦄😂🧶😻 yes", "🦜🦄😂🧶😻 yes"}, // unescaped multi-byte characters are allowed
 }
 
 func testEncoding(t *testing.T, name string, expected string, action func(*JSONBuffer)) {
@@ -65,6 +69,32 @@ func testEncoding(t *testing.T, name string, expected string, action func(*JSONB
 	})
 }
 
+func makeStringEscapingTests(forParser bool) []escapeTest {
+	allBasic := basicEscapeTests
+	if forParser {
+		// These escapes are not used when writing, but may be encountered when parsing
+		allBasic = append(allBasic, escapeTest{"/", `\/`})
+		allBasic = append(allBasic, escapeTest{"も", `\3082`})
+	}
+	// This creates various permutations to ensure that string escaping is handled correctly regardless of
+	// whether the escape sequence is at the beginning, the end, next to another escape sequence, etc.
+	var ret []escapeTest
+	for _, test := range allBasic {
+		ret = append(ret, test)
+		for _, f := range []string{"%sabcd", "abcd%s", "ab%scd"} {
+			ret = append(ret, escapeTest{decoded: fmt.Sprintf(f, test.decoded),
+				encoded: fmt.Sprintf(f, test.encoded)})
+		}
+		for _, test2 := range allBasic {
+			for _, f := range []string{"%s%sabcd", "ab%s%scd", "a%sbc%sd", "abcd%s%s"} {
+				ret = append(ret, escapeTest{decoded: fmt.Sprintf(f, test.decoded, test2.decoded),
+					encoded: fmt.Sprintf(f, test.encoded, test2.encoded)})
+			}
+		}
+	}
+	return ret
+}
+
 func TestWriteSimpleValues(t *testing.T) {
 	for _, test := range allValueTests {
 		testEncoding(t, test.name, test.encoding, test.action)
@@ -72,39 +102,11 @@ func TestWriteSimpleValues(t *testing.T) {
 }
 
 func TestWriteStringFormatting(t *testing.T) {
-	for _, test := range allEscapeTests {
-		expected1 := fmt.Sprintf("%sabcd", test.s)
-		testEncoding(t, expected1, `"`+expected1+`"`, func(j *JSONBuffer) {
-			j.WriteString(fmt.Sprintf("%sabcd", string(test.ch)))
-		})
-
-		expected2 := fmt.Sprintf("ab%scd", test.s)
-		testEncoding(t, expected2, `"`+expected2+`"`, func(j *JSONBuffer) {
-			j.WriteString(fmt.Sprintf("ab%scd", string(test.ch)))
-		})
-
-		expected3 := fmt.Sprintf("abcd%s", test.s)
-		testEncoding(t, expected3, `"`+expected3+`"`, func(j *JSONBuffer) {
-			j.WriteString(fmt.Sprintf("abcd%s", string(test.ch)))
-		})
-
-		expected4 := fmt.Sprintf("ab%scd%sef", test.s, test.s)
-		testEncoding(t, expected4, `"`+expected4+`"`, func(j *JSONBuffer) {
-			j.WriteString(fmt.Sprintf("ab%scd%sef", string(test.ch), string(test.ch)))
-		})
-
-		expected5 := fmt.Sprintf("ab%s%scd", test.s, test.s)
-		testEncoding(t, expected5, `"`+expected5+`"`, func(j *JSONBuffer) {
-			j.WriteString(fmt.Sprintf("ab%s%scd", string(test.ch), string(test.ch)))
+	for _, test := range makeStringEscapingTests(false) {
+		testEncoding(t, test.encoded, `"`+test.encoded+`"`, func(j *JSONBuffer) {
+			j.WriteString(test.decoded)
 		})
 	}
-
-	// Multi-byte characters do not get special handling - JSON allows them to be escaped as hex sequences,
-	// but does not require it.
-	emojiStr := "🦜🦄😂🦹🏻‍♀️🦹‍♂️🧶😻 yes"
-	testEncoding(t, "multi-byte characters", `"`+emojiStr+`"`, func(j *JSONBuffer) {
-		j.WriteString(emojiStr)
-	})
 }
 
 func TestWriteArray(t *testing.T) {
@@ -325,4 +327,49 @@ func TestJSONBufferCanBeLocallyAllocated(t *testing.T) {
 	bytes, err := j.Get()
 	assert.NoError(t, err)
 	assert.Equal(t, "true", string(bytes))
+}
+
+func TestStreamingJSONBuffer(t *testing.T) {
+	t.Run("data is flushed incrementally", func(t *testing.T) {
+		var target bytes.Buffer
+		j := NewStreamingJSONBuffer(&target, 20)
+		j.SetSeparator([]byte(","))
+		j.WriteInt(123456789012345)
+		assert.Len(t, target.Bytes(), 0)
+		j.WriteInt(123456)
+		assert.Equal(t, `123456789012345,123456`, string(target.Bytes()))
+		j.WriteInt(12345678)
+		assert.Equal(t, `123456789012345,123456`, string(target.Bytes()))
+		j.Flush()
+		assert.Equal(t, `123456789012345,123456,12345678`, string(target.Bytes()))
+	})
+
+	t.Run("writer error prevents subsequent writes", func(t *testing.T) {
+		e := errors.New("sorry")
+		var w testWriter
+		j := NewStreamingJSONBuffer(&w, 20)
+		j.SetSeparator([]byte(","))
+		j.WriteInt(12345)
+		j.Flush()
+		j.WriteInt(67890)
+		w.fakeError = e
+		j.Flush()
+		j.WriteInt(22222)
+		j.WriteInt(33333)
+		j.Flush()
+		assert.Equal(t, e, j.GetError())
+		assert.Equal(t, "12345", string(w.target.Bytes()))
+	})
+}
+
+type testWriter struct {
+	target    bytes.Buffer
+	fakeError error
+}
+
+func (w *testWriter) Write(data []byte) (int, error) {
+	if w.fakeError != nil {
+		return 0, w.fakeError
+	}
+	return w.target.Write(data)
 }
