@@ -1,7 +1,9 @@
 package jsonstream
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -325,4 +327,49 @@ func TestJSONBufferCanBeLocallyAllocated(t *testing.T) {
 	bytes, err := j.Get()
 	assert.NoError(t, err)
 	assert.Equal(t, "true", string(bytes))
+}
+
+func TestStreamingJSONBuffer(t *testing.T) {
+	t.Run("data is flushed incrementally", func(t *testing.T) {
+		var target bytes.Buffer
+		j := NewStreamingJSONBuffer(&target, 20)
+		j.SetSeparator([]byte(","))
+		j.WriteInt(123456789012345)
+		assert.Len(t, target.Bytes(), 0)
+		j.WriteInt(123456)
+		assert.Equal(t, `123456789012345,123456`, string(target.Bytes()))
+		j.WriteInt(12345678)
+		assert.Equal(t, `123456789012345,123456`, string(target.Bytes()))
+		j.Flush()
+		assert.Equal(t, `123456789012345,123456,12345678`, string(target.Bytes()))
+	})
+
+	t.Run("writer error prevents subsequent writes", func(t *testing.T) {
+		e := errors.New("sorry")
+		var w testWriter
+		j := NewStreamingJSONBuffer(&w, 20)
+		j.SetSeparator([]byte(","))
+		j.WriteInt(12345)
+		j.Flush()
+		j.WriteInt(67890)
+		w.fakeError = e
+		j.Flush()
+		j.WriteInt(22222)
+		j.WriteInt(33333)
+		j.Flush()
+		assert.Equal(t, e, j.GetError())
+		assert.Equal(t, "12345", string(w.target.Bytes()))
+	})
+}
+
+type testWriter struct {
+	target    bytes.Buffer
+	fakeError error
+}
+
+func (w *testWriter) Write(data []byte) (int, error) {
+	if w.fakeError != nil {
+		return 0, w.fakeError
+	}
+	return w.target.Write(data)
 }
