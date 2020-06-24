@@ -1,22 +1,11 @@
 package jsonstream
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
+	"io"
 	"strconv"
-)
-
-type streamState int
-
-const (
-	stateValueFirst     = iota // no top-level values have been written
-	stateValueNext      = iota // at least one top-level value has been written
-	stateArrayStart     = iota // array has been started, has no values yet
-	stateArrayNext      = iota // array has been started and has at least one value
-	stateObjectStart    = iota // object has been started, has no names or values yet
-	stateObjectNameNext = iota // object has been started, has name-value pairs, can write a new name
-	stateObjectValue    = iota // object has been started, name has been written, needs a value
+	"unicode/utf8"
 )
 
 var (
@@ -45,19 +34,36 @@ var (
 //     buf.EndObject()
 //     bytes, err := buf.Get() // bytes == []byte(`{"a":2}`)
 type JSONBuffer struct {
-	buf                bytes.Buffer
-	state              streamState
-	stateStackArray    [20]streamState // we use this fixed-size array whenever possible to avoid heap allocations
-	stateStackArrayLen int
-	stateStackSlice    []streamState // this slice gets allocated on the heap only if necessary
-	separator          []byte
-	err                error
+	buf       streamableBuffer
+	state     stateStack
+	separator []byte
+	err       error
 }
 
 // NewJSONBuffer creates a new JSONBuffer on the heap. This is not strictly necessary; declaring a local
 // value of JSONBuffer{} will also work.
 func NewJSONBuffer() *JSONBuffer {
 	return &JSONBuffer{}
+}
+
+// NewStreamingJSONBuffer creates a JSONBuffer that, instead of accumulating all of the output in memory,
+// writes it in chunks to the specified Writer.
+//
+// In this mode, operations that write data to the JSONBuffer will accumulate the output in memory until
+// either at least chunkSize bytes have been written, or Flush() is called. At that point, the buffered
+// output is written to the Writer, and then the buffer is cleared. The amount of data written at a time
+// may be more than chunkSize bytes, but will not be less unless you force a Flush().
+//
+// If the Writer returns an error at any point, the JSONBuffer enters a failed state and will not try to
+// write any more data. The error can be checked by calling GetError().
+//
+// It is important to call Flush() after you are done with the JSONBuffer to ensure that everything has
+// been written to the Writer.
+func NewStreamingJSONBuffer(w io.Writer, chunkSize int) *JSONBuffer {
+	j := &JSONBuffer{}
+	j.buf.Grow(chunkSize)
+	j.buf.SetStreamingWriter(w, chunkSize)
+	return j
 }
 
 // Get returns the full encoded byte slice.
@@ -69,7 +75,7 @@ func (j *JSONBuffer) Get() ([]byte, error) {
 	if j.err != nil {
 		return nil, j.err
 	}
-	if j.getStateStackCount() > 0 {
+	if !j.state.isTopLevel() {
 		j.err = errors.New("array or object not ended")
 		return nil, j.err
 	}
@@ -79,7 +85,10 @@ func (j *JSONBuffer) Get() ([]byte, error) {
 // GetError returns an error if the buffer is in a failed state from a previous invalid operation, or
 // nil otherwise.
 func (j *JSONBuffer) GetError() error {
-	return j.err
+	if j.err != nil {
+		return j.err
+	}
+	return j.buf.GetWriterError()
 }
 
 // GetPartial returns the data written to the buffer so far, regardless of whether it is in a failed or
@@ -92,6 +101,12 @@ func (j *JSONBuffer) GetPartial() []byte {
 // on a bytes.Buffer.
 func (j *JSONBuffer) Grow(n int) {
 	j.buf.Grow(n)
+}
+
+// Flush writes any remaining in-memory output to the underlying Writer, if this is a streaming buffer
+// created with NewStreamingJSONBuffer. It has no effect otherwise.
+func (j *JSONBuffer) Flush() error {
+	return j.buf.Flush()
 }
 
 // SetSeparator specifies a byte sequence that should be added to the buffer in between values if more
@@ -188,6 +203,9 @@ func (j *JSONBuffer) WriteFloat64(value float64) {
 }
 
 // WriteString writes a JSON string value to the output, with quotes and escaping.
+//
+// JSONBuffer assumes that multi-byte UTF8 characters are allowed in the output, so it will not escape any
+// characters other than control characters, double quotes, and backslashes.
 func (j *JSONBuffer) WriteString(value string) {
 	if !j.beforeValue() {
 		return
@@ -220,7 +238,7 @@ func (j *JSONBuffer) BeginArray() {
 		return
 	}
 	j.buf.WriteRune('[')
-	j.pushState(stateArrayStart)
+	j.state.push(stateArrayStart)
 }
 
 // EndArray finishes writing the current JSON array.
@@ -228,12 +246,12 @@ func (j *JSONBuffer) EndArray() {
 	if j.err != nil {
 		return
 	}
-	if j.state != stateArrayStart && j.state != stateArrayNext {
+	if j.state.current != stateArrayStart && j.state.current != stateArrayNext {
 		j.fail("called EndArray when not inside an array")
 		return
 	}
 	j.buf.WriteRune(']')
-	j.popState()
+	j.state.pop()
 	j.afterValue()
 }
 
@@ -253,7 +271,7 @@ func (j *JSONBuffer) BeginObject() {
 		return
 	}
 	j.buf.WriteRune('{')
-	j.pushState(stateObjectStart)
+	j.state.push(stateObjectStart)
 }
 
 // WriteName writes a property name within an object.
@@ -264,16 +282,16 @@ func (j *JSONBuffer) WriteName(name string) {
 	if j.err != nil {
 		return
 	}
-	if j.state != stateObjectStart && j.state != stateObjectNameNext {
+	if j.state.current != stateObjectStart && j.state.current != stateObjectNameNext {
 		j.fail("called WriteName when a value was expected")
 		return
 	}
-	if j.state == stateObjectNameNext {
+	if j.state.current == stateObjectNameNext {
 		j.buf.WriteRune(',')
 	}
 	j.writeQuotedString(name)
 	j.buf.WriteRune(':')
-	j.state = stateObjectValue
+	j.state.current = stateObjectValue
 }
 
 // EndObject finishes writing the current JSON object.
@@ -281,16 +299,16 @@ func (j *JSONBuffer) EndObject() {
 	if j.err != nil {
 		return
 	}
-	if j.state == stateObjectValue {
+	if j.state.current == stateObjectValue {
 		j.fail("called EndObject when a value was expected")
 		return
 	}
-	if j.state != stateObjectStart && j.state != stateObjectNameNext {
+	if j.state.current != stateObjectStart && j.state.current != stateObjectNameNext {
 		j.fail("called EndObject when not inside an object")
 		return
 	}
 	j.buf.WriteRune('}')
-	j.popState()
+	j.state.pop()
 	j.afterValue()
 }
 
@@ -298,7 +316,7 @@ func (j *JSONBuffer) beforeValue() bool {
 	if j.err != nil {
 		return false
 	}
-	switch j.state {
+	switch j.state.current {
 	case stateValueNext:
 		if j.separator == nil {
 			j.buf.WriteByte('\n')
@@ -318,118 +336,70 @@ func (j *JSONBuffer) beforeValue() bool {
 }
 
 func (j *JSONBuffer) afterValue() {
-	switch j.state {
+	switch j.state.current {
 	case stateValueFirst:
-		j.state = stateValueNext
+		j.state.current = stateValueNext
 	case stateArrayStart:
-		j.state = stateArrayNext
+		j.state.current = stateArrayNext
 	case stateObjectValue:
-		j.state = stateObjectNameNext
+		j.state.current = stateObjectNameNext
 	}
 }
 
 func (j *JSONBuffer) writeQuotedString(s string) {
-	j.buf.WriteRune('"')
-	if s == "" {
-		j.buf.WriteRune('"')
-		return
-	}
-	foundSpecial := false
-
-	var i int
-	var ch rune
-	for i, ch = range s {
-		if ch == '"' || ch == '\\' || ch < ' ' {
-			foundSpecial = true
-			break
-		}
-	}
-
-	if !foundSpecial {
-		j.buf.WriteString(s)
-	} else {
-		start := 0
-		len := len(s)
-		for i < len {
+	// This is basically the same logic used internally by json.Marshal
+	j.buf.WriteByte('"')
+	start := 0
+	for i := 0; i < len(s); {
+		aByte := s[i]
+		if aByte < ' ' || aByte == '"' || aByte == '\\' {
 			if i > start {
 				j.buf.WriteString(s[start:i])
 			}
-			j.writeEscapedChar(ch)
+			j.writeEscapedChar(aByte)
 			i++
 			start = i
-			for i < len {
-				ch := s[i]
-				if ch == '"' || ch == '\\' || ch < ' ' {
-					break
-				}
+		} else {
+			if aByte < utf8.RuneSelf { // single-byte character
 				i++
+			} else {
+				_, size := utf8.DecodeRuneInString(s[i:])
+				i += size
 			}
 		}
-		if i > start {
-			j.buf.WriteString(s[start:i])
-		}
 	}
-
-	j.buf.WriteRune('"')
+	if start < len(s) {
+		j.buf.WriteString(s[start:])
+	}
+	j.buf.WriteByte('"')
 }
 
-func (j *JSONBuffer) writeEscapedChar(ch rune) {
-	j.buf.WriteRune('\\')
+func (j *JSONBuffer) writeEscapedChar(ch byte) {
+	j.buf.WriteByte('\\')
 	switch ch {
 	case '\b':
-		j.buf.WriteRune('b')
+		j.buf.WriteByte('b')
 	case '\t':
-		j.buf.WriteRune('t')
+		j.buf.WriteByte('t')
 	case '\n':
-		j.buf.WriteRune('n')
+		j.buf.WriteByte('n')
 	case '\f':
-		j.buf.WriteRune('f')
+		j.buf.WriteByte('f')
 	case '\r':
-		j.buf.WriteRune('r')
+		j.buf.WriteByte('r')
 	case '"':
-		j.buf.WriteRune('"')
+		j.buf.WriteByte('"')
 	case '\\':
-		j.buf.WriteRune('\\')
-	}
-}
-
-func (j *JSONBuffer) pushState(s streamState) {
-	// The separate logic here for the slice and the array allows us to avoid allocating a backing array for a
-	// slice on the heap unless we run out of room in our local array. The original implementation of this tried
-	// to be clever by initializing the slice to refer to stateStackArray[0:0]; that would work if we were only
-	// using the slice within the same scope where it was initialized or a deeper scope, but since it stays
-	// around after this method returns, the compiler would consider it suspicious enough to cause escaping.
-	if j.stateStackSlice == nil {
-		if j.stateStackArrayLen < len(j.stateStackArray) {
-			j.stateStackArray[j.stateStackArrayLen] = j.state
-			j.stateStackArrayLen++
-		} else {
-			j.stateStackSlice = make([]streamState, j.stateStackArrayLen, j.stateStackArrayLen*2)
-			copy(j.stateStackSlice, j.stateStackArray[:])
-			j.stateStackSlice = append(j.stateStackSlice, j.state)
+		j.buf.WriteByte('\\')
+	default:
+		j.buf.WriteString("u00")
+		hexChars := make([]byte, 0, 4)
+		hexChars = strconv.AppendInt(hexChars, int64(ch), 16)
+		if len(hexChars) < 2 {
+			j.buf.WriteByte('0')
 		}
-	} else {
-		j.stateStackSlice = append(j.stateStackSlice, j.state)
+		j.buf.Write(hexChars)
 	}
-	j.state = s
-}
-
-func (j *JSONBuffer) popState() {
-	if j.stateStackSlice != nil {
-		n := len(j.stateStackSlice)
-		j.state = j.stateStackSlice[n-1]
-		j.stateStackSlice = j.stateStackSlice[0 : n-1]
-	} else {
-		j.state = j.stateStackArray[j.stateStackArrayLen-1]
-		j.stateStackArrayLen--
-	}
-}
-
-func (j *JSONBuffer) getStateStackCount() int {
-	if j.stateStackSlice == nil {
-		return j.stateStackArrayLen
-	}
-	return len(j.stateStackSlice)
 }
 
 func (j *JSONBuffer) fail(message string) {
