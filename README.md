@@ -1,6 +1,6 @@
 # LaunchDarkly Go SDK Core Packages
 
-[![Circle CI](https://circleci.com/gh/launchdarkly/go-sdk-common.svg?style=shield)](https://circleci.com/gh/launchdarkly/go-sdk-common) [![Documentation](https://godoc.org/gopkg.in/launchdarkly/go-sdk-common.v2?status.svg)](https://godoc.org/gopkg.in/launchdarkly/go-sdk-common.v2)
+[![Circle CI](https://circleci.com/gh/launchdarkly/go-sdk-common.svg?style=shield)](https://circleci.com/gh/launchdarkly/go-sdk-common) [![Documentation](https://img.shields.io/static/v1?label=go.dev&message=reference&color=00add8)](https://pkg.go.dev/gopkg.in/launchdarkly/go-sdk-common.v2)
 
 ## This is a prerelease branch
 
