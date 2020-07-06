@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	helpers "github.com/launchdarkly/go-test-helpers"
+	helpers "github.com/launchdarkly/go-test-helpers/v2"
 )
 
 func TestValueTypes(t *testing.T) {
