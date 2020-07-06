@@ -39,7 +39,7 @@ func NewOptionalString(value string) OptionalString {
 }
 
 // NewOptionalStringFromPointer constructs an OptionalString from a string pointer. If the pointer
-// is non-nil, then the OptionalString copies its value; otherwise the OptionalString is empty.
+// is non-nil, then the OptionalString copies its value; otherwise the OptionalString has no value.
 func NewOptionalStringFromPointer(valuePointer *string) OptionalString {
 	if valuePointer == nil {
 		return OptionalString{hasValue: false}
@@ -47,7 +47,7 @@ func NewOptionalStringFromPointer(valuePointer *string) OptionalString {
 	return OptionalString{value: *valuePointer, hasValue: true}
 }
 
-// IsDefined returns true if the OptionalString contains a string value, or false if it is empty.
+// IsDefined returns true if the OptionalString contains a string value, or false if it has no value.
 func (o OptionalString) IsDefined() bool {
 	return o.hasValue
 }
@@ -69,6 +69,15 @@ func (o OptionalString) OrElse(valueIfEmpty string) string {
 		return o.value
 	}
 	return valueIfEmpty
+}
+
+// OnlyIfNonEmptyString returns the same OptionalString unless it contains an empty string (""), in
+// which case it returns an OptionalString that has no value.
+func (o OptionalString) OnlyIfNonEmptyString() OptionalString {
+	if o.hasValue && o.value == "" {
+		return OptionalString{}
+	}
+	return o
 }
 
 // AsPointer returns the OptionalString's value as a string pointer if it has a value, or
@@ -162,4 +171,29 @@ func (o OptionalString) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
 	} else {
 		j.WriteNull()
 	}
+}
+
+// MarshalText implements the encoding.TextMarshaler interface.
+//
+// Marshaling an empty OptionalString{} will return nil, rather than a zero-length slice.
+func (o OptionalString) MarshalText() ([]byte, error) {
+	if o.hasValue {
+		return []byte(o.value), nil
+	}
+	return nil, nil
+}
+
+// UnmarshalText implements the encoding.TextUnmarshaler interface.
+//
+// This allows OptionalString to be used with packages that can parse text content, such as gcfg.
+//
+// If the byte slice is nil, rather than zero-length, it will set the target value to an empty
+// OptionalString{}. Otherwise, it will set it to a string value.
+func (o *OptionalString) UnmarshalText(text []byte) error {
+	if text == nil {
+		*o = OptionalString{}
+	} else {
+		*o = NewOptionalString(string(text))
+	}
+	return nil
 }

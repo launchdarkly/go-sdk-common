@@ -56,13 +56,19 @@ func TestOptionalStringFromNonNilPointer(t *testing.T) {
 	assert.False(t, p == o.AsPointer()) // should not be the same pointer, just the same underlying string
 }
 
+func TestOptionalStringOnlyIfNonEmptyString(t *testing.T) {
+	assert.Equal(t, OptionalString{}, OptionalString{}.OnlyIfNonEmptyString())
+	assert.Equal(t, OptionalString{}, NewOptionalString("").OnlyIfNonEmptyString())
+	assert.Equal(t, NewOptionalString("x"), NewOptionalString("x").OnlyIfNonEmptyString())
+}
+
 func TestOptionalStringAsStringer(t *testing.T) {
 	assert.Equal(t, "[none]", OptionalString{}.String())
 	assert.Equal(t, "[empty]", NewOptionalString("").String())
 	assert.Equal(t, "x", NewOptionalString("x").String())
 }
 
-func TestOptionalStringMarshalling(t *testing.T) {
+func TestOptionalStringJSONMarshalling(t *testing.T) {
 	bytes, err := json.Marshal(OptionalString{})
 	assert.NoError(t, err)
 	assert.Equal(t, nullAsJSON, string(bytes))
@@ -85,7 +91,7 @@ func TestOptionalStringMarshalling(t *testing.T) {
 	assert.Equal(t, `"a \"good\" string",null`, string(bytes))
 }
 
-func TestOptionalStringUnmarshalling(t *testing.T) {
+func TestOptionalStringJSONUnmarshalling(t *testing.T) {
 	var o OptionalString
 	err := json.Unmarshal([]byte(nullAsJSON), &o)
 	assert.NoError(t, err)
@@ -112,4 +118,32 @@ type structWithOptionalStrings struct {
 	S1 OptionalString `json:"s1"`
 	S2 OptionalString `json:"s2"`
 	S3 OptionalString `json:"s3"`
+}
+
+func TestOptionalStringTextMarshalling(t *testing.T) {
+	b, e := NewOptionalString("x").MarshalText()
+	assert.NoError(t, e)
+	assert.Equal(t, []byte("x"), b)
+
+	b, e = NewOptionalString("").MarshalText()
+	assert.NoError(t, e)
+	assert.Equal(t, []byte{}, b)
+
+	b, e = OptionalString{}.MarshalText()
+	assert.NoError(t, e)
+	assert.Nil(t, b)
+}
+
+func TestOptionalStringTextUnmarshalling(t *testing.T) {
+	var o1 OptionalString
+	assert.NoError(t, o1.UnmarshalText([]byte("x")))
+	assert.Equal(t, NewOptionalString("x"), o1)
+
+	var o2 OptionalString
+	assert.NoError(t, o2.UnmarshalText([]byte("")))
+	assert.Equal(t, NewOptionalString(""), o2)
+
+	var o3 OptionalString
+	assert.NoError(t, o3.UnmarshalText(nil))
+	assert.Equal(t, OptionalString{}, o3)
 }
