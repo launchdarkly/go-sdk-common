@@ -2,16 +2,31 @@ package lduser
 
 import (
 	"encoding/json"
+	"errors"
 
 	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
 	"gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
 )
 
-// This temporary structs allows us to do JSON unmarshalling as efficiently as possible while not requiring
-// the User's internal representation to be constrained by the behavior of json.Unmarshal.
+var (
+	errMissingKey = errors.New("")
+)
 
+// ErrMissingKey returns the standard error value that is used if you try to unmarshal a user from JSON
+// and the "key" property is either absent or null. This is distinguished from other kinds of unmarshaling
+// errors (such as trying to set a string property to a non-string value) in order to support use cases
+// where incomplete data needs to be treated differently from malformed data.
+//
+// LaunchDarkly does allow a user to have an empty string ("") as a key in some cases, but this is
+// discouraged since analytics events will not work properly without unique user keys.
+func ErrMissingKey() error {
+	return errMissingKey
+}
+
+// This temporary struct allows us to do JSON unmarshalling as efficiently as possible while not requiring
+// the User's internal representation to be constrained by the behavior of json.Unmarshal.
 type userForDeserialization struct {
-	Key                   string                 `json:"key"`
+	Key                   ldvalue.OptionalString `json:"key"`
 	Secondary             ldvalue.OptionalString `json:"secondary"`
 	IP                    ldvalue.OptionalString `json:"ip"`
 	Country               ldvalue.OptionalString `json:"country"`
@@ -56,14 +71,21 @@ func (u User) MarshalJSON() ([]byte, error) {
 //
 // This is LaunchDarkly's standard JSON representation for user properties, in which all of the built-in
 // properties are at the top level along with a "custom" property that is an object containing all of
-// the custom properties. Omitted properties are treated as unset.
+// the custom properties.
+//
+// Any property that is either completely omitted or has a null value is ignored and left in an unset
+// state, except for "key". All users must have a key (even if it is ""), so an omitted or null "key"
+// property causes the error ErrMissingKey().
 func (u *User) UnmarshalJSON(data []byte) error {
 	var ufs userForDeserialization
 	if err := json.Unmarshal(data, &ufs); err != nil {
 		return err
 	}
+	if !ufs.Key.IsDefined() {
+		return errMissingKey
+	}
 	*u = User{
-		key:       ufs.Key,
+		key:       ufs.Key.StringValue(),
 		secondary: ufs.Secondary,
 		ip:        ufs.IP,
 		country:   ufs.Country,

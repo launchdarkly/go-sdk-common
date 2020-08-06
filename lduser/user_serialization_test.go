@@ -155,3 +155,25 @@ func TestJSONUnmarshalMalformedData(t *testing.T) {
 	err := json.Unmarshal([]byte(`{"key":[1,2,3]}`), &user)
 	assert.Error(t, err)
 }
+
+func TestJSONUnmarshalUserKeyValidation(t *testing.T) {
+	t.Run("missing key is invalid", func(t *testing.T) {
+		var user User
+		err := json.Unmarshal([]byte(`{"name":"n"}`), &user)
+		assert.Equal(t, ErrMissingKey(), err)
+	})
+
+	t.Run("null key is invalid", func(t *testing.T) {
+		var user User
+		err := json.Unmarshal([]byte(`{"key":null,"name":"n"}`), &user)
+		assert.Equal(t, ErrMissingKey(), err)
+	})
+
+	t.Run("empty string key is valid", func(t *testing.T) {
+		var user User
+		err := json.Unmarshal([]byte(`{"key":"","name":"n"}`), &user)
+		assert.NoError(t, err)
+		assert.Equal(t, "", user.GetKey())
+		assert.Equal(t, "n", user.GetName().StringValue())
+	})
+}
