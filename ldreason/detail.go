@@ -27,13 +27,15 @@ func (d EvaluationDetail) IsDefaultValue() bool {
 	return !d.VariationIndex.IsDefined()
 }
 
-// NewEvaluationDetail constructs an EvaluationDeteail, specifying all fields.
+// NewEvaluationDetail constructs an EvaluationDetail, specifying all fields. This assumes that there
+// is a defined value for variationIndex; if variationIndex is undefined, use NewEvaluationDetailForError
+// or set the struct fields directly.
 func NewEvaluationDetail(
 	value ldvalue.Value,
-	variationIndex ldvalue.OptionalInt,
+	variationIndex int,
 	reason EvaluationReason,
 ) EvaluationDetail {
-	return EvaluationDetail{Value: value, VariationIndex: variationIndex, Reason: reason}
+	return EvaluationDetail{Value: value, VariationIndex: ldvalue.NewOptionalInt(variationIndex), Reason: reason}
 }
 
 // NewEvaluationDetailForError constructs an EvaluationDetail for an error condition.

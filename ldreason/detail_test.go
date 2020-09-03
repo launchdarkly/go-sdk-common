@@ -9,7 +9,7 @@ import (
 )
 
 func TestDetailConstructor(t *testing.T) {
-	detail := NewEvaluationDetail(ldvalue.Bool(true), ldvalue.NewOptionalInt(1), NewEvalReasonFallthrough())
+	detail := NewEvaluationDetail(ldvalue.Bool(true), 1, NewEvalReasonFallthrough())
 	assert.Equal(t, ldvalue.Bool(true), detail.Value)
 	assert.Equal(t, ldvalue.NewOptionalInt(1), detail.VariationIndex)
 	assert.Equal(t, NewEvalReasonFallthrough(), detail.Reason)
