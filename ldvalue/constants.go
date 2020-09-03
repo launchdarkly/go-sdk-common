@@ -2,7 +2,12 @@ package ldvalue
 
 // string literals should be defined here if they are referenced in multiple files
 
-const nullAsJSON = "null"
+const (
+	trueString      = "true"
+	falseString     = "false"
+	nullAsJSON      = "null"
+	noneDescription = "[none]"
+)
 
 // ValueType is defined in value_base.go
 

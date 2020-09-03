@@ -1,6 +1,9 @@
 package ldvalue
 
 var (
+	benchmarkBoolValue          = true
+	benchmarkBoolPointer        = &benchmarkBoolValue
+	benchmarkOptBoolWithValue   = NewOptionalBool(benchmarkBoolValue)
 	benchmarkIntValue           = 3333
 	benchmarkIntPointer         = &benchmarkIntValue
 	benchmarkOptIntWithValue    = NewOptionalInt(benchmarkIntValue)
@@ -16,6 +19,7 @@ var (
 	benchmarkSerializeArrayValue  = ArrayOf(String("a"), String("b"), String("c"))
 	benchmarkSerializeObjectValue = ObjectBuild().Set("a", Int(1)).Set("b", Int(2)).Set("c", Int(3)).Build()
 
+	benchmarkOptBoolResult   OptionalBool
 	benchmarkOptIntResult    OptionalInt
 	benchmarkOptStringResult OptionalString
 	benchmarkStringResult    string

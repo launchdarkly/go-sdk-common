@@ -32,9 +32,9 @@ func (v Value) JSONString() string {
 		return nullAsJSON
 	case BoolType:
 		if v.boolValue {
-			return "true"
+			return trueString
 		}
-		return "false"
+		return falseString
 	case NumberType:
 		if v.IsInt() {
 			return strconv.Itoa(int(v.numberValue))
@@ -60,9 +60,9 @@ func (v Value) MarshalJSON() ([]byte, error) {
 		return []byte(nullAsJSON), nil
 	case BoolType:
 		if v.boolValue {
-			return []byte("true"), nil
+			return []byte(trueString), nil
 		}
-		return []byte("false"), nil
+		return []byte(falseString), nil
 	case NumberType:
 		if v.IsInt() {
 			return []byte(strconv.Itoa(int(v.numberValue))), nil
@@ -101,11 +101,11 @@ func (v *Value) UnmarshalJSON(data []byte) error { //nolint:funlen // yes, we kn
 			return nil
 		}
 	case 't', 'f':
-		if string(data) == "true" {
+		if string(data) == trueString {
 			*v = Bool(true)
 			return nil
 		}
-		if string(data) == "false" {
+		if string(data) == falseString {
 			*v = Bool(false)
 			return nil
 		}

@@ -9,7 +9,7 @@ func NewUser(key string) User {
 
 // NewAnonymousUser creates a new anonymous user identified by the given key.
 func NewAnonymousUser(key string) User {
-	return User{key: key, anonymous: ldvalue.Bool(true)}
+	return User{key: key, anonymous: ldvalue.NewOptionalBool(true)}
 }
 
 // UserBuilder is a mutable object that uses the Builder pattern to specify properties for a User.
@@ -150,7 +150,7 @@ type userBuilderImpl struct {
 	lastName                    ldvalue.OptionalString
 	avatar                      ldvalue.OptionalString
 	name                        ldvalue.OptionalString
-	anonymous                   ldvalue.Value
+	anonymous                   ldvalue.OptionalBool
 	custom                      ldvalue.ObjectBuilder
 	privateAttrs                map[UserAttribute]struct{}
 	lastAttributeCanMakePrivate UserAttribute
@@ -246,7 +246,7 @@ func (b *userBuilderImpl) Name(value string) UserBuilderCanMakeAttributePrivate 
 }
 
 func (b *userBuilderImpl) Anonymous(value bool) UserBuilder {
-	b.anonymous = ldvalue.Bool(value)
+	b.anonymous = ldvalue.NewOptionalBool(value)
 	return b
 }
 
@@ -293,8 +293,11 @@ func (b *userBuilderImpl) SetAttribute(
 	case NameAttribute:
 		setOptString(&b.name)
 	case AnonymousAttribute:
-		if value.IsBool() || value.IsNull() {
-			b.anonymous = value
+		switch {
+		case value.IsNull():
+			b.anonymous = ldvalue.OptionalBool{}
+		case value.IsBool():
+			b.anonymous = ldvalue.NewOptionalBool(value.BoolValue())
 		}
 		okPrivate = false
 	default:

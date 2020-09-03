@@ -22,6 +22,9 @@ import (
 // For instance, this example causes myIntPointer to point to the int value 2:
 //
 //     var myIntPointer *int = NewOptionalInt("x").AsPointer()
+//
+// This type is used in ldreason.EvaluationDetail.VariationIndex, and for other similar fields
+// in the LaunchDarkly Go SDK where an int value may or may not be defined.
 type OptionalInt struct {
 	value    int
 	hasValue bool
@@ -94,20 +97,17 @@ func (o OptionalInt) String() string {
 	if o.hasValue {
 		return strconv.Itoa(o.value)
 	}
-	return "[none]"
+	return noneDescription
 }
 
 // MarshalJSON converts the OptionalInt to its JSON representation.
 //
 // The output will be either a JSON number or null. Note that the "omitempty" tag for a struct
 // field will not cause an empty OptionalInt field to be omitted; it will be output as null.
-// If you want to completely omit a JSON property when there is no value, it must be a string
+// If you want to completely omit a JSON property when there is no value, it must be an int
 // pointer instead of an OptionalInt; use the AsPointer() method to get a pointer.
 func (o OptionalInt) MarshalJSON() ([]byte, error) {
-	if o.hasValue {
-		return Int(o.value).MarshalJSON()
-	}
-	return Null().MarshalJSON()
+	return o.AsValue().MarshalJSON()
 }
 
 // UnmarshalJSON parses an OptionalInt from JSON.
@@ -124,6 +124,7 @@ func (o *OptionalInt) UnmarshalJSON(data []byte) error {
 	case v.IsInt():
 		*o = NewOptionalInt(v.IntValue())
 	default:
+		*o = OptionalInt{}
 		return errors.New("expected integer or null")
 	}
 	return nil
@@ -134,11 +135,7 @@ func (o *OptionalInt) UnmarshalJSON(data []byte) error {
 // The JSON output format is identical to what is produced by json.Marshal, but this implementation is
 // more efficient when building output with JSONBuffer. See the jsonstream package for more details.
 func (o OptionalInt) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
-	if o.hasValue {
-		j.WriteInt(o.value)
-	} else {
-		j.WriteNull()
-	}
+	o.AsValue().WriteToJSONBuffer(j)
 }
 
 // MarshalText implements the encoding.TextMarshaler interface.

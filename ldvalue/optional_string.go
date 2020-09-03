@@ -3,7 +3,6 @@ package ldvalue
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 
 	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
 )
@@ -117,7 +116,7 @@ func (o OptionalString) String() string {
 		}
 		return o.value
 	}
-	return "[none]"
+	return noneDescription
 }
 
 // MarshalJSON converts the OptionalString to its JSON representation.
@@ -137,28 +136,20 @@ func (o OptionalString) MarshalJSON() ([]byte, error) {
 //
 // The input must be either a JSON string or null.
 func (o *OptionalString) UnmarshalJSON(data []byte) error {
-	if len(data) == 0 { // COVERAGE: should not be possible, parser doesn't pass empty slices to UnmarshalJSON
-		return errors.New("cannot parse empty data")
+	var v Value
+	if err := v.UnmarshalJSON(data); err != nil {
+		return err // COVERAGE: should not be possible, parser normally doesn't pass malformed content to UnmarshalJSON
 	}
-	firstCh := data[0]
-	switch firstCh {
-	case 'n':
-		// Note that since Go 1.5, comparing a string to string([]byte) is optimized so it
-		// does not actually create a new string from the byte slice.
-		if string(data) == nullAsJSON {
-			*o = OptionalString{}
-			return nil
-		}
-	case '"':
-		var s string
-		e := json.Unmarshal(data, &s)
-		if e == nil {
-			*o = NewOptionalString(s)
-		}
-		return e
+	switch {
+	case v.IsNull():
+		*o = OptionalString{}
+	case v.IsString():
+		*o = NewOptionalString(v.StringValue())
+	default:
+		*o = OptionalString{}
+		return errors.New("expected string or null")
 	}
-	*o = OptionalString{}
-	return fmt.Errorf("unknown JSON token: %s", data)
+	return nil
 }
 
 // WriteToJSONBuffer provides JSON serialization for OptionalString with the jsonstream API.
@@ -166,11 +157,7 @@ func (o *OptionalString) UnmarshalJSON(data []byte) error {
 // The JSON output format is identical to what is produced by json.Marshal, but this implementation is
 // more efficient when building output with JSONBuffer. See the jsonstream package for more details.
 func (o OptionalString) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
-	if o.hasValue {
-		j.WriteString(o.value)
-	} else {
-		j.WriteNull()
-	}
+	o.AsValue().WriteToJSONBuffer(j)
 }
 
 // MarshalText implements the encoding.TextMarshaler interface.

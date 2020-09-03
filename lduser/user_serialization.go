@@ -35,7 +35,7 @@ type userForDeserialization struct {
 	LastName              ldvalue.OptionalString `json:"lastName"`
 	Avatar                ldvalue.OptionalString `json:"avatar"`
 	Name                  ldvalue.OptionalString `json:"name"`
-	Anonymous             ldvalue.Value          `json:"anonymous"`
+	Anonymous             ldvalue.OptionalBool   `json:"anonymous"`
 	Custom                ldvalue.Value          `json:"custom"`
 	PrivateAttributeNames []UserAttribute        `json:"privateAttributeNames"`
 }
@@ -122,7 +122,7 @@ func (u User) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
 	maybeWriteStringProperty(j, "lastName", u.lastName)
 	maybeWriteStringProperty(j, "avatar", u.avatar)
 	maybeWriteStringProperty(j, "name", u.name)
-	if !u.anonymous.IsNull() {
+	if u.anonymous.IsDefined() {
 		j.WriteName("anonymous")
 		j.WriteBool(u.anonymous.BoolValue())
 	}
