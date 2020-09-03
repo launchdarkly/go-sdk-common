@@ -11,9 +11,10 @@ type EvaluationDetail struct {
 	// the default value that was passed to the Variation method.
 	Value ldvalue.Value
 	// VariationIndex is the index of the returned value within the flag's list of variations, e.g.
-	// 0 for the first variation. This is an ldvalue.OptionalInt rather than an int, because there is
-	// no variation index if the application default value was returned because the flag could not be
-	// evaluated.
+	// 0 for the first variation. This is an ldvalue.OptionalInt rather than an int, because it is
+	// possible for the value to be undefined (there is no variation index if the application default
+	// value was returned due to an error in evaluation) which is different from a value of 0. See
+	// ldvalue.OptionalInt for more about how to use this type.
 	VariationIndex ldvalue.OptionalInt
 	// Reason is an EvaluationReason object describing the main factor that influenced the flag
 	// evaluation value.
