@@ -136,4 +136,8 @@ func TestOptionalIntTextUnmarshalling(t *testing.T) {
 	var o3 OptionalInt
 	assert.NoError(t, o3.UnmarshalText(nil))
 	assert.Equal(t, OptionalInt{}, o3)
+
+	var o4 OptionalInt
+	assert.Error(t, o4.UnmarshalText([]byte("x")))
+	assert.Equal(t, OptionalInt{}, o4)
 }
