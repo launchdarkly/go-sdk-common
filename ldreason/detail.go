@@ -11,9 +11,10 @@ type EvaluationDetail struct {
 	// the default value that was passed to the Variation method.
 	Value ldvalue.Value
 	// VariationIndex is the index of the returned value within the flag's list of variations, e.g.
-	// 0 for the first variation. A negative number indicates that the application default value was
-	// returned because the flag could not be evaluated.
-	VariationIndex int
+	// 0 for the first variation. This is an ldvalue.OptionalInt rather than an int, because there is
+	// no variation index if the application default value was returned because the flag could not be
+	// evaluated.
+	VariationIndex ldvalue.OptionalInt
 	// Reason is an EvaluationReason object describing the main factor that influenced the flag
 	// evaluation value.
 	Reason EvaluationReason
@@ -23,15 +24,19 @@ type EvaluationDetail struct {
 // This means that an error prevented the flag from being evaluated; the Reason field should contain
 // an error value such as NewEvalReasonError(EvalErrorFlagNotFound).
 func (d EvaluationDetail) IsDefaultValue() bool {
-	return d.VariationIndex < 0
+	return !d.VariationIndex.IsDefined()
 }
 
 // NewEvaluationDetail constructs an EvaluationDeteail, specifying all fields.
-func NewEvaluationDetail(value ldvalue.Value, variationIndex int, reason EvaluationReason) EvaluationDetail {
+func NewEvaluationDetail(
+	value ldvalue.Value,
+	variationIndex ldvalue.OptionalInt,
+	reason EvaluationReason,
+) EvaluationDetail {
 	return EvaluationDetail{Value: value, VariationIndex: variationIndex, Reason: reason}
 }
 
 // NewEvaluationDetailForError constructs an EvaluationDetail for an error condition.
 func NewEvaluationDetailForError(errorKind EvalErrorKind, defaultValue ldvalue.Value) EvaluationDetail {
-	return EvaluationDetail{Value: defaultValue, VariationIndex: -1, Reason: NewEvalReasonError(errorKind)}
+	return EvaluationDetail{Value: defaultValue, Reason: NewEvalReasonError(errorKind)}
 }
