@@ -1,6 +1,7 @@
 package ldlogtest
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -73,4 +74,13 @@ func TestMessageMatching(t *testing.T) {
 	shouldMatch(t, ldlog.Warn, "t.*")
 	shouldNotMatch(t, ldlog.Info, "third")
 	shouldNotMatch(t, ldlog.Error, ".")
+}
+
+func TestDump(t *testing.T) {
+	buf := bytes.NewBuffer(nil)
+	m := NewMockLog()
+	m.Loggers.Info("first")
+	m.Loggers.Warn("second")
+	m.Dump(buf)
+	assert.Equal(t, "Info: first\nWarn: second\n", string(buf.Bytes()))
 }
