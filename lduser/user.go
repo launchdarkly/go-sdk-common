@@ -57,7 +57,7 @@ type User struct {
 	lastName          ldvalue.OptionalString
 	avatar            ldvalue.OptionalString
 	name              ldvalue.OptionalString
-	anonymous         ldvalue.Value
+	anonymous         ldvalue.OptionalBool
 	custom            ldvalue.Value
 	privateAttributes map[UserAttribute]struct{}
 }
@@ -90,7 +90,7 @@ func (u User) GetAttribute(attribute UserAttribute) ldvalue.Value {
 	case NameAttribute:
 		return u.name.AsValue()
 	case AnonymousAttribute:
-		return u.anonymous
+		return u.anonymous.AsValue()
 	default:
 		value, _ := u.GetCustom(string(attribute))
 		return value
@@ -157,7 +157,7 @@ func (u User) GetAnonymous() bool {
 // GetAnonymousOptional returns the anonymous attribute of the user, with a second value indicating
 // whether that attribute was defined for the user or not.
 func (u User) GetAnonymousOptional() (bool, bool) {
-	return u.anonymous.BoolValue(), !u.anonymous.IsNull()
+	return u.anonymous.Get()
 }
 
 // GetCustom returns a custom attribute of the user by name. The boolean second return value indicates
@@ -207,7 +207,7 @@ func (u User) Equal(other User) bool {
 		u.lastName != other.lastName ||
 		u.avatar != other.avatar ||
 		u.name != other.name ||
-		!u.anonymous.Equal(other.anonymous) {
+		u.anonymous != other.anonymous {
 		return false
 	}
 	if !u.custom.Equal(other.custom) {

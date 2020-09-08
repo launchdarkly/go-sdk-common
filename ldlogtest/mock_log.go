@@ -2,6 +2,8 @@ package ldlogtest
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -95,6 +97,30 @@ func (ml *MockLog) AssertMessageMatch(t *testing.T, shouldMatch bool, level ldlo
 				line,
 			)
 		}
+	}
+}
+
+// Dump is a shortcut for writing all captured log lines to a Writer.
+func (ml *MockLog) Dump(w io.Writer) {
+	for _, line := range ml.GetAllOutput() {
+		fmt.Fprintln(w, line.Level.Name()+": "+line.Message)
+	}
+}
+
+// DumpIfTestFailed is a shortcut for writing all captured log lines to standard output only if
+// t.Failed() is true.
+//
+// This is useful in tests where you normally don't want to see the log output, but you do want to see it
+// if there was a failure. The simplest way to do this is to use defer:
+//
+//     func TestSomething(t *testing.T) {
+//         ml := ldlogtest.NewMockLog()
+//         defer ml.DumpIfTestFailed(t)
+//         // ... do some test things that may generate log output and/or cause a failure
+//     }
+func (ml *MockLog) DumpIfTestFailed(t *testing.T) {
+	if t.Failed() { // COVERAGE: there's no way to test this in unit tests
+		ml.Dump(os.Stdout)
 	}
 }
 
