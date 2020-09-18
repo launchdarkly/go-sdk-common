@@ -18,7 +18,7 @@ Also, unlike `go-server-sdk` this does not have `server` in the name, because no
 
 ## Supported Go versions
 
-This version of the project has been tested with Go 1.13 through 1.14.
+This version of the project has been tested with Go 1.14 and higher.
 
 ## Learn more
 
