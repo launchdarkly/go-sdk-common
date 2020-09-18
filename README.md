@@ -2,10 +2,6 @@
 
 [![Circle CI](https://circleci.com/gh/launchdarkly/go-sdk-common.svg?style=shield)](https://circleci.com/gh/launchdarkly/go-sdk-common) [![Documentation](https://img.shields.io/static/v1?label=go.dev&message=reference&color=00add8)](https://pkg.go.dev/gopkg.in/launchdarkly/go-sdk-common.v2)
 
-## This is a prerelease branch
-
-The `v2` branch currently contains prerelease code to support development of Go SDK 5.0.0. For the source code of the latest release that is used by Go SDK 4.x, see the [`v1` branch](https://github.com/launchdarkly/go-sdk-common/tree/v1).
-
 ## Overview
 
 This repository contains packages and types that are shared between the [LaunchDarkly Go SDK](https://github.com/launchdarkly/go-server-sdk) and other LaunchDarkly Go components.
