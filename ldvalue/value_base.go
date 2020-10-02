@@ -277,6 +277,14 @@ func (v Value) IsNull() bool {
 	return v.valueType == NullType
 }
 
+// IsDefined returns true if the Value is anything other than null.
+//
+// This is exactly equivalent to !v.IsNull(), but is provided as a separate method for consistency
+// with other types that have an IsDefined() method.
+func (v Value) IsDefined() bool {
+	return !v.IsNull()
+}
+
 // IsBool returns true if the Value is a boolean.
 func (v Value) IsBool() bool {
 	return v.valueType == BoolType

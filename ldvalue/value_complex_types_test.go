@@ -17,6 +17,7 @@ func TestArrayOf(t *testing.T) {
 	assert.Equal(t, ArrayType, value.Type())
 	assert.Equal(t, 2, value.Count())
 
+	assert.True(t, value.IsDefined())
 	assert.False(t, value.IsNull())
 	assert.False(t, value.IsNumber())
 	assert.False(t, value.IsInt())
@@ -106,6 +107,7 @@ func TestObjectBuild(t *testing.T) {
 	assert.Equal(t, item0x, valueAfterModifyingBuilder.GetByKey("item0"))
 	assert.Equal(t, item0, value.GetByKey("item0")) // verifies builder's copy-on-write behavior
 
+	assert.True(t, value.IsDefined())
 	assert.False(t, value.IsNull())
 	assert.False(t, value.IsNumber())
 	assert.False(t, value.IsInt())
