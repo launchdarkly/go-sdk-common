@@ -96,9 +96,11 @@ func TestOptionalIntJSONUnmarshalling(t *testing.T) {
 
 	err = json.Unmarshal([]byte(`true`), &o)
 	assert.Error(t, err)
+	assert.IsType(t, &json.UnmarshalTypeError{}, err)
 
 	err = json.Unmarshal([]byte(`x`), &o)
 	assert.Error(t, err)
+	assert.IsType(t, &json.SyntaxError{}, err)
 
 	var swos structWithOptionalInts
 	err = json.Unmarshal([]byte(`{"n1":3,"n3":null}`), &swos)

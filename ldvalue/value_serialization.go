@@ -3,7 +3,6 @@ package ldvalue
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strconv"
 
 	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
@@ -144,7 +143,7 @@ func (v *Value) UnmarshalJSON(data []byte) error { //nolint:funlen // yes, we kn
 		}
 		return e
 	}
-	return fmt.Errorf("unknown JSON token: %s", data) // COVERAGE: never happens, parser rejects the token earlier
+	return &json.SyntaxError{} // COVERAGE: never happens, parser rejects the token earlier
 }
 
 // WriteToJSONBuffer provides JSON serialization for Value with the jsonstream API.

@@ -113,9 +113,11 @@ func TestOptionalBoolJSONUnmarshalling(t *testing.T) {
 
 	err = json.Unmarshal([]byte(`3`), &o)
 	assert.Error(t, err)
+	assert.IsType(t, &json.UnmarshalTypeError{}, err)
 
 	err = json.Unmarshal([]byte(`x`), &o)
 	assert.Error(t, err)
+	assert.IsType(t, &json.SyntaxError{}, err)
 
 	var swos structWithOptionalBools
 	err = json.Unmarshal([]byte(`{"b1":true,"b2":false,"b3":null}`), &swos)

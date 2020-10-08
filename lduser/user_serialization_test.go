@@ -150,10 +150,19 @@ func TestJSONUnmarshalPrivateAttributes(t *testing.T) {
 	assert.True(t, user2.IsPrivateAttribute("name"))
 }
 
-func TestJSONUnmarshalMalformedData(t *testing.T) {
+func TestJSONUnmarshalDataWithWrongFieldType(t *testing.T) {
 	var user User
 	err := json.Unmarshal([]byte(`{"key":[1,2,3]}`), &user)
-	assert.Error(t, err)
+	assert.IsType(t, &json.UnmarshalTypeError{}, err)
+}
+
+func TestJSONUnmarshalNonStructData(t *testing.T) {
+	var user User
+	assert.IsType(t, &json.UnmarshalTypeError{}, json.Unmarshal([]byte(`null`), &user))
+	assert.IsType(t, &json.UnmarshalTypeError{}, json.Unmarshal([]byte(`true`), &user))
+	assert.IsType(t, &json.UnmarshalTypeError{}, json.Unmarshal([]byte(`3`), &user))
+	assert.IsType(t, &json.UnmarshalTypeError{}, json.Unmarshal([]byte(`"x"`), &user))
+	assert.IsType(t, &json.UnmarshalTypeError{}, json.Unmarshal([]byte(`[]`), &user))
 }
 
 func TestJSONUnmarshalUserKeyValidation(t *testing.T) {
@@ -176,4 +185,8 @@ func TestJSONUnmarshalUserKeyValidation(t *testing.T) {
 		assert.Equal(t, "", user.GetKey())
 		assert.Equal(t, "n", user.GetName().StringValue())
 	})
+}
+
+func TestMissingKeyHasErrorMessage(t *testing.T) {
+	assert.NotEqual(t, "", ErrMissingKey().Error())
 }
