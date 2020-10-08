@@ -2,6 +2,12 @@
 
 All notable changes to the project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [2.0.1] - 2020-10-08
+### Fixed:
+- Trying to unmarshal a JSON `null` value into `lduser.User` now returns an error of type `*json.UnmarshalTypeError`, rather than misleadingly returning `lduser.ErrMissingKey()`.
+- Trying to unmarshal a JSON value of the wrong type into `ldvalue.OptionalBool`, `ldvalue.OptionalInt`, or `ldvalue.OptionalString` now returns an error of type `*json.UnmarshalTypeError`, rather than a generic error string from `errors.New()`.
+- The error `lduser.ErrMissingKey()` had an empty error string.
+
 ## [2.0.0] - 2020-09-18
 Initial release of the newer types that will be used in Go SDK 5.0 and above.
 
