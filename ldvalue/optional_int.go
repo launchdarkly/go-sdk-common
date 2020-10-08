@@ -1,7 +1,8 @@
 package ldvalue
 
 import (
-	"errors"
+	"encoding/json"
+	"reflect"
 	"strconv"
 
 	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
@@ -125,7 +126,7 @@ func (o *OptionalInt) UnmarshalJSON(data []byte) error {
 		*o = NewOptionalInt(v.IntValue())
 	default:
 		*o = OptionalInt{}
-		return errors.New("expected integer or null")
+		return &json.UnmarshalTypeError{Value: string(data), Type: reflect.TypeOf(o)}
 	}
 	return nil
 }

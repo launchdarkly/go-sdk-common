@@ -1,7 +1,8 @@
 package ldvalue
 
 import (
-	"errors"
+	"encoding/json"
+	"reflect"
 
 	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
 )
@@ -127,7 +128,7 @@ func (o *OptionalBool) UnmarshalJSON(data []byte) error {
 		*o = NewOptionalBool(v.BoolValue())
 	default:
 		*o = OptionalBool{}
-		return errors.New("expected boolean or null")
+		return &json.UnmarshalTypeError{Value: string(data), Type: reflect.TypeOf(o)}
 	}
 	return nil
 }

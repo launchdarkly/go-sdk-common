@@ -104,6 +104,7 @@ func TestOptionalStringJSONUnmarshalling(t *testing.T) {
 
 	err = json.Unmarshal([]byte("3"), &o)
 	assert.Error(t, err)
+	assert.IsType(t, &json.UnmarshalTypeError{}, err)
 	assert.False(t, o.IsDefined())
 
 	var swos structWithOptionalStrings

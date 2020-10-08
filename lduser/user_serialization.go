@@ -2,15 +2,17 @@ package lduser
 
 import (
 	"encoding/json"
-	"errors"
+	"reflect"
 
 	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
 	"gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
 )
 
-var (
-	errMissingKey = errors.New("")
-)
+type missingKeyError struct{}
+
+func (e missingKeyError) Error() string {
+	return "User must have a key property"
+}
 
 // ErrMissingKey returns the standard error value that is used if you try to unmarshal a user from JSON
 // and the "key" property is either absent or null. This is distinguished from other kinds of unmarshaling
@@ -20,7 +22,7 @@ var (
 // LaunchDarkly does allow a user to have an empty string ("") as a key in some cases, but this is
 // discouraged since analytics events will not work properly without unique user keys.
 func ErrMissingKey() error {
-	return errMissingKey
+	return missingKeyError{}
 }
 
 // This temporary struct allows us to do JSON unmarshalling as efficiently as possible while not requiring
@@ -76,13 +78,23 @@ func (u User) MarshalJSON() ([]byte, error) {
 // Any property that is either completely omitted or has a null value is ignored and left in an unset
 // state, except for "key". All users must have a key (even if it is ""), so an omitted or null "key"
 // property causes the error ErrMissingKey().
+//
+// Trying to unmarshal any non-struct value, including a JSON null, into a User will return a
+// json.UnmarshalTypeError. If you want to unmarshal optional user data that might be null, use *User
+// instead of User.
 func (u *User) UnmarshalJSON(data []byte) error {
+	// Special handling here for a null value - json.Unmarshal will normally treat a null exactly like
+	// "{}" when unmarshaling a struct. We don't want that, because it will produce a misleading
+	// "missing key" error further down. Instead, just treat it as an invalid type.
+	if string(data) == "null" {
+		return &json.UnmarshalTypeError{Value: string(data), Type: reflect.TypeOf(u)}
+	}
 	var ufs userForDeserialization
 	if err := json.Unmarshal(data, &ufs); err != nil {
 		return err
 	}
 	if !ufs.Key.IsDefined() {
-		return errMissingKey
+		return ErrMissingKey()
 	}
 	*u = User{
 		key:       ufs.Key.StringValue(),
