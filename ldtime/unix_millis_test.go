@@ -18,3 +18,8 @@ func TestUnixMillisNow(t *testing.T) {
 	un := UnixMillisNow()
 	assert.GreaterOrEqual(t, uint64(un), uint64(UnixMillisFromTime(tn)))
 }
+
+func TestUnixMillisIsDefined(t *testing.T) {
+	assert.False(t, UnixMillisecondTime(0).IsDefined())
+	assert.True(t, UnixMillisecondTime(1).IsDefined())
+}
