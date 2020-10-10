@@ -58,7 +58,7 @@ type User struct {
 	avatar            ldvalue.OptionalString
 	name              ldvalue.OptionalString
 	anonymous         ldvalue.OptionalBool
-	custom            ldvalue.Value
+	custom            ldvalue.ValueMap
 	privateAttributes map[UserAttribute]struct{}
 }
 
@@ -168,7 +168,7 @@ func (u User) GetAnonymousOptional() (bool, bool) {
 // the desired type, rather than casting it. If the attribute did not exist, the value will be
 // ldvalue.Null() and the second return value will be false.
 func (u User) GetCustom(attribute string) (ldvalue.Value, bool) {
-	return u.custom.TryGetByKey(attribute)
+	return u.custom.TryGet(attribute)
 }
 
 // GetAllCustom returns all of the user's custom attributes.
@@ -176,6 +176,11 @@ func (u User) GetCustom(attribute string) (ldvalue.Value, bool) {
 // These are represented as a Value that is either an object (with a key-value pair for each attribute)
 // or Null() if there are no custom attributes.
 func (u User) GetAllCustom() ldvalue.Value {
+	return u.custom.AsValue()
+}
+
+// GetAllCustomMap returns all of the user's custom attributes as an immutable ValueMap.
+func (u User) GetAllCustomMap() ldvalue.ValueMap {
 	return u.custom
 }
 

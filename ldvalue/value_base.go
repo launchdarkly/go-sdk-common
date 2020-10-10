@@ -19,12 +19,10 @@ type Value struct {
 	numberValue float64
 	// Used when the value is a string.
 	stringValue string
-	// Used when the value is an array, if it was not created from an interface{}. We never expose
-	// this slice externally.
-	immutableArrayValue []Value
-	// Used when the value is an object, if it was not created from an interface{}. We never expose
-	// this slice externally.
-	immutableObjectValue map[string]Value
+	// Used when the value is an array, if it was not created from an interface{}.
+	arrayValue ValueArray
+	// Used when the value is an object, if it was not created from an interface{}.
+	objectValue ValueMap
 }
 
 // ValueType indicates which JSON type is contained in a Value.
@@ -252,19 +250,11 @@ func CopyArbitraryValue(valueAsInterface interface{}) Value { //nolint:gocyclo /
 }
 
 func copyArbitraryValueArray(o []interface{}) Value {
-	a := make([]Value, len(o))
-	for i, v := range o {
-		a[i] = CopyArbitraryValue(v)
-	}
-	return Value{valueType: ArrayType, immutableArrayValue: a}
+	return Value{valueType: ArrayType, arrayValue: CopyArbitraryValueArray(o)}
 }
 
 func copyArbitraryValueMap(o map[string]interface{}) Value {
-	m := make(map[string]Value, len(o))
-	for k, v := range o {
-		m[k] = CopyArbitraryValue(v)
-	}
-	return Value{valueType: ObjectType, immutableObjectValue: m}
+	return Value{valueType: ObjectType, objectValue: CopyArbitraryValueMap(o)}
 }
 
 // Type returns the ValueType of the Value.
@@ -396,17 +386,9 @@ func (v Value) AsArbitraryValue() interface{} {
 	case StringType:
 		return v.stringValue
 	case ArrayType:
-		ret := make([]interface{}, len(v.immutableArrayValue))
-		for i, element := range v.immutableArrayValue {
-			ret[i] = element.AsArbitraryValue()
-		}
-		return ret
+		return v.arrayValue.AsArbitraryValueSlice()
 	case ObjectType:
-		ret := make(map[string]interface{}, len(v.immutableObjectValue))
-		for key, element := range v.immutableObjectValue {
-			ret[key] = element.AsArbitraryValue()
-		}
-		return ret
+		return v.objectValue.AsArbitraryValueMap()
 	case RawType:
 		return v.AsRaw()
 	}
@@ -443,28 +425,9 @@ func (v Value) Equal(other Value) bool {
 		case StringType, RawType:
 			return v.stringValue == other.stringValue
 		case ArrayType:
-			n := v.Count()
-			if n == other.Count() {
-				for i := 0; i < n; i++ {
-					if !v.GetByIndex(i).Equal(other.GetByIndex(i)) {
-						return false
-					}
-				}
-				return true
-			}
-			return false
+			return v.arrayValue.Equal(other.arrayValue)
 		case ObjectType:
-			keys := v.Keys()
-			if len(keys) == other.Count() {
-				for _, key := range keys {
-					v0 := v.GetByKey(key)
-					if v1, found := other.TryGetByKey(key); !found || !v0.Equal(v1) {
-						return false
-					}
-				}
-				return true
-			}
-			return false
+			return v.objectValue.Equal(other.objectValue)
 		}
 	}
 	return false

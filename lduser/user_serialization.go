@@ -38,7 +38,7 @@ type userForDeserialization struct {
 	Avatar                ldvalue.OptionalString `json:"avatar"`
 	Name                  ldvalue.OptionalString `json:"name"`
 	Anonymous             ldvalue.OptionalBool   `json:"anonymous"`
-	Custom                ldvalue.Value          `json:"custom"`
+	Custom                ldvalue.ValueMap       `json:"custom"`
 	PrivateAttributeNames []UserAttribute        `json:"privateAttributeNames"`
 }
 
@@ -140,13 +140,7 @@ func (u User) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
 	}
 	if u.custom.Count() > 0 {
 		j.WriteName("custom")
-		j.BeginObject()
-		u.custom.Enumerate(func(i int, key string, value ldvalue.Value) bool {
-			j.WriteName(key)
-			value.WriteToJSONBuffer(j)
-			return true
-		})
-		j.EndObject()
+		u.custom.WriteToJSONBuffer(j)
 	}
 	if len(u.privateAttributes) > 0 {
 		j.WriteName("privateAttributeNames")
