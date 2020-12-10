@@ -5,8 +5,8 @@ import (
 
 	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream" //nolint:staticcheck // using a deprecated API
 
-	"github.com/launchdarkly/go-jsonstream/jreader"
-	"github.com/launchdarkly/go-jsonstream/jwriter"
+	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
+	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
 )
 
 // OptionalString represents a string that may or may not have a value. This is similar to using a

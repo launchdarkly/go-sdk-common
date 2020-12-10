@@ -7,8 +7,8 @@ import (
 
 	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream" //nolint:staticcheck // using a deprecated API
 
-	"github.com/launchdarkly/go-jsonstream/jreader"
-	"github.com/launchdarkly/go-jsonstream/jwriter"
+	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
+	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
 )
 
 // This file contains methods for converting Value to and from JSON.

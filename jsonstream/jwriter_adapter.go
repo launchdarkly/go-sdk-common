@@ -1,7 +1,7 @@
 package jsonstream
 
 import (
-	"github.com/launchdarkly/go-jsonstream/jwriter"
+	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
 )
 
 type bufferAdapter struct {

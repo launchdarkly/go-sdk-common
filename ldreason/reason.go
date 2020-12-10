@@ -6,8 +6,8 @@ import (
 	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream" //nolint:staticcheck // using a deprecated API
 	"gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
 
-	"github.com/launchdarkly/go-jsonstream/jreader"
-	"github.com/launchdarkly/go-jsonstream/jwriter"
+	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
+	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
 )
 
 // EvalReasonKind defines the possible values of the Kind property of EvaluationReason.
