@@ -50,7 +50,7 @@ benchmark-allocs:
 	@if [ -z "$$BENCHMARK" ]; then echo "must specify BENCHMARK=" && exit 1; fi
 	@mkdir -p ./build
 	@echo Precompiling test code to $(TEST_BINARY)
-	@go test -c -o $(TEST_BINARY) >/dev/null 2>&1
+	@go test -c -o $(TEST_BINARY) $(BENCHMARK_PACKAGE) >/dev/null 2>&1
 	@echo "Generating heap allocation traces in $(ALLOCATIONS_LOG) for benchmark(s): $$BENCHMARK"
 	@echo "You should see some benchmark result output; if you do not, you may have misspelled the benchmark name/regex"
 	@GODEBUG=allocfreetrace=1 $(TEST_BINARY) -test.run=none -test.bench=$$BENCHMARK -test.benchmem -test.benchtime=1x 2>$(ALLOCATIONS_LOG)

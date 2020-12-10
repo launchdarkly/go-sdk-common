@@ -228,7 +228,7 @@ func TestWriteDeeplyNestedStructures(t *testing.T) {
 	assert.Equal(t, expected, string(bytes))
 }
 
-func TestUsageErrors(t *testing.T) {
+func TestJSONBufferUsageErrors(t *testing.T) {
 	shouldFail := func(name string, expectedPartialOutput string, action func(j *JSONBuffer)) {
 		t.Run(name, func(t *testing.T) {
 			j := NewJSONBuffer()

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/launchdarkly/go-jsonstream/jwriter"
 	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
 
 	"github.com/stretchr/testify/assert"
@@ -62,26 +63,42 @@ func TestOptionalIntAsStringer(t *testing.T) {
 }
 
 func TestOptionalIntJSONMarshalling(t *testing.T) {
-	bytes, err := json.Marshal(OptionalInt{})
-	assert.NoError(t, err)
-	assert.Equal(t, nullAsJSON, string(bytes))
+	testWithMarshaler := func(t *testing.T, marshal func(OptionalInt) ([]byte, error)) {
+		bytes, err := marshal(OptionalInt{})
+		assert.NoError(t, err)
+		assert.Equal(t, nullAsJSON, string(bytes))
 
-	bytes, err = json.Marshal(NewOptionalInt(3))
-	assert.NoError(t, err)
-	assert.Equal(t, `3`, string(bytes))
+		bytes, err = marshal(NewOptionalInt(3))
+		assert.NoError(t, err)
+		assert.Equal(t, `3`, string(bytes))
+	}
 
-	swos := structWithOptionalInts{N1: NewOptionalInt(3)}
-	bytes, err = json.Marshal(swos)
-	assert.NoError(t, err)
-	assert.Equal(t, `{"n1":3,"n2":null,"n3":null}`, string(bytes))
+	t.Run("with json.Marshal", func(t *testing.T) {
+		testWithMarshaler(t, func(o OptionalInt) ([]byte, error) {
+			return json.Marshal(o)
+		})
 
-	var j jsonstream.JSONBuffer
-	j.SetSeparator([]byte(","))
-	NewOptionalInt(3).WriteToJSONBuffer(&j)
-	OptionalInt{}.WriteToJSONBuffer(&j)
-	bytes, err = j.Get()
-	assert.NoError(t, err)
-	assert.Equal(t, `3,null`, string(bytes))
+		swos := structWithOptionalInts{N1: NewOptionalInt(3)}
+		bytes, err := json.Marshal(swos)
+		assert.NoError(t, err)
+		assert.Equal(t, `{"n1":3,"n2":null,"n3":null}`, string(bytes))
+	})
+
+	t.Run("with WriteToJSONWriter", func(t *testing.T) {
+		testWithMarshaler(t, func(o OptionalInt) ([]byte, error) {
+			w := jwriter.NewWriter()
+			o.WriteToJSONWriter(&w)
+			return w.Bytes(), w.Error()
+		})
+	})
+
+	t.Run("with WriteToJSONBuffer", func(t *testing.T) {
+		testWithMarshaler(t, func(o OptionalInt) ([]byte, error) {
+			var b jsonstream.JSONBuffer
+			o.WriteToJSONBuffer(&b)
+			return b.Get()
+		})
+	})
 }
 
 func TestOptionalIntJSONUnmarshalling(t *testing.T) {
