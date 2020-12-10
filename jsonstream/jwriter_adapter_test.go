@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/launchdarkly/go-jsonstream/jwriter"
+	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

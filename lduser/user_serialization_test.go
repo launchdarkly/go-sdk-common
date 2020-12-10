@@ -7,7 +7,7 @@ import (
 	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
 	"gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
 
-	"github.com/launchdarkly/go-jsonstream/jreader"
+	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
