@@ -70,15 +70,9 @@ func (v Value) MarshalJSON() ([]byte, error) {
 	case StringType:
 		return json.Marshal(v.stringValue)
 	case ArrayType:
-		if v.immutableArrayValue == nil {
-			return json.Marshal([]Value{})
-		}
-		return json.Marshal(v.immutableArrayValue)
+		return v.arrayValue.MarshalJSON()
 	case ObjectType:
-		if v.immutableObjectValue == nil {
-			return json.Marshal(map[string]Value{})
-		}
-		return json.Marshal(v.immutableObjectValue)
+		return v.objectValue.MarshalJSON()
 	case RawType:
 		return []byte(v.stringValue), nil
 	}
@@ -116,23 +110,17 @@ func (v *Value) UnmarshalJSON(data []byte) error { //nolint:funlen // yes, we kn
 		}
 		return e
 	case '[':
-		var a []Value
+		var a ValueArray
 		e := json.Unmarshal(data, &a)
 		if e == nil {
-			if len(a) == 0 {
-				a = nil // don't need to retain an empty array
-			}
-			*v = Value{valueType: ArrayType, immutableArrayValue: a}
+			*v = Value{valueType: ArrayType, arrayValue: a}
 		}
 		return e
 	case '{':
-		var o map[string]Value
-		e := json.Unmarshal(data, &o)
+		var m ValueMap
+		e := m.UnmarshalJSON(data)
 		if e == nil {
-			if len(o) == 0 {
-				o = nil // don't need to retain an empty map
-			}
-			*v = Value{valueType: ObjectType, immutableObjectValue: o}
+			*v = Value{valueType: ObjectType, objectValue: m}
 		}
 		return e
 	case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9': // note, JSON does not allow a leading '.'
@@ -161,18 +149,9 @@ func (v Value) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
 	case StringType:
 		j.WriteString(v.stringValue)
 	case ArrayType:
-		j.BeginArray()
-		for _, vv := range v.immutableArrayValue {
-			vv.WriteToJSONBuffer(j)
-		}
-		j.EndArray()
+		v.arrayValue.WriteToJSONBuffer(j)
 	case ObjectType:
-		j.BeginObject()
-		for k, vv := range v.immutableObjectValue {
-			j.WriteName(k)
-			vv.WriteToJSONBuffer(j)
-		}
-		j.EndObject()
+		v.objectValue.WriteToJSONBuffer(j)
 	case RawType:
 		j.WriteRaw([]byte(v.stringValue))
 	}

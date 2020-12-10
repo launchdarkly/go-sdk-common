@@ -28,6 +28,10 @@ func NewAnonymousUser(key string) User {
 //     user := NewUserBuilder("user-key").Name("Bob").AsPrivateAttribute().Build() // Name is now private
 //
 // A UserBuilder should not be accessed by multiple goroutines at once.
+//
+// This is defined as an interface rather than a concrete type only for syntactic convenience (see
+// UserBuilderCanMakeAttributePrivate). Applications should not implement this interface since the package
+// may add methods to it in the future.
 type UserBuilder interface {
 	// Key changes the unique key for the user being built.
 	Key(value string) UserBuilder
@@ -72,6 +76,13 @@ type UserBuilder interface {
 	//         Custom("custom-attr-name", ldvalue.String("some-string-value")).AsPrivateAttribute().
 	//         Build()
 	Custom(attribute string, value ldvalue.Value) UserBuilderCanMakeAttributePrivate
+
+	// CustomAll sets all of the user's custom attributes at once from a ValueMap.
+	//
+	// UserBuilder has copy-on-write behavior to make this method efficient: if you do not make any
+	// changes to custom attributes after this, it reuses the original map rather than allocating a
+	// new one.
+	CustomAll(ldvalue.ValueMap) UserBuilderCanMakeAttributePrivate
 
 	// SetAttribute sets any attribute of the user being built, specified as a UserAttribute, to a value
 	// of type ldvalue.Value.
@@ -151,8 +162,9 @@ type userBuilderImpl struct {
 	avatar                      ldvalue.OptionalString
 	name                        ldvalue.OptionalString
 	anonymous                   ldvalue.OptionalBool
-	custom                      ldvalue.ObjectBuilder
+	custom                      ldvalue.ValueMapBuilder
 	privateAttrs                map[UserAttribute]struct{}
+	privateAttrsCopyOnWrite     bool
 	lastAttributeCanMakePrivate UserAttribute
 }
 
@@ -166,31 +178,28 @@ func NewUserBuilder(key string) UserBuilder {
 
 // NewUserBuilderFromUser constructs a new UserBuilder, copying all attributes from an existing user. You may
 // then call setter methods on the new UserBuilder to modify those attributes.
+//
+// Custom attributes, and the set of attribute names that are private, are implemented internally as maps.
+// Since the User struct does not expose these maps, they are in effect immutable and will be reused from the
+// original User rather than copied whenever possible. The UserBuilder has copy-on-write behavior so that it
+// only makes copies of these data structures if you actually modify them.
 func NewUserBuilderFromUser(fromUser User) UserBuilder {
 	builder := &userBuilderImpl{
-		key:       fromUser.key,
-		secondary: fromUser.secondary,
-		ip:        fromUser.ip,
-		country:   fromUser.country,
-		email:     fromUser.email,
-		firstName: fromUser.firstName,
-		lastName:  fromUser.lastName,
-		avatar:    fromUser.avatar,
-		name:      fromUser.name,
-		anonymous: fromUser.anonymous,
+		key:                     fromUser.key,
+		secondary:               fromUser.secondary,
+		ip:                      fromUser.ip,
+		country:                 fromUser.country,
+		email:                   fromUser.email,
+		firstName:               fromUser.firstName,
+		lastName:                fromUser.lastName,
+		avatar:                  fromUser.avatar,
+		name:                    fromUser.name,
+		anonymous:               fromUser.anonymous,
+		privateAttrs:            fromUser.privateAttributes,
+		privateAttrsCopyOnWrite: true,
 	}
 	if fromUser.custom.Count() > 0 {
-		builder.custom = ldvalue.ObjectBuildWithCapacity(fromUser.custom.Count())
-		fromUser.custom.Enumerate(func(index int, key string, value ldvalue.Value) bool {
-			builder.custom.Set(key, value)
-			return true
-		})
-	}
-	if len(fromUser.privateAttributes) > 0 {
-		builder.privateAttrs = make(map[UserAttribute]struct{}, len(fromUser.privateAttributes))
-		for name := range fromUser.privateAttributes {
-			builder.privateAttrs[name] = struct{}{}
-		}
+		builder.custom = ldvalue.ValueMapBuildFromMap(fromUser.custom)
 	}
 	return builder
 }
@@ -252,10 +261,20 @@ func (b *userBuilderImpl) Anonymous(value bool) UserBuilder {
 
 func (b *userBuilderImpl) Custom(attribute string, value ldvalue.Value) UserBuilderCanMakeAttributePrivate {
 	if b.custom == nil {
-		b.custom = ldvalue.ObjectBuild()
+		b.custom = ldvalue.ValueMapBuild()
 	}
 	b.custom.Set(attribute, value)
 	return b.canMakeAttributePrivate(UserAttribute(attribute))
+}
+
+func (b *userBuilderImpl) CustomAll(valueMap ldvalue.ValueMap) UserBuilderCanMakeAttributePrivate {
+	if valueMap.Count() == 0 {
+		b.custom = nil
+	} else {
+		b.custom = ldvalue.ValueMapBuildFromMap(valueMap)
+	}
+	b.lastAttributeCanMakePrivate = ""
+	return b
 }
 
 func (b *userBuilderImpl) SetAttribute(
@@ -312,27 +331,22 @@ func (b *userBuilderImpl) SetAttribute(
 
 func (b *userBuilderImpl) Build() User {
 	u := User{
-		key:       b.key,
-		secondary: b.secondary,
-		ip:        b.ip,
-		country:   b.country,
-		email:     b.email,
-		firstName: b.firstName,
-		lastName:  b.lastName,
-		avatar:    b.avatar,
-		name:      b.name,
-		anonymous: b.anonymous,
+		key:               b.key,
+		secondary:         b.secondary,
+		ip:                b.ip,
+		country:           b.country,
+		email:             b.email,
+		firstName:         b.firstName,
+		lastName:          b.lastName,
+		avatar:            b.avatar,
+		name:              b.name,
+		anonymous:         b.anonymous,
+		privateAttributes: b.privateAttrs,
 	}
 	if b.custom != nil {
 		u.custom = b.custom.Build()
 	}
-	if len(b.privateAttrs) > 0 {
-		p := make(map[UserAttribute]struct{}, len(b.privateAttrs))
-		for key := range b.privateAttrs {
-			p[key] = struct{}{}
-		}
-		u.privateAttributes = p
-	}
+	b.privateAttrsCopyOnWrite = true
 	return u
 }
 
@@ -340,8 +354,15 @@ func (b *userBuilderImpl) AsPrivateAttribute() UserBuilder {
 	if b.lastAttributeCanMakePrivate != "" {
 		if b.privateAttrs == nil {
 			b.privateAttrs = make(map[UserAttribute]struct{})
+		} else if b.privateAttrsCopyOnWrite {
+			copied := make(map[UserAttribute]struct{}, len(b.privateAttrs))
+			for name := range b.privateAttrs {
+				copied[name] = struct{}{}
+			}
+			b.privateAttrs = copied
 		}
 		b.privateAttrs[b.lastAttributeCanMakePrivate] = struct{}{}
+		b.privateAttrsCopyOnWrite = false
 	}
 	return b
 }

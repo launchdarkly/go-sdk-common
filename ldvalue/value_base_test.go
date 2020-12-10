@@ -25,6 +25,7 @@ func TestNullValue(t *testing.T) {
 	v := Null()
 
 	assert.Equal(t, NullType, v.Type())
+	assert.False(t, v.IsDefined())
 	assert.True(t, v.IsNull())
 	assert.False(t, v.IsBool())
 	assert.False(t, v.IsNumber())
@@ -50,6 +51,7 @@ func TestBoolValue(t *testing.T) {
 
 	assert.Equal(t, BoolType, tv.Type())
 	assert.True(t, tv.BoolValue())
+	assert.True(t, tv.IsDefined())
 	assert.False(t, tv.IsNull())
 	assert.True(t, tv.IsBool())
 	assert.False(t, tv.IsNumber())
@@ -72,6 +74,7 @@ func TestBoolValue(t *testing.T) {
 
 	assert.Equal(t, BoolType, fv.Type())
 	assert.False(t, fv.BoolValue())
+	assert.True(t, fv.IsDefined())
 	assert.False(t, fv.IsNull())
 	assert.False(t, fv.IsNumber())
 	assert.False(t, fv.IsInt())
@@ -86,6 +89,7 @@ func TestIntValue(t *testing.T) {
 	assert.Equal(t, NumberType, v.Type())
 	assert.Equal(t, 2, v.IntValue())
 	assert.Equal(t, float64(2), v.Float64Value())
+	assert.True(t, v.IsDefined())
 	assert.False(t, v.IsNull())
 	assert.False(t, v.IsBool())
 	assert.True(t, v.IsNumber())
@@ -111,6 +115,7 @@ func TestFloat64Value(t *testing.T) {
 	assert.Equal(t, NumberType, v.Type())
 	assert.Equal(t, 2, v.IntValue())
 	assert.Equal(t, 2.75, v.Float64Value())
+	assert.True(t, v.IsDefined())
 	assert.False(t, v.IsNull())
 	assert.False(t, v.IsBool())
 	assert.True(t, v.IsNumber())
@@ -143,6 +148,7 @@ func TestStringValue(t *testing.T) {
 	assert.Equal(t, StringType, v.Type())
 	assert.Equal(t, "abc", v.StringValue())
 	assert.Equal(t, NewOptionalString("abc"), v.AsOptionalString())
+	assert.True(t, v.IsDefined())
 	assert.False(t, v.IsNull())
 	assert.False(t, v.IsBool())
 	assert.False(t, v.IsNumber())
@@ -168,6 +174,7 @@ func TestRawValue(t *testing.T) {
 
 	assert.Equal(t, RawType, v.Type())
 	assert.Equal(t, rawJson, v.AsRaw())
+	assert.True(t, v.IsDefined())
 	assert.False(t, v.IsNull())
 	assert.False(t, v.IsBool())
 	assert.False(t, v.IsNumber())

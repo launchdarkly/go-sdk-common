@@ -64,6 +64,12 @@ type EvaluationReason struct {
 	errorKind       EvalErrorKind
 }
 
+// IsDefined returns true if this EvaluationReason has a non-empty GetKind(). It is false for a
+// zero value of EvaluationReason{}.
+func (r EvaluationReason) IsDefined() bool {
+	return r.kind != ""
+}
+
 // String returns a concise string representation of the reason. Examples: "OFF", "ERROR(WRONG_TYPE)".
 func (r EvaluationReason) String() string {
 	switch r.kind {

@@ -4,6 +4,8 @@ package ldvalue
 // object), in the fully immutable model where no slices, maps, or interface{} values are exposed.
 
 // ArrayBuilder is a builder created by ArrayBuild(), for creating immutable arrays.
+//
+// An ArrayBuilder should not be accessed by multiple goroutines at once.
 type ArrayBuilder interface {
 	// Add appends an element to the array builder.
 	Add(value Value) ArrayBuilder
@@ -13,11 +15,12 @@ type ArrayBuilder interface {
 }
 
 type arrayBuilderImpl struct {
-	copyOnWrite bool
-	output      []Value
+	builder valueArrayBuilderImpl
 }
 
 // ObjectBuilder is a builder created by ObjectBuild(), for creating immutable JSON objects.
+//
+// An ObjectBuilder should not be accessed by multiple goroutines at once.
 type ObjectBuilder interface {
 	// Set sets a key-value pair in the object builder.
 	Set(key string, value Value) ObjectBuilder
@@ -27,8 +30,7 @@ type ObjectBuilder interface {
 }
 
 type objectBuilderImpl struct {
-	copyOnWrite bool
-	output      map[string]Value
+	builder valueMapBuilderImpl
 }
 
 // ArrayOf creates an array Value from a list of Values.
@@ -37,12 +39,7 @@ type objectBuilderImpl struct {
 // using the spread operator, and then modified. However, since Value is itself immutable, it does
 // not need to deep-copy each item.
 func ArrayOf(items ...Value) Value {
-	if len(items) == 0 {
-		return Value{valueType: ArrayType} // no need to allocate an empty array
-	}
-	copiedItems := make([]Value, len(items))
-	copy(copiedItems, items)
-	return Value{valueType: ArrayType, immutableArrayValue: copiedItems}
+	return Value{valueType: ArrayType, arrayValue: ValueArrayOf(items...)}
 }
 
 // ArrayBuild creates a builder for constructing an immutable array Value.
@@ -59,34 +56,23 @@ func ArrayBuild() ArrayBuilder {
 //
 //     arrayValue := ldvalue.ArrayBuildWithCapacity(2).Add(ldvalue.Int(100)).Add(ldvalue.Int(200)).Build()
 func ArrayBuildWithCapacity(capacity int) ArrayBuilder {
-	return &arrayBuilderImpl{output: make([]Value, 0, capacity)}
+	return &arrayBuilderImpl{valueArrayBuilderImpl{output: make([]Value, 0, capacity)}}
 }
 
 func (b *arrayBuilderImpl) Add(value Value) ArrayBuilder {
-	if b.copyOnWrite {
-		n := len(b.output)
-		newSlice := make([]Value, n, n+1)
-		copy(newSlice[0:n], b.output)
-		b.output = newSlice
-		b.copyOnWrite = false
-	}
-	b.output = append(b.output, value)
+	b.builder.Add(value)
 	return b
 }
 
 func (b *arrayBuilderImpl) Build() Value {
-	if len(b.output) == 0 {
-		return Value{valueType: ArrayType} // don't bother retaining an empty slice
-	}
-	b.copyOnWrite = true
-	return Value{valueType: ArrayType, immutableArrayValue: b.output}
+	return Value{valueType: ArrayType, arrayValue: b.builder.Build()}
 }
 
 // CopyObject creates a Value by copying an existing map[string]Value.
 //
 // If you want to copy a map[string]interface{} instead, use CopyArbitraryValue.
 func CopyObject(m map[string]Value) Value {
-	return Value{valueType: ObjectType, immutableObjectValue: copyValueMap(m)}
+	return Value{valueType: ObjectType, objectValue: CopyValueMap(m)}
 }
 
 // ObjectBuild creates a builder for constructing an immutable JSON object Value.
@@ -103,24 +89,16 @@ func ObjectBuild() ObjectBuilder {
 //
 //     objValue := ldvalue.ObjectBuildWithCapacity(2).Set("a", ldvalue.Int(100)).Set("b", ldvalue.Int(200)).Build()
 func ObjectBuildWithCapacity(capacity int) ObjectBuilder {
-	return &objectBuilderImpl{output: make(map[string]Value, capacity)}
+	return &objectBuilderImpl{valueMapBuilderImpl{output: make(map[string]Value, capacity)}}
 }
 
 func (b *objectBuilderImpl) Set(name string, value Value) ObjectBuilder {
-	if b.copyOnWrite {
-		b.output = copyValueMap(b.output)
-		b.copyOnWrite = false
-	}
-	b.output[name] = value
+	b.builder.Set(name, value)
 	return b
 }
 
 func (b *objectBuilderImpl) Build() Value {
-	if len(b.output) == 0 {
-		return Value{valueType: ObjectType} // don't bother retaining an empty map
-	}
-	b.copyOnWrite = true
-	return Value{valueType: ObjectType, immutableObjectValue: b.output}
+	return Value{valueType: ObjectType, objectValue: b.builder.Build()}
 }
 
 // Count returns the number of elements in an array or JSON object.
@@ -129,9 +107,9 @@ func (b *objectBuilderImpl) Build() Value {
 func (v Value) Count() int {
 	switch v.valueType {
 	case ArrayType:
-		return len(v.immutableArrayValue)
+		return v.arrayValue.Count()
 	case ObjectType:
-		return len(v.immutableObjectValue)
+		return v.objectValue.Count()
 	}
 	return 0
 }
@@ -149,12 +127,9 @@ func (v Value) GetByIndex(index int) Value {
 //
 // If the value is not an array, or if the index is out of range, it returns (Null(), false).
 func (v Value) TryGetByIndex(index int) (Value, bool) {
-	if v.valueType == ArrayType {
-		if index >= 0 && index < len(v.immutableArrayValue) {
-			return v.immutableArrayValue[index], true
-		}
-	}
-	return Null(), false
+	return v.arrayValue.TryGet(index)
+	// This is always safe because if v isn't an array, arrayValue is an empty ValueArray{}
+	// and TryGet will always return Null(), false.
 }
 
 // Keys returns the keys of a JSON object as a slice.
@@ -162,13 +137,7 @@ func (v Value) TryGetByIndex(index int) (Value, bool) {
 // The method copies the keys. If the value is not an object, it returns an empty slice.
 func (v Value) Keys() []string {
 	if v.valueType == ObjectType {
-		ret := make([]string, len(v.immutableObjectValue))
-		i := 0
-		for key := range v.immutableObjectValue {
-			ret[i] = key
-			i++
-		}
-		return ret
+		return v.objectValue.Keys()
 	}
 	return nil
 }
@@ -177,8 +146,9 @@ func (v Value) Keys() []string {
 //
 // If the value is not an object, or if the key is not found, it returns Null().
 func (v Value) GetByKey(name string) Value {
-	ret, _ := v.TryGetByKey(name)
-	return ret
+	return v.objectValue.Get(name)
+	// This is always safe because if v isn't an object, objectValue is an empty ValueMap{}
+	// and keys will never be found.
 }
 
 // TryGetByKey gets a value from a JSON object by key, with a second return value of true if
@@ -186,19 +156,7 @@ func (v Value) GetByKey(name string) Value {
 //
 // If the value is not an object, or if the key is not found, it returns (Null(), false).
 func (v Value) TryGetByKey(name string) (Value, bool) {
-	if v.valueType == ObjectType {
-		ret, ok := v.immutableObjectValue[name]
-		return ret, ok
-	}
-	return Null(), false
-}
-
-func copyValueMap(m map[string]Value) map[string]Value {
-	ret := make(map[string]Value, len(m))
-	for k, v := range m {
-		ret[k] = v
-	}
-	return ret
+	return v.objectValue.TryGet(name)
 }
 
 // Enumerate calls a function for each value within a Value.
@@ -219,13 +177,13 @@ func (v Value) Enumerate(fn func(index int, key string, value Value) bool) {
 	case NullType:
 		return
 	case ArrayType:
-		for i, v1 := range v.immutableArrayValue {
+		for i, v1 := range v.arrayValue.data {
 			if !fn(i, "", v1) {
 				return
 			}
 		}
 	case ObjectType:
-		for k, v1 := range v.immutableObjectValue {
+		for k, v1 := range v.objectValue.data {
 			if !fn(0, k, v1) {
 				return
 			}
@@ -282,9 +240,18 @@ func (v Value) Transform(fn func(index int, key string, value Value) (Value, boo
 	case NullType:
 		return v
 	case ArrayType:
-		return Value{valueType: ArrayType, immutableArrayValue: transformArray(v.immutableArrayValue, fn)}
+		return Value{valueType: ArrayType, arrayValue: v.arrayValue.Transform(
+			func(index int, value Value) (Value, bool) {
+				return fn(index, "", value)
+			},
+		)}
 	case ObjectType:
-		return Value{valueType: ObjectType, immutableObjectValue: transformObject(v.immutableObjectValue, fn)}
+		return Value{valueType: ObjectType, objectValue: v.objectValue.Transform(
+			func(key string, value Value) (string, Value, bool) {
+				resultValue, ok := fn(0, key, value)
+				return key, resultValue, ok
+			},
+		)}
 	default:
 		if transformedValue, ok := fn(0, "", v); ok {
 			return transformedValue
@@ -293,64 +260,16 @@ func (v Value) Transform(fn func(index int, key string, value Value) (Value, boo
 	}
 }
 
-func transformArray(values []Value, fn func(index int, key string, value Value) (Value, bool)) []Value {
-	ret := values
-	startedNewSlice := false
-	for i, v := range values {
-		transformedValue, ok := fn(i, "", v)
-		modified := !ok || !transformedValue.Equal(v)
-		if modified && !startedNewSlice {
-			// This is the first change we've seen, so we should start building a new slice and
-			// retroactively add any values to it that already passed the test without changes.
-			startedNewSlice = true
-			if i == 0 {
-				ret = nil // Avoid allocating an array until we know it'll be non-empty
-			} else {
-				ret = make([]Value, i, len(values))
-				copy(ret, values)
-			}
-		}
-		if startedNewSlice && ok {
-			if ret == nil {
-				ret = make([]Value, 0, len(values))
-			}
-			ret = append(ret, transformedValue)
-		}
-	}
-	return ret
+// AsValueArray converts the Value to the immutable ValueArray type if it is a JSON array.
+// Otherwise it returns a ValueArray in an uninitialized (nil) state. This is an efficient operation
+// that does not allocate a new slice.
+func (v Value) AsValueArray() ValueArray {
+	return v.arrayValue
 }
 
-func transformObject(
-	values map[string]Value,
-	fn func(index int, key string, value Value,
-	) (Value, bool)) map[string]Value {
-	ret := values
-	startedNewMap := false
-	seenKeys := make([]string, 0, len(values))
-	for k, v := range values {
-		transformedValue, ok := fn(0, k, v)
-		modified := !ok || !transformedValue.Equal(v)
-		if modified && !startedNewMap {
-			// This is the first change we've seen, so we should start building a new map and
-			// retroactively add any values to it that already passed the test without changes.
-			startedNewMap = true
-			if len(seenKeys) == 0 {
-				ret = nil // Avoid allocating a map until we know it'll be non-empty
-			} else {
-				ret = make(map[string]Value, len(values))
-				for _, seenKey := range seenKeys {
-					ret[seenKey] = values[seenKey]
-				}
-			}
-		} else {
-			seenKeys = append(seenKeys, k)
-		}
-		if startedNewMap && ok {
-			if ret == nil {
-				ret = make(map[string]Value, len(values))
-			}
-			ret[k] = transformedValue
-		}
-	}
-	return ret
+// AsValueMap converts the Value to the immutable ValueMap type if it is a JSON object. Otherwise
+// it returns a ValueMap in an uninitialized (nil) state. This is an efficient operation that does
+// not allocate a new map.
+func (v Value) AsValueMap() ValueMap {
+	return v.objectValue
 }
