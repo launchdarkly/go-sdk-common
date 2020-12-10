@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/launchdarkly/go-jsonstream/jreader"
+	"github.com/launchdarkly/go-jsonstream/jwriter"
 	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
 
 	"github.com/stretchr/testify/assert"
@@ -70,61 +72,92 @@ func TestOptionalBoolAsStringer(t *testing.T) {
 }
 
 func TestOptionalBoolJSONMarshalling(t *testing.T) {
-	bytes, err := json.Marshal(OptionalBool{})
-	assert.NoError(t, err)
-	assert.Equal(t, nullAsJSON, string(bytes))
+	testWithMarshaler := func(t *testing.T, marshal func(OptionalBool) ([]byte, error)) {
+		bytes, err := marshal(OptionalBool{})
+		assert.NoError(t, err)
+		assert.Equal(t, nullAsJSON, string(bytes))
 
-	bytes, err = json.Marshal(NewOptionalBool(true))
-	assert.NoError(t, err)
-	assert.Equal(t, `true`, string(bytes))
+		bytes, err = marshal(NewOptionalBool(true))
+		assert.NoError(t, err)
+		assert.Equal(t, `true`, string(bytes))
 
-	bytes, err = json.Marshal(NewOptionalBool(false))
-	assert.NoError(t, err)
-	assert.Equal(t, `false`, string(bytes))
+		bytes, err = marshal(NewOptionalBool(false))
+		assert.NoError(t, err)
+		assert.Equal(t, `false`, string(bytes))
+	}
 
-	swos := structWithOptionalBools{B1: NewOptionalBool(true), B2: NewOptionalBool(false)}
-	bytes, err = json.Marshal(swos)
-	assert.NoError(t, err)
-	assert.Equal(t, `{"b1":true,"b2":false,"b3":null}`, string(bytes))
+	t.Run("with json.Marshal", func(t *testing.T) {
+		testWithMarshaler(t, func(o OptionalBool) ([]byte, error) {
+			return json.Marshal(o)
+		})
 
-	var j jsonstream.JSONBuffer
-	j.SetSeparator([]byte(","))
-	NewOptionalBool(true).WriteToJSONBuffer(&j)
-	NewOptionalBool(false).WriteToJSONBuffer(&j)
-	OptionalBool{}.WriteToJSONBuffer(&j)
-	bytes, err = j.Get()
-	assert.NoError(t, err)
-	assert.Equal(t, `true,false,null`, string(bytes))
+		swos := structWithOptionalBools{B1: NewOptionalBool(true), B2: NewOptionalBool(false)}
+		bytes, err := json.Marshal(swos)
+		assert.NoError(t, err)
+		assert.Equal(t, `{"b1":true,"b2":false,"b3":null}`, string(bytes))
+	})
+
+	t.Run("with WriteToJSONWriter", func(t *testing.T) {
+		testWithMarshaler(t, func(o OptionalBool) ([]byte, error) {
+			w := jwriter.NewWriter()
+			o.WriteToJSONWriter(&w)
+			return w.Bytes(), w.Error()
+		})
+	})
+
+	t.Run("with WriteToJSONBuffer", func(t *testing.T) {
+		testWithMarshaler(t, func(o OptionalBool) ([]byte, error) {
+			var b jsonstream.JSONBuffer
+			o.WriteToJSONBuffer(&b)
+			return b.Get()
+		})
+	})
 }
 
 func TestOptionalBoolJSONUnmarshalling(t *testing.T) {
-	var o OptionalBool
-	err := json.Unmarshal([]byte(nullAsJSON), &o)
-	assert.NoError(t, err)
-	assert.False(t, o.IsDefined())
+	testWithUnmarshaler := func(t *testing.T, unmarshal func([]byte, *OptionalBool) error) {
+		var o OptionalBool
+		err := unmarshal([]byte(nullAsJSON), &o)
+		assert.NoError(t, err)
+		assert.False(t, o.IsDefined())
 
-	err = json.Unmarshal([]byte(`true`), &o)
-	assert.NoError(t, err)
-	assert.Equal(t, NewOptionalBool(true), o)
+		err = unmarshal([]byte(`true`), &o)
+		assert.NoError(t, err)
+		assert.Equal(t, NewOptionalBool(true), o)
 
-	err = json.Unmarshal([]byte(`false`), &o)
-	assert.NoError(t, err)
-	assert.Equal(t, NewOptionalBool(false), o)
+		err = unmarshal([]byte(`false`), &o)
+		assert.NoError(t, err)
+		assert.Equal(t, NewOptionalBool(false), o)
 
-	err = json.Unmarshal([]byte(`3`), &o)
-	assert.Error(t, err)
-	assert.IsType(t, &json.UnmarshalTypeError{}, err)
+		err = unmarshal([]byte(`3`), &o)
+		assert.Error(t, err)
+		assert.IsType(t, &json.UnmarshalTypeError{}, err)
 
-	err = json.Unmarshal([]byte(`x`), &o)
-	assert.Error(t, err)
-	assert.IsType(t, &json.SyntaxError{}, err)
+		err = unmarshal([]byte(`x`), &o)
+		assert.Error(t, err)
+		assert.IsType(t, &json.SyntaxError{}, err)
+	}
 
-	var swos structWithOptionalBools
-	err = json.Unmarshal([]byte(`{"b1":true,"b2":false,"b3":null}`), &swos)
-	assert.NoError(t, err)
-	assert.Equal(t, NewOptionalBool(true), swos.B1)
-	assert.Equal(t, NewOptionalBool(false), swos.B2)
-	assert.Equal(t, OptionalBool{}, swos.B3)
+	t.Run("with json.Unmarshal", func(t *testing.T) {
+		testWithUnmarshaler(t, func(data []byte, o *OptionalBool) error {
+			return json.Unmarshal(data, o)
+		})
+
+		var swos structWithOptionalBools
+		err := json.Unmarshal([]byte(`{"b1":true,"b2":false,"b3":null}`), &swos)
+		assert.NoError(t, err)
+		assert.Equal(t, NewOptionalBool(true), swos.B1)
+		assert.Equal(t, NewOptionalBool(false), swos.B2)
+		assert.Equal(t, OptionalBool{}, swos.B3)
+	})
+
+	t.Run("with ReadFromJSONReader", func(t *testing.T) {
+		testWithUnmarshaler(t, func(data []byte, o *OptionalBool) error {
+			r := jreader.NewReader(data)
+			o.ReadFromJSONReader(&r)
+			return jreader.ToJSONError(r.Error(), o)
+		})
+	})
 }
 
 type structWithOptionalBools struct {

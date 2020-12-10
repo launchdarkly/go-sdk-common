@@ -5,7 +5,10 @@ import (
 	"errors"
 	"strconv"
 
-	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
+	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream" //nolint:staticcheck // using a deprecated API
+
+	"github.com/launchdarkly/go-jsonstream/jreader"
+	"github.com/launchdarkly/go-jsonstream/jwriter"
 )
 
 // This file contains methods for converting Value to and from JSON.
@@ -16,7 +19,7 @@ import (
 // use in test scenarios where malformed data is not a concern.
 func Parse(jsonData []byte) Value {
 	var v Value
-	if err := json.Unmarshal(jsonData, &v); err != nil {
+	if err := v.UnmarshalJSON(jsonData); err != nil {
 		return Null()
 	}
 	return v
@@ -44,7 +47,7 @@ func (v Value) JSONString() string {
 	bytes, _ := json.Marshal(v)
 	// It shouldn't be possible for marshalling to fail, because Value can only contain
 	// JSON-compatible types. But if it somehow did fail, bytes will be nil and we'll return
-	// an empty tring.
+	// an empty string.
 	return string(bytes)
 }
 
@@ -56,12 +59,12 @@ func (v Value) JSONString() string {
 func (v Value) MarshalJSON() ([]byte, error) {
 	switch v.valueType {
 	case NullType:
-		return []byte(nullAsJSON), nil
+		return nullAsJSONBytes, nil
 	case BoolType:
 		if v.boolValue {
-			return []byte(trueString), nil
+			return trueBytes, nil
 		}
-		return []byte(falseString), nil
+		return falseBytes, nil
 	case NumberType:
 		if v.IsInt() {
 			return []byte(strconv.Itoa(int(v.numberValue))), nil
@@ -80,79 +83,68 @@ func (v Value) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON parses a Value from JSON.
-func (v *Value) UnmarshalJSON(data []byte) error { //nolint:funlen // yes, we know it's a long function
-	if len(data) == 0 { // COVERAGE: should not be possible, parser doesn't pass empty slices to UnmarshalJSON
-		return errors.New("cannot parse empty data")
-	}
-	firstCh := data[0]
-	switch firstCh {
-	case 'n':
-		// Note that since Go 1.5, comparing a string to string([]byte) is optimized so it
-		// does not actually create a new string from the byte slice.
-		if string(data) == "null" {
-			*v = Null()
-			return nil
-		}
-	case 't', 'f':
-		if string(data) == trueString {
-			*v = Bool(true)
-			return nil
-		}
-		if string(data) == falseString {
-			*v = Bool(false)
-			return nil
-		}
-	case '"':
-		var s string
-		e := json.Unmarshal(data, &s)
-		if e == nil {
-			*v = String(s)
-		}
-		return e
-	case '[':
-		var a ValueArray
-		e := json.Unmarshal(data, &a)
-		if e == nil {
-			*v = Value{valueType: ArrayType, arrayValue: a}
-		}
-		return e
-	case '{':
-		var m ValueMap
-		e := m.UnmarshalJSON(data)
-		if e == nil {
-			*v = Value{valueType: ObjectType, objectValue: m}
-		}
-		return e
-	case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9': // note, JSON does not allow a leading '.'
-		var n float64
-		e := json.Unmarshal(data, &n)
-		if e == nil {
-			*v = Value{valueType: NumberType, numberValue: n}
-		}
-		return e
-	}
-	return &json.SyntaxError{} // COVERAGE: never happens, parser rejects the token earlier
+func (v *Value) UnmarshalJSON(data []byte) error {
+	return jreader.UnmarshalJSONWithReader(data, v)
 }
 
-// WriteToJSONBuffer provides JSON serialization for Value with the jsonstream API.
+// ReadFromJSONReader provides JSON deserialization for use with the jsonstream API.
 //
-// The JSON output format is identical to what is produced by json.Marshal, but this implementation is
-// more efficient when building output with JSONBuffer. See the jsonstream package for more details.
-func (v Value) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
+// This implementation is used by the SDK in cases where it is more efficient than JSON.Unmarshal.
+// See the jsonstream package for more details.
+func (v *Value) ReadFromJSONReader(r *jreader.Reader) {
+	a := r.Any()
+	if r.Error() != nil {
+		return
+	}
+	switch a.Kind {
+	case jreader.BoolValue:
+		*v = Bool(a.Bool)
+	case jreader.NumberValue:
+		*v = Float64(a.Number)
+	case jreader.StringValue:
+		*v = String(a.String)
+	case jreader.ArrayValue:
+		var va ValueArray
+		if va.readFromJSONArray(r, &a.Array); r.Error() == nil {
+			*v = Value{valueType: ArrayType, arrayValue: va}
+		}
+	case jreader.ObjectValue:
+		var vm ValueMap
+		if vm.readFromJSONObject(r, &a.Object); r.Error() == nil {
+			*v = Value{valueType: ObjectType, objectValue: vm}
+		}
+	default:
+		*v = Null()
+	}
+}
+
+// WriteToJSONWriter provides JSON serialization for use with the jsonstream API.
+//
+// This implementation is used by the SDK in cases where it is more efficient than JSON.Marshal.
+// See https://github.com/launchdarkly/go-jsonstream for more details.
+func (v Value) WriteToJSONWriter(w *jwriter.Writer) {
 	switch v.valueType {
 	case NullType:
-		j.WriteNull()
+		w.Null()
 	case BoolType:
-		j.WriteBool(v.boolValue)
+		w.Bool(v.boolValue)
 	case NumberType:
-		j.WriteFloat64(v.numberValue)
+		w.Float64(v.numberValue)
 	case StringType:
-		j.WriteString(v.stringValue)
+		w.String(v.stringValue)
 	case ArrayType:
-		v.arrayValue.WriteToJSONBuffer(j)
+		v.arrayValue.WriteToJSONWriter(w)
 	case ObjectType:
-		v.objectValue.WriteToJSONBuffer(j)
+		v.objectValue.WriteToJSONWriter(w)
 	case RawType:
-		j.WriteRaw([]byte(v.stringValue))
+		w.Raw([]byte(v.stringValue))
 	}
+}
+
+// WriteToJSONBuffer provides JSON serialization for use with the deprecated jsonstream API.
+//
+// Deprecated: this method is provided for backward compatibility. The LaunchDarkly SDK no longer
+// uses this API; instead it uses the newer https://github.com/launchdarkly/go-jsonstream.
+func (v Value) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
+	jsonstream.WriteToJSONBufferThroughWriter(v, j)
 }

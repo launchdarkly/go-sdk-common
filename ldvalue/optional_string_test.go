@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/launchdarkly/go-jsonstream/jwriter"
 	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
 
 	"github.com/stretchr/testify/assert"
@@ -69,26 +70,42 @@ func TestOptionalStringAsStringer(t *testing.T) {
 }
 
 func TestOptionalStringJSONMarshalling(t *testing.T) {
-	bytes, err := json.Marshal(OptionalString{})
-	assert.NoError(t, err)
-	assert.Equal(t, nullAsJSON, string(bytes))
+	testWithMarshaler := func(t *testing.T, marshal func(OptionalString) ([]byte, error)) {
+		bytes, err := marshal(OptionalString{})
+		assert.NoError(t, err)
+		assert.Equal(t, nullAsJSON, string(bytes))
 
-	bytes, err = json.Marshal(NewOptionalString(`a "good" string`))
-	assert.NoError(t, err)
-	assert.Equal(t, `"a \"good\" string"`, string(bytes))
+		bytes, err = marshal(NewOptionalString(`a "good" string`))
+		assert.NoError(t, err)
+		assert.Equal(t, `"a \"good\" string"`, string(bytes))
+	}
 
-	swos := structWithOptionalStrings{S1: NewOptionalString("yes")}
-	bytes, err = json.Marshal(swos)
-	assert.NoError(t, err)
-	assert.Equal(t, `{"s1":"yes","s2":null,"s3":null}`, string(bytes))
+	t.Run("with json.Marshal", func(t *testing.T) {
+		testWithMarshaler(t, func(o OptionalString) ([]byte, error) {
+			return json.Marshal(o)
+		})
 
-	var j jsonstream.JSONBuffer
-	j.SetSeparator([]byte(","))
-	NewOptionalString(`a "good" string`).WriteToJSONBuffer(&j)
-	OptionalString{}.WriteToJSONBuffer(&j)
-	bytes, err = j.Get()
-	assert.NoError(t, err)
-	assert.Equal(t, `"a \"good\" string",null`, string(bytes))
+		swos := structWithOptionalStrings{S1: NewOptionalString("yes")}
+		bytes, err := json.Marshal(swos)
+		assert.NoError(t, err)
+		assert.Equal(t, `{"s1":"yes","s2":null,"s3":null}`, string(bytes))
+	})
+
+	t.Run("with WriteToJSONWriter", func(t *testing.T) {
+		testWithMarshaler(t, func(o OptionalString) ([]byte, error) {
+			w := jwriter.NewWriter()
+			o.WriteToJSONWriter(&w)
+			return w.Bytes(), w.Error()
+		})
+	})
+
+	t.Run("with WriteToJSONBuffer", func(t *testing.T) {
+		testWithMarshaler(t, func(o OptionalString) ([]byte, error) {
+			var b jsonstream.JSONBuffer
+			o.WriteToJSONBuffer(&b)
+			return b.Get()
+		})
+	})
 }
 
 func TestOptionalStringJSONUnmarshalling(t *testing.T) {
@@ -105,7 +122,6 @@ func TestOptionalStringJSONUnmarshalling(t *testing.T) {
 	err = json.Unmarshal([]byte("3"), &o)
 	assert.Error(t, err)
 	assert.IsType(t, &json.UnmarshalTypeError{}, err)
-	assert.False(t, o.IsDefined())
 
 	var swos structWithOptionalStrings
 	err = json.Unmarshal([]byte(`{"s1":"yes","s3":null}`), &swos)

@@ -1,10 +1,13 @@
 package ldreason
 
 import (
-	"encoding/json"
 	"fmt"
 
-	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
+	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream" //nolint:staticcheck // using a deprecated API
+	"gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
+
+	"github.com/launchdarkly/go-jsonstream/jreader"
+	"github.com/launchdarkly/go-jsonstream/jwriter"
 )
 
 // EvalReasonKind defines the possible values of the Kind property of EvaluationReason.
@@ -58,7 +61,7 @@ const (
 // This struct is immutable; its properties can be accessed only via getter methods.
 type EvaluationReason struct {
 	kind            EvalReasonKind
-	ruleIndex       int
+	ruleIndex       ldvalue.OptionalInt
 	ruleID          string
 	prerequisiteKey string
 	errorKind       EvalErrorKind
@@ -74,7 +77,7 @@ func (r EvaluationReason) IsDefined() bool {
 func (r EvaluationReason) String() string {
 	switch r.kind {
 	case EvalReasonRuleMatch:
-		return fmt.Sprintf("%s(%d,%s)", r.kind, r.ruleIndex, r.ruleID)
+		return fmt.Sprintf("%s(%d,%s)", r.kind, r.ruleIndex.OrElse(0), r.ruleID)
 	case EvalReasonPrerequisiteFailed:
 		return fmt.Sprintf("%s(%s)", r.kind, r.prerequisiteKey)
 	case EvalReasonError:
@@ -92,10 +95,7 @@ func (r EvaluationReason) GetKind() EvalReasonKind {
 // GetRuleIndex provides the index of the rule that was matched (0 being the first), if
 // the Kind is EvalReasonRuleMatch. Otherwise it returns -1.
 func (r EvaluationReason) GetRuleIndex() int {
-	if r.kind == EvalReasonRuleMatch {
-		return r.ruleIndex
-	}
-	return -1
+	return r.ruleIndex.OrElse(-1)
 }
 
 // GetRuleID provides the unique identifier of the rule that was matched, if the Kind is
@@ -134,7 +134,8 @@ func NewEvalReasonTargetMatch() EvaluationReason {
 
 // NewEvalReasonRuleMatch returns an EvaluationReason whose Kind is EvalReasonRuleMatch.
 func NewEvalReasonRuleMatch(ruleIndex int, ruleID string) EvaluationReason {
-	return EvaluationReason{kind: EvalReasonRuleMatch, ruleIndex: ruleIndex, ruleID: ruleID}
+	return EvaluationReason{kind: EvalReasonRuleMatch,
+		ruleIndex: ldvalue.NewOptionalInt(ruleIndex), ruleID: ruleID}
 }
 
 // NewEvalReasonPrerequisiteFailed returns an EvaluationReason whose Kind is EvalReasonPrerequisiteFailed.
@@ -149,64 +150,74 @@ func NewEvalReasonError(errorKind EvalErrorKind) EvaluationReason {
 
 // MarshalJSON implements custom JSON serialization for EvaluationReason.
 func (r EvaluationReason) MarshalJSON() ([]byte, error) {
-	var buf jsonstream.JSONBuffer
-	r.WriteToJSONBuffer(&buf)
-	return buf.Get()
-}
-
-type evaluationReasonForUnmarshaling struct {
-	Kind            EvalReasonKind `json:"kind"`
-	RuleIndex       *int           `json:"ruleIndex,omitempty"`
-	RuleID          string         `json:"ruleId,omitempty"`
-	PrerequisiteKey string         `json:"prerequisiteKey,omitempty"`
-	ErrorKind       EvalErrorKind  `json:"errorKind,omitempty"`
+	return jwriter.MarshalJSONWithWriter(r)
 }
 
 // UnmarshalJSON implements custom JSON deserialization for EvaluationReason.
 func (r *EvaluationReason) UnmarshalJSON(data []byte) error {
-	var erm evaluationReasonForUnmarshaling
-	if err := json.Unmarshal(data, &erm); err != nil {
-		return err
-	}
-	*r = EvaluationReason{
-		kind:            erm.Kind,
-		ruleID:          erm.RuleID,
-		prerequisiteKey: erm.PrerequisiteKey,
-		errorKind:       erm.ErrorKind,
-	}
-	if erm.RuleIndex != nil {
-		r.ruleIndex = *erm.RuleIndex
-	}
-	return nil
+	return jreader.UnmarshalJSONWithReader(data, r)
 }
 
-// WriteToJSONBuffer provides JSON serialization for EvaluationReason with the jsonstream API.
+// ReadFromJSONReader provides JSON deserialization for use with the jsonstream API.
 //
-// The JSON output format is identical to what is produced by json.Marshal, but this implementation is
-// more efficient when building output with JSONBuffer. See the jsonstream package for more details.
-func (r EvaluationReason) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
+// This implementation is used by the SDK in cases where it is more efficient than JSON.Unmarshal.
+// See https://github.com/launchdarkly/go-jsonstream for more details.
+func (r *EvaluationReason) ReadFromJSONReader(reader *jreader.Reader) {
+	var ret EvaluationReason
+	for obj := reader.ObjectOrNull(); obj.Next(); {
+		switch string(obj.Name()) {
+		case "kind":
+			ret.kind = EvalReasonKind(reader.String())
+		case "ruleId":
+			ret.ruleID = reader.String()
+		case "ruleIndex":
+			ret.ruleIndex = ldvalue.NewOptionalInt(reader.Int())
+		case "errorKind":
+			ret.errorKind = EvalErrorKind(reader.String())
+		case "prerequisiteKey":
+			ret.prerequisiteKey = reader.String()
+		}
+	}
+	if reader.Error() == nil {
+		*r = ret
+	}
+}
+
+// WriteToJSONWriter provides JSON serialization for use with the jsonstream API.
+//
+// This implementation is used by the SDK in cases where it is more efficient than JSON.Marshal.
+// See https://github.com/launchdarkly/go-jsonstream for more details.
+func (r EvaluationReason) WriteToJSONWriter(w *jwriter.Writer) {
 	if r.kind == "" {
-		j.WriteNull()
+		w.Null()
 		return
 	}
-	j.BeginObject()
-	j.WriteName("kind")
-	j.WriteString(string(r.kind))
-	if r.kind == EvalReasonRuleMatch {
-		j.WriteName("ruleIndex")
-		j.WriteInt(r.ruleIndex)
+	obj := w.Object()
+	obj.Property("kind")
+	w.String(string(r.kind))
+	if r.ruleIndex.IsDefined() {
+		obj.Property("ruleIndex")
+		w.Int(r.ruleIndex.OrElse(0))
 		if r.ruleID != "" {
-			j.WriteName("ruleId")
-			j.WriteString(r.ruleID)
+			obj.Property("ruleId")
+			w.String(r.ruleID)
 		}
 	}
 	if r.kind == EvalReasonPrerequisiteFailed {
-		j.WriteName("prerequisiteKey")
-		j.WriteString(r.prerequisiteKey)
+		obj.Property("prerequisiteKey")
+		w.String(r.prerequisiteKey)
 	}
 	if r.kind == EvalReasonError {
-		j.WriteName("errorKind")
-		j.WriteString(string(r.errorKind))
+		obj.Property("errorKind")
+		w.String(string(r.errorKind))
 	}
-	j.EndObject()
+	obj.End()
+}
+
+// WriteToJSONBuffer provides JSON serialization for use with the deprecated jsonstream API.
+//
+// Deprecated: this method is provided for backward compatibility. The LaunchDarkly SDK no longer
+// uses this API; instead it uses the newer https://github.com/launchdarkly/go-jsonstream.
+func (r EvaluationReason) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
+	jsonstream.WriteToJSONBufferThroughWriter(r, j)
 }

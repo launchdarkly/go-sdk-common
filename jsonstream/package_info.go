@@ -1,5 +1,5 @@
-// Package jsonstream provides a fast JSON encoder for manual generation of sequential output.
+// Package jsonstream is a deprecated implementation of sequential JSON encoding and tokenizing.
 //
-// This implementation is used by the LaunchDarkly Go SDK to avoid the overhead of reflection-based
-// marshalling.
+// Deprecated: this implementation is no longer used by the LaunchDarkly SDK, but is retained for backward
+// compatibility. It has been replaced by the go-jsonstream project: https://github.com/launchdarkly/go-jsonstream
 package jsonstream

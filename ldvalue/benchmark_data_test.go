@@ -19,6 +19,7 @@ var (
 	benchmarkSerializeArrayValue  = ArrayOf(String("a"), String("b"), String("c"))
 	benchmarkSerializeObjectValue = ObjectBuild().Set("a", Int(1)).Set("b", Int(2)).Set("c", Int(3)).Build()
 
+	benchmarkErrResult       error
 	benchmarkOptBoolResult   OptionalBool
 	benchmarkOptIntResult    OptionalInt
 	benchmarkOptStringResult OptionalString

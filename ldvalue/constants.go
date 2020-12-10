@@ -9,6 +9,12 @@ const (
 	noneDescription = "[none]"
 )
 
+var (
+	nullAsJSONBytes = []byte("null")  //nolint:gochecknoglobals
+	trueBytes       = []byte("true")  //nolint:gochecknoglobals
+	falseBytes      = []byte("false") //nolint:gochecknoglobals
+)
+
 // ValueType is defined in value_base.go
 
 const (

@@ -6,9 +6,11 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
+	"github.com/launchdarkly/go-jsonstream/jreader"
+	"github.com/launchdarkly/go-jsonstream/jwriter"
 	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNilValueMap(t *testing.T) {
@@ -311,7 +313,18 @@ func TestValueMapJSONMarshalUnmarshal(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, item.valueMap, m)
 
-			var buf jsonstream.JSONBuffer
+			r := jreader.NewReader([]byte(item.json))
+			m = ValueMap{}
+			m.ReadFromJSONReader(&r)
+			assert.NoError(t, r.Error())
+			assert.Equal(t, item.valueMap, m)
+
+			w := jwriter.NewWriter()
+			item.valueMap.WriteToJSONWriter(&w)
+			assert.NoError(t, w.Error())
+			assert.Equal(t, item.json, string(w.Bytes()))
+
+			var buf jsonstream.JSONBuffer // deprecated API
 			item.valueMap.WriteToJSONBuffer(&buf)
 			bytes, err := buf.Get()
 			assert.NoError(t, err)

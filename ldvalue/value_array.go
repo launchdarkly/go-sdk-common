@@ -2,10 +2,11 @@ package ldvalue
 
 import (
 	"encoding/json"
-	"errors"
-	"reflect"
 
-	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
+	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream" //nolint:staticcheck // using a deprecated API
+
+	"github.com/launchdarkly/go-jsonstream/jreader"
+	"github.com/launchdarkly/go-jsonstream/jwriter"
 )
 
 // we reuse this for all non-nil zero-length ValueArray instances
@@ -290,44 +291,47 @@ func (a ValueArray) JSONString() string {
 // Like a Go slice, a ValueArray in an uninitialized/nil state produces a JSON null rather than an empty [].
 func (a ValueArray) MarshalJSON() ([]byte, error) {
 	if a.data == nil {
-		return []byte(nullAsJSON), nil
+		return nullAsJSONBytes, nil
 	}
 	return json.Marshal(a.data)
 }
 
 // UnmarshalJSON parses a ValueArray from JSON.
 func (a *ValueArray) UnmarshalJSON(data []byte) error {
-	if len(data) == 0 { // COVERAGE: should not be possible, parser doesn't pass empty slices to UnmarshalJSON
-		return errors.New("cannot parse empty data")
-	}
-	firstCh := data[0]
-	switch firstCh {
-	case 'n':
-		// Note that since Go 1.5, comparing a string to string([]byte) is optimized so it
-		// does not actually create a new string from the byte slice.
-		if string(data) == nullAsJSON {
-			*a = ValueArray{}
-			return nil
-		}
-	case '[':
-		if len(data) == 2 && data[1] == ']' {
-			*a = ValueArray{emptyArray} // don't bother calling json.Unmarshal or allocating a new slice for this
-			return nil
-		}
-		var o []Value
-		e := json.Unmarshal(data, &o)
-		if e == nil {
-			*a = ValueArray{o}
-		}
-		return e
-	}
-	return &json.UnmarshalTypeError{Value: string(data), Type: reflect.TypeOf(a)}
+	return jreader.UnmarshalJSONWithReader(data, a)
 }
 
-// WriteToJSONBuffer provides JSON serialization for ValueArray with the jsonstream API.
+// ReadFromJSONReader provides JSON deserialization for use with the jsonstream API.
+//
+// This implementation is used by the SDK in cases where it is more efficient than JSON.Unmarshal.
+// See the jsonstream package for more details.
+func (a *ValueArray) ReadFromJSONReader(r *jreader.Reader) {
+	arr := r.ArrayOrNull()
+	a.readFromJSONArray(r, &arr)
+}
+
+// WriteToJSONWriter provides JSON serialization for use with the jsonstream API.
 //
 // The JSON output format is identical to what is produced by json.Marshal, but this implementation is
-// more efficient when building output with JSONBuffer. See the jsonstream package for more details.
+// more efficient when building output with jsonstream. See the jsonstream package for more details.
+//
+// Like a Go slice, a ValueArray in an uninitialized/nil state produces a JSON null rather than an empty [].
+func (a ValueArray) WriteToJSONWriter(w *jwriter.Writer) {
+	if a.data == nil {
+		w.Null()
+		return
+	}
+	arr := w.Array()
+	for _, v := range a.data {
+		v.WriteToJSONWriter(w)
+	}
+	arr.End()
+}
+
+// WriteToJSONBuffer provides JSON serialization for use with the deprecated jsonstream API.
+//
+// Deprecated: this method is provided for backward compatibility. The LaunchDarkly SDK no longer
+// uses this API; instead it uses the newer https://github.com/launchdarkly/go-jsonstream.
 //
 // Like a Go slice, a ValueArray in an uninitialized/nil state produces a JSON null rather than an empty [].
 func (a ValueArray) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
@@ -335,9 +339,31 @@ func (a ValueArray) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
 		j.WriteNull()
 		return
 	}
-	j.BeginArray()
-	for _, v := range a.data {
-		v.WriteToJSONBuffer(j)
+	jsonstream.WriteToJSONBufferThroughWriter(a, j)
+}
+
+func (a *ValueArray) readFromJSONArray(r *jreader.Reader, arr *jreader.ArrayState) {
+	if r.Error() != nil {
+		return
 	}
-	j.EndArray()
+	if !arr.IsDefined() {
+		*a = ValueArray{}
+		return
+	}
+	var ab ValueArrayBuilder
+	for arr.Next() {
+		if ab == nil {
+			ab = ValueArrayBuildWithCapacity(2)
+		}
+		var vv Value
+		vv.ReadFromJSONReader(r)
+		ab.Add(vv)
+	}
+	if r.Error() == nil {
+		if ab == nil {
+			*a = ValueArrayOf()
+		} else {
+			*a = ab.Build()
+		}
+	}
 }
