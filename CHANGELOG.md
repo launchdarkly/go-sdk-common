@@ -2,6 +2,14 @@
 
 All notable changes to the project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [2.1.0] - 2020-12-14
+### Added:
+- `IsDefined()` method for `ldvalue.Value`, `ldreason.EvaluationReason`, and `ldtime.UnixMillisecondTime`.
+- `ValueArray` and `ValueMap` types in `ldvalue`, for representing immutable JSON array/object data in contexts where only an array or an object is allowed, as opposed to the more general `ldvalue.Value`. This is mainly used by LaunchDarkly internal components but may be useful elsewhere.
+
+### Changed:
+- In `lduser.NewUserBuilderFromUser()`, if the original user had custom attributes and/or private attributes, the map that holds that data now has copy-on-write behavior: that is, the builder will only allocate a new map if you actually make changes to those attributes.
+
 ## [2.0.1] - 2020-10-08
 ### Fixed:
 - Trying to unmarshal a JSON `null` value into `lduser.User` now returns an error of type `*json.UnmarshalTypeError`, rather than misleadingly returning `lduser.ErrMissingKey()`.
