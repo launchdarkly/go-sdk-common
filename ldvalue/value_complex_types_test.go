@@ -2,7 +2,6 @@ package ldvalue
 
 import (
 	"encoding/json"
-	"fmt"
 	"sort"
 	"testing"
 
@@ -17,6 +16,7 @@ func TestArrayOf(t *testing.T) {
 	assert.Equal(t, ArrayType, value.Type())
 	assert.Equal(t, 2, value.Count())
 
+	assert.True(t, value.IsDefined())
 	assert.False(t, value.IsNull())
 	assert.False(t, value.IsNumber())
 	assert.False(t, value.IsInt())
@@ -106,6 +106,7 @@ func TestObjectBuild(t *testing.T) {
 	assert.Equal(t, item0x, valueAfterModifyingBuilder.GetByKey("item0"))
 	assert.Equal(t, item0, value.GetByKey("item0")) // verifies builder's copy-on-write behavior
 
+	assert.True(t, value.IsDefined())
 	assert.False(t, value.IsNull())
 	assert.False(t, value.IsNumber())
 	assert.False(t, value.IsInt())
@@ -315,133 +316,49 @@ func TestTransformSimpleTypes(t *testing.T) {
 }
 
 func TestTransformArray(t *testing.T) {
-	fnNoChanges := func(index int, key string, value Value) (Value, bool) {
-		return value, true
+	// The implementation of this delegates to ValueMap.Transform, so we're just verifying a
+	// basic set of inputs and outputs rather than every possible behavior.
+	fnAddOne := func(index int, key string, value Value) (Value, bool) {
+		return Int(value.IntValue() + 1), true
 	}
-	fnAbsoluteValuesAndNoOddNumbers := func(index int, key string, value Value) (Value, bool) {
-		if value.IntValue()%2 == 1 {
-			return value, false // first return value should be ignored since second one is false
-		}
-		if value.IntValue() < 0 {
-			return Int(-value.IntValue()), true
-		}
-		return value, true
-	}
-	fnTransformUsingIndex := func(index int, key string, value Value) (Value, bool) {
-		return String(fmt.Sprintf("%d=%s", index, value.StringValue())), true
-	}
-
-	array1 := ArrayOf(Int(2), Int(4), Int(6))
-	array1a := array1.Transform(fnNoChanges)
-	array1b := array1.Transform(fnAbsoluteValuesAndNoOddNumbers)
-	// Should have no changes...
-	assert.Equal(t, array1, array1a)
-	assert.Equal(t, array1, array1b)
-	// ...and should be wrapping the *same* slice, not a copy
-	array1.immutableArrayValue[0] = Int(0)
-	assert.Equal(t, array1, array1a)
-	assert.Equal(t, array1, array1b)
-
-	array2 := ArrayOf(Int(2), Int(4), Int(1), Int(-6))
-	array2a := array2.Transform(fnNoChanges)
-	array2b := array2.Transform(fnAbsoluteValuesAndNoOddNumbers)
-	// array2a should have no changes, and should be wrapping the same slice
-	assert.Equal(t, array2, array2a)
-	array2.immutableArrayValue[0] = Int(0)
-	assert.Equal(t, array2, array2a)
-	// array2b should have a transformed slice
-	assert.Equal(t, ArrayOf(Int(2), Int(4), Int(6)), array2b)
-
-	// Same as the array2 tests, except that the first change is a modification, not a deletion
-	array3 := ArrayOf(Int(2), Int(4), Int(-6), Int(1))
-	array3a := array3.Transform(fnNoChanges)
-	array3b := array3.Transform(fnAbsoluteValuesAndNoOddNumbers)
-	// array3a should have no changes, and should be wrapping the same slice
-	assert.Equal(t, array3, array3a)
-	array3.immutableArrayValue[0] = Int(0)
-	assert.Equal(t, array3, array3a)
-	// array3b should have a transformed slice
-	assert.Equal(t, ArrayOf(Int(2), Int(4), Int(6)), array3b)
-
-	// Edge case where the very first element is dropped
-	array4 := ArrayOf(Int(1), Int(2), Int(4))
-	array4b := array4.Transform(fnAbsoluteValuesAndNoOddNumbers)
-	assert.Equal(t, ArrayOf(Int(2), Int(4)), array4b)
-
-	// Edge case where the only element is dropped
-	array5 := ArrayOf(Int(1))
-	assert.Equal(t, ArrayOf(), array5.Transform(fnAbsoluteValuesAndNoOddNumbers))
-
-	// Transformation function that uses the index parameter
-	array6 := ArrayOf(String("a"), String("b"))
-	assert.Equal(t, ArrayOf(String("0=a"), String("1=b")), array6.Transform(fnTransformUsingIndex))
+	a1 := ArrayOf(Int(2), Int(4))
+	a1a := a1.Transform(fnAddOne)
+	assert.Equal(t, ArrayOf(Int(3), Int(5)), a1a)
 }
 
 func TestTransformObject(t *testing.T) {
-	fnNoChanges := func(index int, key string, value Value) (Value, bool) {
-		return value, true
+	// The implementation of this delegates to ValueMap.Transform, so we're just verifying a
+	// basic set of inputs and outputs rather than every possible behavior.
+	fnAddOne := func(index int, key string, value Value) (Value, bool) {
+		return Int(value.IntValue() + 1), true
 	}
-	fnAbsoluteValuesAndNoOddNumbers := func(index int, key string, value Value) (Value, bool) {
-		if value.IntValue()%2 == 1 {
-			return value, false // first return value should be ignored since second one is false
-		}
-		if value.IntValue() < 0 {
-			return Int(-value.IntValue()), true
-		}
-		return value, true
-	}
-	fnTransformUsingKey := func(index int, key string, value Value) (Value, bool) {
-		return String(fmt.Sprintf("%s=%s", key, value.JSONString())), true
-	}
+	o1 := ObjectBuild().Set("a", Int(2)).Set("b", Int(4)).Build()
+	o1a := o1.Transform(fnAddOne)
+	assert.Equal(t, ObjectBuild().Set("a", Int(3)).Set("b", Int(5)).Build(), o1a)
+}
 
-	o1 := ObjectBuild().Set("a", Int(2)).Set("b", Int(4)).Set("c", Int(6)).Build()
-	o1a := o1.Transform(fnNoChanges)
-	o1b := o1.Transform(fnAbsoluteValuesAndNoOddNumbers)
-	// Should have no changes...
-	assert.Equal(t, o1, o1a)
-	assert.Equal(t, o1, o1b)
-	// ...and should be wrapping the *same* map, not a copy
-	o1.immutableObjectValue["a"] = Int(0)
-	assert.Equal(t, o1, o1a)
-	assert.Equal(t, o1, o1b)
+func TestAsValueArray(t *testing.T) {
+	value := ArrayOf(String("a"))
+	a := value.AsValueArray()
+	assert.Equal(t, ValueArrayOf(String("a")), a)
+	shouldBeSameSlice(t, a.data, value.arrayValue.data)
 
-	o2 := ObjectBuild().Set("a", Int(2)).Set("b", Int(4)).Set("c", Int(1)).Set("d", Int(-6)).Build()
-	o2a := o2.Transform(fnNoChanges)
-	o2b := o2.Transform(fnAbsoluteValuesAndNoOddNumbers)
-	// o2a should have no changes, and should be wrapping the same map
-	assert.Equal(t, o2, o2a)
-	o2.immutableObjectValue["a"] = Int(0)
-	assert.Equal(t, o2, o2a)
-	// o2b should have a transformed map
-	assert.Equal(t, ObjectBuild().Set("a", Int(2)).Set("b", Int(4)).Set("d", Int(6)).Build(), o2b)
+	assert.Equal(t, ValueArray{}, Null().AsValueArray())
+	assert.Equal(t, ValueArray{}, Bool(true).AsValueArray())
+	assert.Equal(t, ValueArray{}, Int(1).AsValueArray())
+	assert.Equal(t, ValueArray{}, String("x").AsValueArray())
+	assert.Equal(t, ValueArray{}, ObjectBuild().Build().AsValueArray())
+}
 
-	// Edge case where the only element is dropped
-	o3 := ObjectBuild().Set("a", Int(1)).Build()
-	assert.Equal(t, ObjectBuild().Build(), o3.Transform(fnAbsoluteValuesAndNoOddNumbers))
+func TestAsValueMap(t *testing.T) {
+	value := ObjectBuild().Set("a", Int(1)).Build()
+	m := value.AsValueMap()
+	assert.Equal(t, ValueMapBuild().Set("a", Int(1)).Build(), m)
+	shouldBeSameMap(t, m.data, value.objectValue.data)
 
-	// Transformation function that uses the key parameter
-	o4 := ObjectBuild().Set("a", Int(2)).Set("b", Int(4)).Build()
-	assert.Equal(t, ObjectBuild().Set("a", String("a=2")).Set("b", String("b=4")).Build(),
-		o4.Transform(fnTransformUsingKey))
-
-	// Case where we guarantee that the first element we iterated through is *not* modified - map
-	// iteration order is nondeterministic, we just want to verify that we've hit all code paths
-	n := 0
-	fnTransformUsingKeyButNotFirst := func(index int, key string, value Value) (Value, bool) {
-		n++
-		if n > 1 {
-			return fnTransformUsingKey(index, key, value)
-		}
-		return value, true
-	}
-	o5 := o4.Transform(fnTransformUsingKeyButNotFirst)
-	assert.NotEqual(t, o4, o5)
-	assert.Equal(t, o4.Count(), o5.Count())
-	if o5.GetByKey("a").IsNumber() {
-		assert.Equal(t, Int(2), o5.GetByKey("a"))
-		assert.Equal(t, String("b=4"), o5.GetByKey("b"))
-	} else {
-		assert.Equal(t, String("a=2"), o5.GetByKey("a"))
-		assert.Equal(t, Int(4), o5.GetByKey("b"))
-	}
+	assert.Equal(t, ValueMap{}, Null().AsValueMap())
+	assert.Equal(t, ValueMap{}, Bool(true).AsValueMap())
+	assert.Equal(t, ValueMap{}, Int(1).AsValueMap())
+	assert.Equal(t, ValueMap{}, String("x").AsValueMap())
+	assert.Equal(t, ValueMap{}, ArrayOf().AsValueMap())
 }

@@ -9,6 +9,16 @@ import (
 	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
 )
 
+func TestReasonIsDefined(t *testing.T) {
+	assert.False(t, EvaluationReason{}.IsDefined())
+	assert.True(t, NewEvalReasonOff().IsDefined())
+	assert.True(t, NewEvalReasonFallthrough().IsDefined())
+	assert.True(t, NewEvalReasonTargetMatch().IsDefined())
+	assert.True(t, NewEvalReasonRuleMatch(0, "").IsDefined())
+	assert.True(t, NewEvalReasonPrerequisiteFailed("").IsDefined())
+	assert.True(t, NewEvalReasonError(EvalErrorFlagNotFound).IsDefined())
+}
+
 func TestReasonKind(t *testing.T) {
 	assert.Equal(t, EvalReasonOff, NewEvalReasonOff().GetKind())
 	assert.Equal(t, EvalReasonFallthrough, NewEvalReasonFallthrough().GetKind())
