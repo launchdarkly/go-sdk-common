@@ -59,6 +59,11 @@ jobs:
             make test | tee $CIRCLE_ARTIFACTS/report.txt
     
       - run:
+          name: Run tests (easyjson implementation)
+          command: |
+            make test-easyjson | tee -a $CIRCLE_ARTIFACTS/report.txt
+    
+      - run:
           name: Process test results
           command: go-junit-report < $CIRCLE_ARTIFACTS/report.txt > $CIRCLE_TEST_REPORTS/junit.xml
           when: always
@@ -109,6 +114,10 @@ jobs:
           command: |
             mkdir -p $CIRCLE_ARTIFACTS
             make benchmarks | tee $CIRCLE_ARTIFACTS/benchmarks.txt
+      - run:
+          name: Run benchmarks (easyjson implementation)
+          command: |
+            make benchmarks-easyjson | tee $CIRCLE_ARTIFACTS/benchmarks-easyjson.txt
 
       - store_artifacts:
           path: /tmp/circle-artifacts
