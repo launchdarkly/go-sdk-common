@@ -40,9 +40,6 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 			assert.Equal(t, item.json, item.value.JSONString())
 			assert.Equal(t, json.RawMessage(item.json), item.value.AsRaw())
 
-			if item.value.Type() == ArrayType {
-				fmt.Println("yo")
-			}
 			var v Value
 			err = json.Unmarshal([]byte(item.json), &v)
 			assert.NoError(t, err)
