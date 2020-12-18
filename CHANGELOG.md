@@ -2,6 +2,14 @@
 
 All notable changes to the project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [2.2.0] - 2020-12-17
+### Added:
+- All types that can be converted to or from JSON now have `WriteToJSONWriter` and `ReadFromJSONReader` methods that use the new [`go-jsonstream`](https://github.com/launchdarkly/go-jsonstream) API for greater efficiency, although `json.Marshal` and `json.Unmarshal` still also work.
+
+### Deprecated:
+- The `jsonstream` subpackage in `go-sdk-common` is now deprecated in favor of [`go-jsonstream`](https://github.com/launchdarkly/go-jsonstream). The Go SDK no longer uses `jsonstream`, but it is retained here for backward compatibility with any other code that may have been using it. Some types still have `WriteToJSONBuffer` methods for using `jsonstream`; these are also deprecated.
+
+
 ## [2.1.0] - 2020-12-14
 ### Added:
 - `IsDefined()` method for `ldvalue.Value`, `ldreason.EvaluationReason`, and `ldtime.UnixMillisecondTime`.
