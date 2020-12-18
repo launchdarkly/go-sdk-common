@@ -132,29 +132,31 @@ func (u *User) ReadFromJSONReader(r *jreader.Reader) {
 // See https://github.com/launchdarkly/go-jsonstream for more details.
 func (u User) WriteToJSONWriter(w *jwriter.Writer) {
 	obj := w.Object()
-	obj.String("key", u.key)
-	obj.OptString("secondary", u.secondary.IsDefined(), u.secondary.StringValue())
-	obj.OptString("ip", u.ip.IsDefined(), u.ip.StringValue())
-	obj.OptString("country", u.country.IsDefined(), u.country.StringValue())
-	obj.OptString("email", u.email.IsDefined(), u.email.StringValue())
-	obj.OptString("firstName", u.firstName.IsDefined(), u.firstName.StringValue())
-	obj.OptString("lastName", u.lastName.IsDefined(), u.lastName.StringValue())
-	obj.OptString("avatar", u.avatar.IsDefined(), u.avatar.StringValue())
-	obj.OptString("name", u.name.IsDefined(), u.name.StringValue())
-	obj.OptBool("anonymous", u.anonymous.IsDefined(), u.anonymous.BoolValue())
+	obj.Name("key").String(u.key)
+	optStringProperty(&obj, "secondary", u.secondary)
+	optStringProperty(&obj, "ip", u.ip)
+	optStringProperty(&obj, "country", u.country)
+	optStringProperty(&obj, "email", u.email)
+	optStringProperty(&obj, "firstName", u.firstName)
+	optStringProperty(&obj, "lastName", u.lastName)
+	optStringProperty(&obj, "avatar", u.avatar)
+	optStringProperty(&obj, "name", u.name)
+	obj.Maybe("anonymous", u.anonymous.IsDefined()).Bool(u.anonymous.BoolValue())
 	if u.custom.Count() > 0 {
-		obj.Property("custom")
-		u.custom.WriteToJSONWriter(w)
+		u.custom.WriteToJSONWriter(obj.Name("custom"))
 	}
 	if len(u.privateAttributes) > 0 {
-		obj.Property("privateAttributeNames")
-		arr := w.Array()
+		arr := obj.Name("privateAttributeNames").Array()
 		for name := range u.privateAttributes {
 			arr.String(string(name))
 		}
 		arr.End()
 	}
 	obj.End()
+}
+
+func optStringProperty(obj *jwriter.ObjectState, name string, value ldvalue.OptionalString) {
+	obj.Maybe(name, value.IsDefined()).String(value.StringValue())
 }
 
 // WriteToJSONBuffer provides JSON serialization for use with the deprecated jsonstream API.

@@ -344,8 +344,7 @@ func (m ValueMap) WriteToJSONWriter(w *jwriter.Writer) {
 	}
 	obj := w.Object()
 	for k, vv := range m.data {
-		obj.Property(k)
-		vv.WriteToJSONWriter(w)
+		vv.WriteToJSONWriter(obj.Name(k))
 	}
 	obj.End()
 }

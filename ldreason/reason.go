@@ -193,23 +193,16 @@ func (r EvaluationReason) WriteToJSONWriter(w *jwriter.Writer) {
 		return
 	}
 	obj := w.Object()
-	obj.Property("kind")
-	w.String(string(r.kind))
+	obj.Name("kind").String(string(r.kind))
 	if r.ruleIndex.IsDefined() {
-		obj.Property("ruleIndex")
-		w.Int(r.ruleIndex.OrElse(0))
-		if r.ruleID != "" {
-			obj.Property("ruleId")
-			w.String(r.ruleID)
-		}
+		obj.Name("ruleIndex").Int(r.ruleIndex.OrElse(0))
+		obj.Maybe("ruleId", r.ruleID != "").String(r.ruleID)
 	}
 	if r.kind == EvalReasonPrerequisiteFailed {
-		obj.Property("prerequisiteKey")
-		w.String(r.prerequisiteKey)
+		obj.Name("prerequisiteKey").String(r.prerequisiteKey)
 	}
 	if r.kind == EvalReasonError {
-		obj.Property("errorKind")
-		w.String(string(r.errorKind))
+		obj.Name("errorKind").String(string(r.errorKind))
 	}
 	obj.End()
 }
