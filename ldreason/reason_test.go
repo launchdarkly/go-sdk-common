@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
+	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
+	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
 	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestReasonIsDefined(t *testing.T) {
@@ -98,9 +100,21 @@ func TestReasonSerializationAndDeserialization(t *testing.T) {
 
 		assert.Equal(t, param.stringRep, param.reason.String())
 
+		var r2 EvaluationReason
+		reader := jreader.NewReader(actual)
+		r2.ReadFromJSONReader(&reader)
+		assert.NoError(t, reader.Error())
+		assert.Equal(t, param.reason, r2)
+
+		w := jwriter.NewWriter()
+		param.reason.WriteToJSONWriter(&w)
+		assert.NoError(t, w.Error())
+		bytes := w.Bytes()
+		assert.JSONEq(t, param.expectedJSON, string(bytes))
+
 		var buf jsonstream.JSONBuffer
 		param.reason.WriteToJSONBuffer(&buf)
-		bytes, err := buf.Get()
+		bytes, err = buf.Get()
 		assert.NoError(t, err)
 		assert.JSONEq(t, param.expectedJSON, string(bytes))
 	}

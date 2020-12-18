@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"testing"
 
+	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
+	"gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
+
+	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
 )
 
 func getJSONAsMap(t *testing.T, thing interface{}) map[string]interface{} {
@@ -95,6 +98,17 @@ func TestJSONMarshalPrivateAttributes(t *testing.T) {
 	props2 := getJSONAsMap(t, NewUserBuilder("some-key").Name("value").AsPrivateAttribute().Build())
 	assert.Equal(t, "value", props2["name"])
 	assert.Equal(t, []interface{}{"name"}, props2["privateAttributeNames"])
+}
+
+func TestJSONMarshalWithDeprecatedAPI(t *testing.T) {
+	user := newUserBuilderWithAllPropertiesSet("some-key").Build()
+	expected, err := json.Marshal(user)
+	require.NoError(t, err)
+
+	var b jsonstream.JSONBuffer
+	user.WriteToJSONBuffer(&b)
+	actual, err := b.Get()
+	require.JSONEq(t, string(expected), string(actual))
 }
 
 func TestJSONUnmarshalStringAttributes(t *testing.T) {
@@ -189,4 +203,39 @@ func TestJSONUnmarshalUserKeyValidation(t *testing.T) {
 
 func TestMissingKeyHasErrorMessage(t *testing.T) {
 	assert.NotEqual(t, "", ErrMissingKey().Error())
+}
+
+func TestJSONUnmarshalUnknownAttributesAreIgnored(t *testing.T) {
+	user := unmarshalUser(t, map[string]interface{}{
+		"key":  "some-key",
+		"a":    3,
+		"b":    nil,
+		"c":    []interface{}{},
+		"name": "value",
+	})
+	assert.Equal(t, "some-key", user.GetKey())
+	assert.Equal(t, "value", user.GetName().StringValue())
+}
+
+func TestJSONUnmarshalMalformedData(t *testing.T) {
+	var user User
+	for _, data := range [][]byte{
+		nil,
+		[]byte{},
+		[]byte("true"),
+		[]byte("[]"),
+		[]byte("{"),
+		[]byte("{true"),
+		[]byte(`{"key":true}`),
+		[]byte(`{"name":true}`),
+		[]byte(`{"privateAttributeNames":{}`),
+		[]byte(`{"privateAttributeNames":[true]`),
+	} {
+		t.Run(string(data), func(t *testing.T) {
+			assert.Error(t, json.Unmarshal(data, &user))
+			r := jreader.NewReader(data)
+			user.ReadFromJSONReader(&r)
+			assert.Error(t, r.Error())
+		})
+	}
 }

@@ -1,10 +1,14 @@
 package ldvalue
 
 import (
+	"bytes"
 	"encoding/json"
 	"reflect"
 
-	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
+	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream" //nolint:staticcheck // using a deprecated API
+
+	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
+	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
 )
 
 // OptionalBool represents a bool that may or may not have a value. This is similar to using a
@@ -117,39 +121,69 @@ func (o OptionalBool) MarshalJSON() ([]byte, error) {
 //
 // The input must be either a JSON number that is a boolean or null.
 func (o *OptionalBool) UnmarshalJSON(data []byte) error {
-	var v Value
-	if err := v.UnmarshalJSON(data); err != nil {
-		return err // COVERAGE: should not be possible, parser normally doesn't pass malformed content to UnmarshalJSON
-	}
-	switch {
-	case v.IsNull():
+	if bytes.Equal(data, []byte("null")) {
 		*o = OptionalBool{}
-	case v.IsBool():
-		*o = NewOptionalBool(v.BoolValue())
-	default:
-		*o = OptionalBool{}
-		return &json.UnmarshalTypeError{Value: string(data), Type: reflect.TypeOf(o)}
+		return nil
 	}
-	return nil
-}
-
-// WriteToJSONBuffer provides JSON serialization for OptionalBool with the jsonstream API.
-//
-// The JSON output format is identical to what is produced by json.Marshal, but this implementation is
-// more efficient when building output with JSONBuffer. See the jsonstream package for more details.
-func (o OptionalBool) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
-	o.AsValue().WriteToJSONBuffer(j)
+	if bytes.Equal(data, []byte("true")) {
+		*o = NewOptionalBool(true)
+		return nil
+	}
+	if bytes.Equal(data, []byte("false")) {
+		*o = NewOptionalBool(false)
+		return nil
+	}
+	return &json.UnmarshalTypeError{Value: string(data), Type: reflect.TypeOf(o)}
 }
 
 // MarshalText implements the encoding.TextMarshaler interface.
 func (o OptionalBool) MarshalText() ([]byte, error) {
 	if o.hasValue {
 		if o.value {
-			return []byte(trueString), nil
+			return trueBytes, nil
 		}
-		return []byte(falseString), nil
+		return falseBytes, nil
 	}
 	return []byte(""), nil
+}
+
+// ReadFromJSONReader provides JSON deserialization for use with the jsonstream API.
+//
+// This implementation is used by the SDK in cases where it is more efficient than JSON.Unmarshal.
+// See https://github.com/launchdarkly/go-jsonstream for more details.
+func (o *OptionalBool) ReadFromJSONReader(r *jreader.Reader) {
+	val, nonNull := r.BoolOrNull()
+	if r.Error() == nil {
+		if nonNull {
+			*o = NewOptionalBool(val)
+		} else {
+			*o = OptionalBool{}
+		}
+	}
+}
+
+// WriteToJSONWriter provides JSON serialization for use with the jsonstream API.
+//
+// This implementation is used by the SDK in cases where it is more efficient than JSON.Marshal.
+// See https://github.com/launchdarkly/go-jsonstream for more details.
+func (o OptionalBool) WriteToJSONWriter(w *jwriter.Writer) {
+	if o.hasValue {
+		w.Bool(o.value)
+	} else {
+		w.Null()
+	}
+}
+
+// WriteToJSONBuffer provides JSON serialization for use with the deprecated jsonstream API.
+//
+// Deprecated: this method is provided for backward compatibility. The LaunchDarkly SDK no longer
+// uses this API; instead it uses the newer https://github.com/launchdarkly/go-jsonstream.
+func (o OptionalBool) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
+	if o.hasValue {
+		j.WriteBool(o.value)
+	} else {
+		j.WriteNull()
+	}
 }
 
 // UnmarshalText implements the encoding.TextUnmarshaler interface.

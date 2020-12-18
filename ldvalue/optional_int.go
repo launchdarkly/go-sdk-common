@@ -2,10 +2,12 @@ package ldvalue
 
 import (
 	"encoding/json"
-	"reflect"
 	"strconv"
 
-	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
+	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream" //nolint:staticcheck // using a deprecated API
+
+	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
+	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
 )
 
 // OptionalInt represents an int that may or may not have a value. This is similar to using an
@@ -108,33 +110,50 @@ func (o OptionalInt) String() string {
 // If you want to completely omit a JSON property when there is no value, it must be an int
 // pointer instead of an OptionalInt; use the AsPointer() method to get a pointer.
 func (o OptionalInt) MarshalJSON() ([]byte, error) {
-	return o.AsValue().MarshalJSON()
+	if o.hasValue {
+		return json.Marshal(o.value)
+	}
+	return nullAsJSONBytes, nil
 }
 
 // UnmarshalJSON parses an OptionalInt from JSON.
 //
 // The input must be either a JSON number that is an integer or null.
 func (o *OptionalInt) UnmarshalJSON(data []byte) error {
-	var v Value
-	if err := v.UnmarshalJSON(data); err != nil {
-		return err // COVERAGE: should not be possible, parser normally doesn't pass malformed content to UnmarshalJSON
-	}
-	switch {
-	case v.IsNull():
-		*o = OptionalInt{}
-	case v.IsInt():
-		*o = NewOptionalInt(v.IntValue())
-	default:
-		*o = OptionalInt{}
-		return &json.UnmarshalTypeError{Value: string(data), Type: reflect.TypeOf(o)}
-	}
-	return nil
+	return jreader.UnmarshalJSONWithReader(data, o)
 }
 
-// WriteToJSONBuffer provides JSON serialization for OptionalInt with the jsonstream API.
+// ReadFromJSONReader provides JSON deserialization for use with the jsonstream API.
 //
-// The JSON output format is identical to what is produced by json.Marshal, but this implementation is
-// more efficient when building output with JSONBuffer. See the jsonstream package for more details.
+// This implementation is used by the SDK in cases where it is more efficient than JSON.Unmarshal.
+// See https://github.com/launchdarkly/go-jsonstream for more details.
+func (o *OptionalInt) ReadFromJSONReader(r *jreader.Reader) {
+	val, nonNull := r.IntOrNull()
+	if r.Error() == nil {
+		if nonNull {
+			*o = NewOptionalInt(val)
+		} else {
+			*o = OptionalInt{}
+		}
+	}
+}
+
+// WriteToJSONWriter provides JSON serialization for use with the jsonstream API.
+//
+// This implementation is used by the SDK in cases where it is more efficient than JSON.Marshal.
+// See https://github.com/launchdarkly/go-jsonstream for more details.
+func (o OptionalInt) WriteToJSONWriter(w *jwriter.Writer) {
+	if o.hasValue {
+		w.Int(o.value)
+	} else {
+		w.Null()
+	}
+}
+
+// WriteToJSONBuffer provides JSON serialization for use with the deprecated jsonstream API.
+//
+// Deprecated: this method is provided for backward compatibility. The LaunchDarkly SDK no longer
+// uses this API; instead it uses the newer https://github.com/launchdarkly/go-jsonstream.
 func (o OptionalInt) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
 	o.AsValue().WriteToJSONBuffer(j)
 }

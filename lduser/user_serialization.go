@@ -2,11 +2,15 @@ package lduser
 
 import (
 	"encoding/json"
-	"reflect"
 
-	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
+	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream" //nolint:staticcheck // using a deprecated API
 	"gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
+
+	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
+	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
 )
+
+var userRequiredProperties = []string{"key"} //nolint:gochecknoglobals
 
 type missingKeyError struct{}
 
@@ -23,23 +27,6 @@ func (e missingKeyError) Error() string {
 // discouraged since analytics events will not work properly without unique user keys.
 func ErrMissingKey() error {
 	return missingKeyError{}
-}
-
-// This temporary struct allows us to do JSON unmarshalling as efficiently as possible while not requiring
-// the User's internal representation to be constrained by the behavior of json.Unmarshal.
-type userForDeserialization struct {
-	Key                   ldvalue.OptionalString `json:"key"`
-	Secondary             ldvalue.OptionalString `json:"secondary"`
-	IP                    ldvalue.OptionalString `json:"ip"`
-	Country               ldvalue.OptionalString `json:"country"`
-	Email                 ldvalue.OptionalString `json:"email"`
-	FirstName             ldvalue.OptionalString `json:"firstName"`
-	LastName              ldvalue.OptionalString `json:"lastName"`
-	Avatar                ldvalue.OptionalString `json:"avatar"`
-	Name                  ldvalue.OptionalString `json:"name"`
-	Anonymous             ldvalue.OptionalBool   `json:"anonymous"`
-	Custom                ldvalue.ValueMap       `json:"custom"`
-	PrivateAttributeNames []UserAttribute        `json:"privateAttributeNames"`
 }
 
 // String returns a simple string representation of a user.
@@ -64,9 +51,7 @@ func (u User) String() string {
 // LaunchDarkly services-- they will treat an explicit null value in JSON data the same as an unset
 // attribute, and treat an omitted "custom" the same as an empty "custom" map.
 func (u User) MarshalJSON() ([]byte, error) {
-	var buf jsonstream.JSONBuffer
-	u.WriteToJSONBuffer(&buf)
-	return buf.Get()
+	return jwriter.MarshalJSONWithWriter(u)
 }
 
 // UnmarshalJSON provides JSON deserialization for User when using json.UnmarshalJSON.
@@ -83,79 +68,118 @@ func (u User) MarshalJSON() ([]byte, error) {
 // json.UnmarshalTypeError. If you want to unmarshal optional user data that might be null, use *User
 // instead of User.
 func (u *User) UnmarshalJSON(data []byte) error {
-	// Special handling here for a null value - json.Unmarshal will normally treat a null exactly like
-	// "{}" when unmarshaling a struct. We don't want that, because it will produce a misleading
-	// "missing key" error further down. Instead, just treat it as an invalid type.
-	if string(data) == "null" {
-		return &json.UnmarshalTypeError{Value: string(data), Type: reflect.TypeOf(u)}
-	}
-	var ufs userForDeserialization
-	if err := json.Unmarshal(data, &ufs); err != nil {
-		return err
-	}
-	if !ufs.Key.IsDefined() {
-		return ErrMissingKey()
-	}
-	*u = User{
-		key:       ufs.Key.StringValue(),
-		secondary: ufs.Secondary,
-		ip:        ufs.IP,
-		country:   ufs.Country,
-		email:     ufs.Email,
-		firstName: ufs.FirstName,
-		lastName:  ufs.LastName,
-		avatar:    ufs.Avatar,
-		name:      ufs.Name,
-		anonymous: ufs.Anonymous,
-		custom:    ufs.Custom,
-	}
-	if len(ufs.PrivateAttributeNames) > 0 {
-		u.privateAttributes = make(map[UserAttribute]struct{})
-		for _, a := range ufs.PrivateAttributeNames {
-			u.privateAttributes[a] = struct{}{}
-		}
-	}
-	return nil
+	return jreader.UnmarshalJSONWithReader(data, u)
 }
 
-// WriteToJSONBuffer provides JSON serialization for User with the jsonstream API.
+// ReadFromJSONReader provides JSON deserialization for use with the jsonstream API.
 //
-// The JSON output format is identical to what is produced by json.Marshal, but this implementation is
-// more efficient when building output with JSONBuffer. See the jsonstream package for more details.
-func (u User) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
-	j.BeginObject()
-	j.WriteName("key")
-	j.WriteString(u.key)
-	maybeWriteStringProperty(j, "secondary", u.secondary)
-	maybeWriteStringProperty(j, "ip", u.ip)
-	maybeWriteStringProperty(j, "country", u.country)
-	maybeWriteStringProperty(j, "email", u.email)
-	maybeWriteStringProperty(j, "firstName", u.firstName)
-	maybeWriteStringProperty(j, "lastName", u.lastName)
-	maybeWriteStringProperty(j, "avatar", u.avatar)
-	maybeWriteStringProperty(j, "name", u.name)
-	if u.anonymous.IsDefined() {
-		j.WriteName("anonymous")
-		j.WriteBool(u.anonymous.BoolValue())
+// This implementation is used by the SDK in cases where it is more efficient than JSON.Unmarshal.
+// See https://github.com/launchdarkly/go-jsonstream for more details.
+func (u *User) ReadFromJSONReader(r *jreader.Reader) {
+	var parsed User
+
+	for obj := r.Object().WithRequiredProperties(userRequiredProperties); obj.Next(); {
+		switch string(obj.Name()) {
+		case "key":
+			if key, nonNull := r.StringOrNull(); nonNull {
+				parsed.key = key
+			} else {
+				r.AddError(ErrMissingKey())
+			}
+		case "anonymous":
+			parsed.anonymous.ReadFromJSONReader(r)
+		case "custom":
+			parsed.custom.ReadFromJSONReader(r)
+		case "privateAttributeNames":
+			for arr := r.Array(); arr.Next(); {
+				s := r.String()
+				if r.Error() == nil {
+					if parsed.privateAttributes == nil {
+						parsed.privateAttributes = make(map[UserAttribute]struct{})
+					}
+					parsed.privateAttributes[UserAttribute(s)] = struct{}{}
+				}
+			}
+		default:
+			var setter func(*User, ldvalue.OptionalString)
+			for _, sas := range optStringAttrSetters {
+				if string(obj.Name()) == string(sas.attr) {
+					setter = sas.setter
+					break
+				}
+			}
+			if setter != nil {
+				var s ldvalue.OptionalString
+				s.ReadFromJSONReader(r)
+				if r.Error() == nil {
+					setter(&parsed, s)
+				}
+			}
+		}
 	}
+	if err := r.Error(); err != nil {
+		if rpe, ok := err.(jreader.RequiredPropertyError); ok && rpe.Name == "key" {
+			r.ReplaceError(ErrMissingKey())
+		}
+	} else {
+		*u = parsed
+	}
+}
+
+// WriteToJSONWriter provides JSON serialization for use with the jsonstream API.
+//
+// This implementation is used by the SDK in cases where it is more efficient than JSON.Marshal.
+// See https://github.com/launchdarkly/go-jsonstream for more details.
+func (u User) WriteToJSONWriter(w *jwriter.Writer) {
+	obj := w.Object()
+	obj.Name("key").String(u.key)
+	optStringProperty(&obj, "secondary", u.secondary)
+	optStringProperty(&obj, "ip", u.ip)
+	optStringProperty(&obj, "country", u.country)
+	optStringProperty(&obj, "email", u.email)
+	optStringProperty(&obj, "firstName", u.firstName)
+	optStringProperty(&obj, "lastName", u.lastName)
+	optStringProperty(&obj, "avatar", u.avatar)
+	optStringProperty(&obj, "name", u.name)
+	obj.Maybe("anonymous", u.anonymous.IsDefined()).Bool(u.anonymous.BoolValue())
 	if u.custom.Count() > 0 {
-		j.WriteName("custom")
-		u.custom.WriteToJSONBuffer(j)
+		u.custom.WriteToJSONWriter(obj.Name("custom"))
 	}
 	if len(u.privateAttributes) > 0 {
-		j.WriteName("privateAttributeNames")
-		j.BeginArray()
+		arr := obj.Name("privateAttributeNames").Array()
 		for name := range u.privateAttributes {
-			j.WriteString(string(name))
+			arr.String(string(name))
 		}
-		j.EndArray()
+		arr.End()
 	}
-	j.EndObject()
+	obj.End()
 }
 
-func maybeWriteStringProperty(j *jsonstream.JSONBuffer, name string, value ldvalue.OptionalString) {
-	if value.IsDefined() {
-		j.WriteName(name)
-		j.WriteString(value.StringValue())
-	}
+func optStringProperty(obj *jwriter.ObjectState, name string, value ldvalue.OptionalString) {
+	obj.Maybe(name, value.IsDefined()).String(value.StringValue())
+}
+
+// WriteToJSONBuffer provides JSON serialization for use with the deprecated jsonstream API.
+//
+// Deprecated: this method is provided for backward compatibility. The LaunchDarkly SDK no longer
+// uses this API; instead it uses the newer https://github.com/launchdarkly/go-jsonstream.
+func (u User) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
+	jsonstream.WriteToJSONBufferThroughWriter(u, j)
+}
+
+type optStringAttrSetter struct {
+	attr   UserAttribute
+	setter func(*User, ldvalue.OptionalString)
+}
+
+//nolint:gochecknoglobals
+var optStringAttrSetters = []optStringAttrSetter{
+	{SecondaryKeyAttribute, func(u *User, s ldvalue.OptionalString) { u.secondary = s }},
+	{IPAttribute, func(u *User, s ldvalue.OptionalString) { u.ip = s }},
+	{CountryAttribute, func(u *User, s ldvalue.OptionalString) { u.country = s }},
+	{EmailAttribute, func(u *User, s ldvalue.OptionalString) { u.email = s }},
+	{FirstNameAttribute, func(u *User, s ldvalue.OptionalString) { u.firstName = s }},
+	{LastNameAttribute, func(u *User, s ldvalue.OptionalString) { u.lastName = s }},
+	{AvatarAttribute, func(u *User, s ldvalue.OptionalString) { u.avatar = s }},
+	{NameAttribute, func(u *User, s ldvalue.OptionalString) { u.name = s }},
 }

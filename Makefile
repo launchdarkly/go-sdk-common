@@ -15,16 +15,26 @@ COVERAGE_ENFORCER_FLAGS=-skipcode "// COVERAGE" -packagestats -filestats -showco
 TEST_BINARY=./build/go-sdk-common.test
 ALLOCATIONS_LOG=./build/allocations.out
 
-.PHONY: build clean test test-coverage lint
+EASYJSON_TAG=launchdarkly_easyjson
+
+.PHONY: all build build-easyjson clean test test-easyjson test-coverage lint benchmarks benchmarks-easyjson benchmark-allocs
+
+all: build build-easyjson
 
 build:
 	go build ./...
+
+build-easyjson:
+	go build -tags $(EASYJSON_TAG) ./...
 
 clean:
 	go clean
 
 test: build
 	go test -race -v ./...
+
+test-easyjson: build-easyjson
+	go test -tags $(EASYJSON_TAG) -race -v ./...
 
 test-coverage: $(COVERAGE_PROFILE_RAW)
 	if [ -z "$(which go-coverage-enforcer)" ]; then go install github.com/launchdarkly-labs/go-coverage-enforcer; fi
@@ -41,6 +51,10 @@ benchmarks: build
 	go test -benchmem '-run=^$$' '-bench=.*' ./... | tee build/benchmarks.out
 	@if grep <build/benchmarks.out 'NoAlloc.*[1-9][0-9]* allocs/op'; then echo "Unexpected heap allocations detected in benchmarks!"; exit 1; fi
 
+benchmarks-easyjson: build
+	@mkdir -p ./build
+	go test -tags $(EASYJSON_TAG) -benchmem '-run=^$$' '-bench=.*' ./... | tee build/benchmarks.out
+
 # See CONTRIBUTING.md regarding the use of the benchmark-allocs target. Notes about this implementation:
 # 1. We precompile the test code because otherwise the allocation traces will include the actions of the compiler itself.
 # 2. "benchtime=3x" means the run count (b.N) is set to 3. Setting it to 1 would produce less redundant output, but the
@@ -50,7 +64,7 @@ benchmark-allocs:
 	@if [ -z "$$BENCHMARK" ]; then echo "must specify BENCHMARK=" && exit 1; fi
 	@mkdir -p ./build
 	@echo Precompiling test code to $(TEST_BINARY)
-	@go test -c -o $(TEST_BINARY) >/dev/null 2>&1
+	@go test -c -o $(TEST_BINARY) $(BENCHMARK_PACKAGE) >/dev/null 2>&1
 	@echo "Generating heap allocation traces in $(ALLOCATIONS_LOG) for benchmark(s): $$BENCHMARK"
 	@echo "You should see some benchmark result output; if you do not, you may have misspelled the benchmark name/regex"
 	@GODEBUG=allocfreetrace=1 $(TEST_BINARY) -test.run=none -test.bench=$$BENCHMARK -test.benchmem -test.benchtime=1x 2>$(ALLOCATIONS_LOG)

@@ -1,11 +1,10 @@
 package ldvalue
 
 import (
-	"encoding/json"
-	"errors"
-	"reflect"
+	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream" //nolint:staticcheck // using a deprecated API
 
-	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
+	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
+	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
 )
 
 // we reuse this for all non-nil zero-length ValueMap instances
@@ -315,56 +314,74 @@ func (m ValueMap) JSONString() string {
 //
 // Like a Go map, a ValueMap in an uninitialized/nil state produces a JSON null rather than an empty {}.
 func (m ValueMap) MarshalJSON() ([]byte, error) {
-	if m.data == nil {
-		return []byte(nullAsJSON), nil
-	}
-	return json.Marshal(m.data)
+	return jwriter.MarshalJSONWithWriter(m)
 }
 
 // UnmarshalJSON parses a ValueMap from JSON.
 func (m *ValueMap) UnmarshalJSON(data []byte) error {
-	if len(data) == 0 { // COVERAGE: should not be possible, parser doesn't pass empty slices to UnmarshalJSON
-		return errors.New("cannot parse empty data")
-	}
-	firstCh := data[0]
-	switch firstCh {
-	case 'n':
-		// Note that since Go 1.5, comparing a string to string([]byte) is optimized so it
-		// does not actually create a new string from the byte slice.
-		if string(data) == nullAsJSON {
-			*m = ValueMap{}
-			return nil
-		}
-	case '{':
-		if len(data) == 2 && data[1] == '}' {
-			*m = ValueMap{emptyMap} // don't bother calling json.Unmarshal or allocating a new map for this
-			return nil
-		}
-		var o map[string]Value
-		e := json.Unmarshal(data, &o)
-		if e == nil {
-			*m = ValueMap{o}
-		}
-		return e
-	}
-	return &json.UnmarshalTypeError{Value: string(data), Type: reflect.TypeOf(m)}
+	return jreader.UnmarshalJSONWithReader(data, m)
 }
 
-// WriteToJSONBuffer provides JSON serialization for Value with the jsonstream API.
+// ReadFromJSONReader provides JSON deserialization for use with the jsonstream API.
+//
+// This implementation is used by the SDK in cases where it is more efficient than JSON.Unmarshal.
+// See the jsonstream package for more details.
+func (m *ValueMap) ReadFromJSONReader(r *jreader.Reader) {
+	obj := r.ObjectOrNull()
+	m.readFromJSONObject(r, &obj)
+}
+
+// WriteToJSONWriter provides JSON serialization for use with the jsonstream API.
 //
 // The JSON output format is identical to what is produced by json.Marshal, but this implementation is
 // more efficient when building output with JSONBuffer. See the jsonstream package for more details.
 //
 // Like a Go map, a ValueMap in an uninitialized/nil state produces a JSON null rather than an empty {}.
-func (m ValueMap) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
+func (m ValueMap) WriteToJSONWriter(w *jwriter.Writer) {
 	if m.data == nil {
-		j.WriteNull()
+		w.Null()
 		return
 	}
-	j.BeginObject()
+	obj := w.Object()
 	for k, vv := range m.data {
-		j.WriteName(k)
-		vv.WriteToJSONBuffer(j)
+		vv.WriteToJSONWriter(obj.Name(k))
 	}
-	j.EndObject()
+	obj.End()
+}
+
+// WriteToJSONBuffer provides JSON serialization for use with the deprecated jsonstream API.
+//
+// Deprecated: this method is provided for backward compatibility. The LaunchDarkly SDK no longer
+// uses this API; instead it uses the newer https://github.com/launchdarkly/go-jsonstream.
+//
+// Like a Go map, a ValueMap in an uninitialized/nil state produces a JSON null rather than an empty {}.
+func (m ValueMap) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
+	jsonstream.WriteToJSONBufferThroughWriter(m, j)
+}
+
+func (m *ValueMap) readFromJSONObject(r *jreader.Reader, obj *jreader.ObjectState) {
+	if r.Error() != nil {
+		return
+	}
+	if !obj.IsDefined() {
+		*m = ValueMap{}
+		return
+	}
+	var mb ValueMapBuilder
+	for obj.Next() {
+		if mb == nil {
+			mb = ValueMapBuild()
+		}
+		name := obj.Name()
+		var vv Value
+		vv.ReadFromJSONReader(r)
+		mb.Set(string(name), vv)
+	}
+	if r.Error() == nil {
+		if mb == nil {
+			*m = ValueMap{data: emptyMap}
+		} else {
+			*m = mb.Build()
+		}
+	}
 }
