@@ -164,6 +164,12 @@ func TestJSONUnmarshalPrivateAttributes(t *testing.T) {
 	assert.True(t, user2.IsPrivateAttribute("name"))
 }
 
+func TestJSONUnmarshalNullsAreAllowedForArraysAndObjects(t *testing.T) {
+	user := unmarshalUser(t, map[string]interface{}{"key": "some-key", "custom": nil, "privateAttributeNames": nil})
+	assert.Equal(t, ldvalue.ValueMap{}, user.custom)
+	assert.Nil(t, user.privateAttributes)
+}
+
 func TestJSONUnmarshalDataWithWrongFieldType(t *testing.T) {
 	var user User
 	err := json.Unmarshal([]byte(`{"key":[1,2,3]}`), &user)
