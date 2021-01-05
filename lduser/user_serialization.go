@@ -91,7 +91,7 @@ func (u *User) ReadFromJSONReader(r *jreader.Reader) {
 		case "custom":
 			parsed.custom.ReadFromJSONReader(r)
 		case "privateAttributeNames":
-			for arr := r.Array(); arr.Next(); {
+			for arr := r.ArrayOrNull(); arr.Next(); {
 				s := r.String()
 				if r.Error() == nil {
 					if parsed.privateAttributes == nil {
