@@ -7,8 +7,6 @@ import (
 	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
 	"gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
 
-	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -224,6 +222,7 @@ func doUserUnmarshalingTests(t *testing.T, unmarshalFn func([]byte, interface{})
 		for _, data := range [][]byte{
 			nil,
 			[]byte{},
+			[]byte("null"),
 			[]byte("true"),
 			[]byte("[]"),
 			[]byte("{"),
@@ -234,10 +233,9 @@ func doUserUnmarshalingTests(t *testing.T, unmarshalFn func([]byte, interface{})
 			[]byte(`{"privateAttributeNames":[true]`),
 		} {
 			t.Run(string(data), func(t *testing.T) {
-				assert.Error(t, unmarshalFn(data, &user))
-				r := jreader.NewReader(data)
-				user.ReadFromJSONReader(&r)
-				assert.Error(t, r.Error())
+				err := unmarshalFn(data, &user)
+				assert.Error(t, err)
+				assert.NotEqual(t, ErrMissingKey(), err)
 			})
 		}
 	})

@@ -30,6 +30,10 @@ func (u User) MarshalEasyJSON(writer *ej_jwriter.Writer) {
 }
 
 func (u *User) UnmarshalEasyJSON(lexer *jlexer.Lexer) {
+	if lexer.IsNull() {
+		lexer.Delim('{') // to trigger an "expected an object, got null" error
+		return
+	}
 	var fields userEquivalentStruct
 	fields.UnmarshalEasyJSON(lexer)
 	if lexer.Error() != nil {
