@@ -2,6 +2,10 @@
 
 All notable changes to the project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [2.2.2] - 2021-01-15
+### Changed:
+- Greatly improved the efficiency of deserializing `lduser` and `ldvalue` types from JSON when the `launchdarkly_easyjson` build tag is enabled, by using the EasyJSON API more directly than before. When the build tag is not enabled, these changes have no effect.
+
 ## [2.2.1] - 2021-01-04
 ### Fixed:
 - Parsing a `User` from JSON failed if there was a `privateAttributeNames` property whose value was `null`. This has been fixed so that it behaves the same as if the property had a value of `[]` or if it was not present at all.
