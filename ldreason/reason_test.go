@@ -2,6 +2,7 @@ package ldreason
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
@@ -74,49 +75,79 @@ func TestReasonErrorProperties(t *testing.T) {
 	}
 }
 
+func TestReasonUnboundedSegmentsStatus(t *testing.T) {
+	for _, r := range []EvaluationReason{
+		NewEvalReasonOff(), NewEvalReasonFallthrough(), NewEvalReasonTargetMatch(),
+		NewEvalReasonRuleMatch(0, "id"), NewEvalReasonPrerequisiteFailed("key"),
+		NewEvalReasonError(EvalErrorFlagNotFound),
+	} {
+		t.Run(string(r.GetKind()), func(t *testing.T) {
+			assert.Equal(t, UnboundedSegmentsStatus(""), r.GetUnboundedSegmentsStatus())
+			r1 := NewEvalReasonFromReasonWithUnboundedSegmentsStatus(r, UnboundedSegmentsHealthy)
+			assert.Equal(t, UnboundedSegmentsHealthy, r1.GetUnboundedSegmentsStatus())
+		})
+	}
+}
+
+type serializationTestParams struct {
+	reason       EvaluationReason
+	stringRep    string
+	expectedJSON string
+}
+
 func TestReasonSerializationAndDeserialization(t *testing.T) {
-	params := []struct {
-		reason       EvaluationReason
-		stringRep    string
-		expectedJSON string
-	}{
+	baseParams := []serializationTestParams{
 		{EvaluationReason{}, "", "null"},
 		{NewEvalReasonOff(), "OFF", `{"kind":"OFF"}`},
 		{NewEvalReasonFallthrough(), "FALLTHROUGH", `{"kind":"FALLTHROUGH"}`},
 		{NewEvalReasonTargetMatch(), "TARGET_MATCH", `{"kind":"TARGET_MATCH"}`},
 		{NewEvalReasonRuleMatch(1, "x"), "RULE_MATCH(1,x)", `{"kind":"RULE_MATCH","ruleIndex":1,"ruleId":"x"}`},
-		{NewEvalReasonPrerequisiteFailed("x"), "PREREQUISITE_FAILED(x)", `{"kind":"PREREQUISITE_FAILED","prerequisiteKey":"x"} `},
+		{NewEvalReasonPrerequisiteFailed("x"), "PREREQUISITE_FAILED(x)", `{"kind":"PREREQUISITE_FAILED","prerequisiteKey":"x"}`},
 		{NewEvalReasonError(EvalErrorWrongType), "ERROR(WRONG_TYPE)", `{"kind":"ERROR","errorKind":"WRONG_TYPE"}`},
 	}
+	params := baseParams
+	for _, param := range baseParams {
+		if param.reason.IsDefined() {
+			params = append(params, serializationTestParams{
+				reason:    NewEvalReasonFromReasonWithUnboundedSegmentsStatus(param.reason, UnboundedSegmentsHealthy),
+				stringRep: param.stringRep,
+				expectedJSON: strings.TrimSuffix(param.expectedJSON, "}") +
+					`,"unboundedSegmentsStatus":"HEALTHY"}`,
+			})
+		}
+	}
+
 	for _, param := range params {
-		actual, err := json.Marshal(param.reason)
-		assert.NoError(t, err)
-		assert.JSONEq(t, param.expectedJSON, string(actual))
+		t.Run(param.expectedJSON, func(t *testing.T) {
+			actual, err := json.Marshal(param.reason)
+			assert.NoError(t, err)
+			assert.JSONEq(t, param.expectedJSON, string(actual))
 
-		var r1 EvaluationReason
-		err = json.Unmarshal(actual, &r1)
-		assert.NoError(t, err)
-		assert.Equal(t, param.reason, r1)
+			var r1 EvaluationReason
+			err = json.Unmarshal(actual, &r1)
+			assert.NoError(t, err)
+			assert.Equal(t, param.reason, r1)
 
-		assert.Equal(t, param.stringRep, param.reason.String())
+			assert.Equal(t, param.stringRep, param.reason.String())
 
-		var r2 EvaluationReason
-		reader := jreader.NewReader(actual)
-		r2.ReadFromJSONReader(&reader)
-		assert.NoError(t, reader.Error())
-		assert.Equal(t, param.reason, r2)
+			var r2 EvaluationReason
+			reader := jreader.NewReader(actual)
+			r2.ReadFromJSONReader(&reader)
+			assert.NoError(t, reader.Error())
+			assert.Equal(t, param.reason, r2)
 
-		w := jwriter.NewWriter()
-		param.reason.WriteToJSONWriter(&w)
-		assert.NoError(t, w.Error())
-		bytes := w.Bytes()
-		assert.JSONEq(t, param.expectedJSON, string(bytes))
+			w := jwriter.NewWriter()
+			param.reason.WriteToJSONWriter(&w)
+			assert.NoError(t, w.Error())
+			bytes := w.Bytes()
+			assert.JSONEq(t, param.expectedJSON, string(bytes))
 
-		var buf jsonstream.JSONBuffer
-		param.reason.WriteToJSONBuffer(&buf)
-		bytes, err = buf.Get()
-		assert.NoError(t, err)
-		assert.JSONEq(t, param.expectedJSON, string(bytes))
+			var buf jsonstream.JSONBuffer
+			param.reason.WriteToJSONBuffer(&buf)
+			bytes, err = buf.Get()
+			assert.NoError(t, err)
+			assert.JSONEq(t, param.expectedJSON, string(bytes))
+		})
 	}
 
 	var r EvaluationReason
