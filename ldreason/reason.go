@@ -10,7 +10,7 @@ import (
 	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
 )
 
-// EvalReasonKind defines the possible values of the Kind property of EvaluationReason.
+// EvalReasonKind defines the possible values of EvaluationReason.GetKind().
 type EvalReasonKind string
 
 const (
@@ -32,7 +32,7 @@ const (
 	EvalReasonError EvalReasonKind = "ERROR"
 )
 
-// EvalErrorKind defines the possible values of the ErrorKind property of EvaluationReason.
+// EvalErrorKind defines the possible values of EvaluationReason.GetErrorKind().
 type EvalErrorKind string
 
 const (
@@ -56,15 +56,38 @@ const (
 	EvalErrorException EvalErrorKind = "EXCEPTION"
 )
 
+// UnboundedSegmentsStatus defines the possible values of EvaluationReason.GetUnboundedSegmentStatus().
+type UnboundedSegmentsStatus string
+
+const (
+	// UnboundedSegmentsHealthy indicates that the unbounded segment query involved in the flag
+	// evaluation was successful, and that the segment state is considered up to date.
+	UnboundedSegmentsHealthy UnboundedSegmentsStatus = "HEALTHY"
+
+	// UnboundedSegmentsStale indicates that the unbounded segment query involved in the flag
+	// evaluation was successful, but that the segment state may not be up to date.
+	UnboundedSegmentsStale UnboundedSegmentsStatus = "STALE"
+
+	// UnboundedSegmentsNotConfigured indicates that unbounded segments could not be queried for
+	// the flag evaluation because the SDK configuration did not include an unbounded segment
+	// store.
+	UnboundedSegmentsNotConfigured UnboundedSegmentsStatus = "NOT_CONFIGURED"
+
+	// UnboundedSegmentsStoreError indicates that the unbounded segment query involved in the
+	// flag evaluation failed, for instance due to a database error.
+	UnboundedSegmentsStoreError UnboundedSegmentsStatus = "STORE_ERROR"
+)
+
 // EvaluationReason describes the reason that a flag evaluation producted a particular value.
 //
 // This struct is immutable; its properties can be accessed only via getter methods.
 type EvaluationReason struct {
-	kind            EvalReasonKind
-	ruleIndex       ldvalue.OptionalInt
-	ruleID          string
-	prerequisiteKey string
-	errorKind       EvalErrorKind
+	kind                    EvalReasonKind
+	ruleIndex               ldvalue.OptionalInt
+	ruleID                  string
+	prerequisiteKey         string
+	errorKind               EvalErrorKind
+	unboundedSegmentsStatus UnboundedSegmentsStatus
 }
 
 // IsDefined returns true if this EvaluationReason has a non-empty GetKind(). It is false for a
@@ -117,6 +140,13 @@ func (r EvaluationReason) GetErrorKind() EvalErrorKind {
 	return r.errorKind
 }
 
+// GetUnboundedSegmentsStatus describes the validity of unbounded segment information, if and
+// only if the flag evaluation required querying at least one unbounded segment. Otherwise it
+// returns an empty string.
+func (r EvaluationReason) GetUnboundedSegmentsStatus() UnboundedSegmentsStatus {
+	return r.unboundedSegmentsStatus
+}
+
 // NewEvalReasonOff returns an EvaluationReason whose Kind is EvalReasonOff.
 func NewEvalReasonOff() EvaluationReason {
 	return EvaluationReason{kind: EvalReasonOff}
@@ -148,6 +178,16 @@ func NewEvalReasonError(errorKind EvalErrorKind) EvaluationReason {
 	return EvaluationReason{kind: EvalReasonError, errorKind: errorKind}
 }
 
+// NewEvalReasonFromReasonWithUnboundedSegmentsStatus returns a copy of an EvaluationReason
+// with a specific UnboundedSegmentsStatus value added.
+func NewEvalReasonFromReasonWithUnboundedSegmentsStatus(
+	reason EvaluationReason,
+	unboundedSegmentsStatus UnboundedSegmentsStatus,
+) EvaluationReason {
+	reason.unboundedSegmentsStatus = unboundedSegmentsStatus
+	return reason
+}
+
 // MarshalJSON implements custom JSON serialization for EvaluationReason.
 func (r EvaluationReason) MarshalJSON() ([]byte, error) {
 	return jwriter.MarshalJSONWithWriter(r)
@@ -176,6 +216,8 @@ func (r *EvaluationReason) ReadFromJSONReader(reader *jreader.Reader) {
 			ret.errorKind = EvalErrorKind(reader.String())
 		case "prerequisiteKey":
 			ret.prerequisiteKey = reader.String()
+		case "unboundedSegmentsStatus":
+			ret.unboundedSegmentsStatus = UnboundedSegmentsStatus(reader.String())
 		}
 	}
 	if reader.Error() == nil {
@@ -203,6 +245,9 @@ func (r EvaluationReason) WriteToJSONWriter(w *jwriter.Writer) {
 	}
 	if r.kind == EvalReasonError {
 		obj.Name("errorKind").String(string(r.errorKind))
+	}
+	if r.unboundedSegmentsStatus != "" {
+		obj.Name("unboundedSegmentsStatus").String(string(r.unboundedSegmentsStatus))
 	}
 	obj.End()
 }
