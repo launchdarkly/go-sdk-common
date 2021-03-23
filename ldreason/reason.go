@@ -56,38 +56,40 @@ const (
 	EvalErrorException EvalErrorKind = "EXCEPTION"
 )
 
-// UnboundedSegmentsStatus defines the possible values of EvaluationReason.GetUnboundedSegmentStatus().
-type UnboundedSegmentsStatus string
+// BigSegmentsStatus defines the possible values of EvaluationReason.GetBigSegmentsStatus().
+//
+// "Big segments" are a specific type of user segments. For more information, read the LaunchDarkly
+// documentation about user segments: https://docs.launchdarkly.com/home/users
+type BigSegmentsStatus string
 
 const (
-	// UnboundedSegmentsHealthy indicates that the unbounded segment query involved in the flag
+	// BigSegmentsHealthy indicates that the big segment query involved in the flag
 	// evaluation was successful, and that the segment state is considered up to date.
-	UnboundedSegmentsHealthy UnboundedSegmentsStatus = "HEALTHY"
+	BigSegmentsHealthy BigSegmentsStatus = "HEALTHY"
 
-	// UnboundedSegmentsStale indicates that the unbounded segment query involved in the flag
+	// BigSegmentsStale indicates that the big segment query involved in the flag
 	// evaluation was successful, but that the segment state may not be up to date.
-	UnboundedSegmentsStale UnboundedSegmentsStatus = "STALE"
+	BigSegmentsStale BigSegmentsStatus = "STALE"
 
-	// UnboundedSegmentsNotConfigured indicates that unbounded segments could not be queried for
-	// the flag evaluation because the SDK configuration did not include an unbounded segment
-	// store.
-	UnboundedSegmentsNotConfigured UnboundedSegmentsStatus = "NOT_CONFIGURED"
+	// BigSegmentsNotConfigured indicates that big segments could not be queried for the
+	// flag evaluation because the SDK configuration did not include a big segment store.
+	BigSegmentsNotConfigured BigSegmentsStatus = "NOT_CONFIGURED"
 
-	// UnboundedSegmentsStoreError indicates that the unbounded segment query involved in the
-	// flag evaluation failed, for instance due to a database error.
-	UnboundedSegmentsStoreError UnboundedSegmentsStatus = "STORE_ERROR"
+	// BigSegmentsStoreError indicates that the big segment query involved in the flag
+	// evaluation failed, for instance due to a database error.
+	BigSegmentsStoreError BigSegmentsStatus = "STORE_ERROR"
 )
 
 // EvaluationReason describes the reason that a flag evaluation producted a particular value.
 //
 // This struct is immutable; its properties can be accessed only via getter methods.
 type EvaluationReason struct {
-	kind                    EvalReasonKind
-	ruleIndex               ldvalue.OptionalInt
-	ruleID                  string
-	prerequisiteKey         string
-	errorKind               EvalErrorKind
-	unboundedSegmentsStatus UnboundedSegmentsStatus
+	kind              EvalReasonKind
+	ruleIndex         ldvalue.OptionalInt
+	ruleID            string
+	prerequisiteKey   string
+	errorKind         EvalErrorKind
+	bigSegmentsStatus BigSegmentsStatus
 }
 
 // IsDefined returns true if this EvaluationReason has a non-empty GetKind(). It is false for a
@@ -140,11 +142,13 @@ func (r EvaluationReason) GetErrorKind() EvalErrorKind {
 	return r.errorKind
 }
 
-// GetUnboundedSegmentsStatus describes the validity of unbounded segment information, if and
-// only if the flag evaluation required querying at least one unbounded segment. Otherwise it
-// returns an empty string.
-func (r EvaluationReason) GetUnboundedSegmentsStatus() UnboundedSegmentsStatus {
-	return r.unboundedSegmentsStatus
+// GetBigSegmentsStatus describes the validity of big segment information, if and only if the flag
+// evaluation required querying at least one big segment. Otherwise it returns an empty string.
+//
+// "Big segments" are a specific kind of user segments. For more information, read the LaunchDarkly
+// documentation about user segments: https://docs.launchdarkly.com/home/users
+func (r EvaluationReason) GetBigSegmentsStatus() BigSegmentsStatus {
+	return r.bigSegmentsStatus
 }
 
 // NewEvalReasonOff returns an EvaluationReason whose Kind is EvalReasonOff.
@@ -178,13 +182,13 @@ func NewEvalReasonError(errorKind EvalErrorKind) EvaluationReason {
 	return EvaluationReason{kind: EvalReasonError, errorKind: errorKind}
 }
 
-// NewEvalReasonFromReasonWithUnboundedSegmentsStatus returns a copy of an EvaluationReason
-// with a specific UnboundedSegmentsStatus value added.
-func NewEvalReasonFromReasonWithUnboundedSegmentsStatus(
+// NewEvalReasonFromReasonWithBigSegmentsStatus returns a copy of an EvaluationReason
+// with a specific BigSegmentsStatus value added.
+func NewEvalReasonFromReasonWithBigSegmentsStatus(
 	reason EvaluationReason,
-	unboundedSegmentsStatus UnboundedSegmentsStatus,
+	bigSegmentsStatus BigSegmentsStatus,
 ) EvaluationReason {
-	reason.unboundedSegmentsStatus = unboundedSegmentsStatus
+	reason.bigSegmentsStatus = bigSegmentsStatus
 	return reason
 }
 
@@ -216,8 +220,8 @@ func (r *EvaluationReason) ReadFromJSONReader(reader *jreader.Reader) {
 			ret.errorKind = EvalErrorKind(reader.String())
 		case "prerequisiteKey":
 			ret.prerequisiteKey = reader.String()
-		case "unboundedSegmentsStatus":
-			ret.unboundedSegmentsStatus = UnboundedSegmentsStatus(reader.String())
+		case "bigSegmentsStatus":
+			ret.bigSegmentsStatus = BigSegmentsStatus(reader.String())
 		}
 	}
 	if reader.Error() == nil {
@@ -246,8 +250,8 @@ func (r EvaluationReason) WriteToJSONWriter(w *jwriter.Writer) {
 	if r.kind == EvalReasonError {
 		obj.Name("errorKind").String(string(r.errorKind))
 	}
-	if r.unboundedSegmentsStatus != "" {
-		obj.Name("unboundedSegmentsStatus").String(string(r.unboundedSegmentsStatus))
+	if r.bigSegmentsStatus != "" {
+		obj.Name("bigSegmentsStatus").String(string(r.bigSegmentsStatus))
 	}
 	obj.End()
 }
