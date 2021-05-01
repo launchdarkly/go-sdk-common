@@ -82,9 +82,9 @@ func TestReasonUnboundedSegmentsStatus(t *testing.T) {
 		NewEvalReasonError(EvalErrorFlagNotFound),
 	} {
 		t.Run(string(r.GetKind()), func(t *testing.T) {
-			assert.Equal(t, UnboundedSegmentsStatus(""), r.GetUnboundedSegmentsStatus())
-			r1 := NewEvalReasonFromReasonWithUnboundedSegmentsStatus(r, UnboundedSegmentsHealthy)
-			assert.Equal(t, UnboundedSegmentsHealthy, r1.GetUnboundedSegmentsStatus())
+			assert.Equal(t, BigSegmentsStatus(""), r.GetBigSegmentsStatus())
+			r1 := NewEvalReasonFromReasonWithBigSegmentsStatus(r, BigSegmentsHealthy)
+			assert.Equal(t, BigSegmentsHealthy, r1.GetBigSegmentsStatus())
 		})
 	}
 }
@@ -109,10 +109,10 @@ func TestReasonSerializationAndDeserialization(t *testing.T) {
 	for _, param := range baseParams {
 		if param.reason.IsDefined() {
 			params = append(params, serializationTestParams{
-				reason:    NewEvalReasonFromReasonWithUnboundedSegmentsStatus(param.reason, UnboundedSegmentsHealthy),
+				reason:    NewEvalReasonFromReasonWithBigSegmentsStatus(param.reason, BigSegmentsHealthy),
 				stringRep: param.stringRep,
 				expectedJSON: strings.TrimSuffix(param.expectedJSON, "}") +
-					`,"unboundedSegmentsStatus":"HEALTHY"}`,
+					`,"bigSegmentsStatus":"HEALTHY"}`,
 			})
 		}
 	}
