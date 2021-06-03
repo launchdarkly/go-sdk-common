@@ -6,5 +6,5 @@ require (
 	github.com/launchdarkly/go-test-helpers/v2 v2.2.0
 	github.com/mailru/easyjson v0.7.6
 	github.com/stretchr/testify v1.6.1
-	gopkg.in/launchdarkly/go-jsonstream.v1 v1.0.0
+	gopkg.in/launchdarkly/go-jsonstream.v1 v1.0.1
 )
