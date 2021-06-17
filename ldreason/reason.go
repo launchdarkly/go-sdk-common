@@ -64,6 +64,7 @@ type EvaluationReason struct {
 	ruleIndex       ldvalue.OptionalInt
 	ruleID          string
 	prerequisiteKey string
+	inExperiment    bool
 	errorKind       EvalErrorKind
 }
 
@@ -111,6 +112,13 @@ func (r EvaluationReason) GetPrerequisiteKey() string {
 	return r.prerequisiteKey
 }
 
+// IsInExperiment describes whether the evaluation was part of an experiment. It returns
+// true if the evaluation resulted in an experiment rollout *and* served one of the
+// variations in the experiment.  Otherwise it returns false.
+func (r EvaluationReason) IsInExperiment() bool {
+	return r.inExperiment
+}
+
 // GetErrorKind describes the general category of the error, if the Kind is EvalReasonError.
 // Otherwise it returns an empty string.
 func (r EvaluationReason) GetErrorKind() EvalErrorKind {
@@ -127,6 +135,13 @@ func NewEvalReasonFallthrough() EvaluationReason {
 	return EvaluationReason{kind: EvalReasonFallthrough}
 }
 
+// NewEvalReasonFallthroughExperiment returns an EvaluationReason whose Kind is
+// EvalReasonFallthrough. The inExperiment parameter represents whether the evaluation was
+// part of an experiment.
+func NewEvalReasonFallthroughExperiment(inExperiment bool) EvaluationReason {
+	return EvaluationReason{kind: EvalReasonFallthrough, inExperiment: inExperiment}
+}
+
 // NewEvalReasonTargetMatch returns an EvaluationReason whose Kind is EvalReasonTargetMatch.
 func NewEvalReasonTargetMatch() EvaluationReason {
 	return EvaluationReason{kind: EvalReasonTargetMatch}
@@ -136,6 +151,18 @@ func NewEvalReasonTargetMatch() EvaluationReason {
 func NewEvalReasonRuleMatch(ruleIndex int, ruleID string) EvaluationReason {
 	return EvaluationReason{kind: EvalReasonRuleMatch,
 		ruleIndex: ldvalue.NewOptionalInt(ruleIndex), ruleID: ruleID}
+}
+
+// NewEvalReasonRuleMatchExperiment returns an EvaluationReason whose Kind is
+// EvalReasonRuleMatch. The inExperiment parameter represents whether the evaluation was
+// part of an experiment.
+func NewEvalReasonRuleMatchExperiment(ruleIndex int, ruleID string, inExperiment bool) EvaluationReason {
+	return EvaluationReason{
+		kind:         EvalReasonRuleMatch,
+		ruleIndex:    ldvalue.NewOptionalInt(ruleIndex),
+		ruleID:       ruleID,
+		inExperiment: inExperiment,
+	}
 }
 
 // NewEvalReasonPrerequisiteFailed returns an EvaluationReason whose Kind is EvalReasonPrerequisiteFailed.
@@ -176,6 +203,8 @@ func (r *EvaluationReason) ReadFromJSONReader(reader *jreader.Reader) {
 			ret.errorKind = EvalErrorKind(reader.String())
 		case "prerequisiteKey":
 			ret.prerequisiteKey = reader.String()
+		case "inExperiment":
+			ret.inExperiment = reader.Bool()
 		}
 	}
 	if reader.Error() == nil {
@@ -198,6 +227,7 @@ func (r EvaluationReason) WriteToJSONWriter(w *jwriter.Writer) {
 		obj.Name("ruleIndex").Int(r.ruleIndex.OrElse(0))
 		obj.Maybe("ruleId", r.ruleID != "").String(r.ruleID)
 	}
+	obj.Maybe("inExperiment", r.inExperiment).Bool(r.inExperiment)
 	if r.kind == EvalReasonPrerequisiteFailed {
 		obj.Name("prerequisiteKey").String(r.prerequisiteKey)
 	}
