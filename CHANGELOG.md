@@ -2,6 +2,14 @@
 
 All notable changes to the project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [2.3.0] - 2021-06-17
+### Added:
+- The SDK now supports the ability to control the proportion of traffic allocation to an experiment. This works in conjunction with a new platform feature now available to early access customers.
+
+## [2.2.3] - 2021-06-03
+### Fixed:
+- Updated `go-jsonstream` to [v1.0.1](https://github.com/launchdarkly/go-jsonstream/releases/tag/1.0.1) to incorporate a bugfix in JSON number parsing.
+
 ## [2.2.2] - 2021-01-15
 ### Changed:
 - Greatly improved the efficiency of deserializing `lduser` and `ldvalue` types from JSON when the `launchdarkly_easyjson` build tag is enabled, by using the EasyJSON API more directly than before. When the build tag is not enabled, these changes have no effect.
