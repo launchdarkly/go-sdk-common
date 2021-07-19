@@ -10,7 +10,7 @@ import (
 	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
 )
 
-// EvalReasonKind defines the possible values of the Kind property of EvaluationReason.
+// EvalReasonKind defines the possible values of EvaluationReason.GetKind().
 type EvalReasonKind string
 
 const (
@@ -32,7 +32,7 @@ const (
 	EvalReasonError EvalReasonKind = "ERROR"
 )
 
-// EvalErrorKind defines the possible values of the ErrorKind property of EvaluationReason.
+// EvalErrorKind defines the possible values of EvaluationReason.GetErrorKind().
 type EvalErrorKind string
 
 const (
@@ -56,16 +56,41 @@ const (
 	EvalErrorException EvalErrorKind = "EXCEPTION"
 )
 
+// BigSegmentsStatus defines the possible values of EvaluationReason.GetBigSegmentsStatus().
+//
+// "Big segments" are a specific type of user segments. For more information, read the LaunchDarkly
+// documentation about user segments: https://docs.launchdarkly.com/home/users
+type BigSegmentsStatus string
+
+const (
+	// BigSegmentsHealthy indicates that the big segment query involved in the flag
+	// evaluation was successful, and that the segment state is considered up to date.
+	BigSegmentsHealthy BigSegmentsStatus = "HEALTHY"
+
+	// BigSegmentsStale indicates that the big segment query involved in the flag
+	// evaluation was successful, but that the segment state may not be up to date.
+	BigSegmentsStale BigSegmentsStatus = "STALE"
+
+	// BigSegmentsNotConfigured indicates that big segments could not be queried for the
+	// flag evaluation because the SDK configuration did not include a big segment store.
+	BigSegmentsNotConfigured BigSegmentsStatus = "NOT_CONFIGURED"
+
+	// BigSegmentsStoreError indicates that the big segment query involved in the flag
+	// evaluation failed, for instance due to a database error.
+	BigSegmentsStoreError BigSegmentsStatus = "STORE_ERROR"
+)
+
 // EvaluationReason describes the reason that a flag evaluation producted a particular value.
 //
 // This struct is immutable; its properties can be accessed only via getter methods.
 type EvaluationReason struct {
-	kind            EvalReasonKind
-	ruleIndex       ldvalue.OptionalInt
-	ruleID          string
-	prerequisiteKey string
-	inExperiment    bool
-	errorKind       EvalErrorKind
+	kind              EvalReasonKind
+	ruleIndex         ldvalue.OptionalInt
+	ruleID            string
+	prerequisiteKey   string
+	inExperiment      bool
+	errorKind         EvalErrorKind
+	bigSegmentsStatus BigSegmentsStatus
 }
 
 // IsDefined returns true if this EvaluationReason has a non-empty GetKind(). It is false for a
@@ -125,6 +150,15 @@ func (r EvaluationReason) GetErrorKind() EvalErrorKind {
 	return r.errorKind
 }
 
+// GetBigSegmentsStatus describes the validity of big segment information, if and only if the flag
+// evaluation required querying at least one big segment. Otherwise it returns an empty string.
+//
+// "Big segments" are a specific kind of user segments. For more information, read the LaunchDarkly
+// documentation about user segments: https://docs.launchdarkly.com/home/users
+func (r EvaluationReason) GetBigSegmentsStatus() BigSegmentsStatus {
+	return r.bigSegmentsStatus
+}
+
 // NewEvalReasonOff returns an EvaluationReason whose Kind is EvalReasonOff.
 func NewEvalReasonOff() EvaluationReason {
 	return EvaluationReason{kind: EvalReasonOff}
@@ -175,6 +209,16 @@ func NewEvalReasonError(errorKind EvalErrorKind) EvaluationReason {
 	return EvaluationReason{kind: EvalReasonError, errorKind: errorKind}
 }
 
+// NewEvalReasonFromReasonWithBigSegmentsStatus returns a copy of an EvaluationReason
+// with a specific BigSegmentsStatus value added.
+func NewEvalReasonFromReasonWithBigSegmentsStatus(
+	reason EvaluationReason,
+	bigSegmentsStatus BigSegmentsStatus,
+) EvaluationReason {
+	reason.bigSegmentsStatus = bigSegmentsStatus
+	return reason
+}
+
 // MarshalJSON implements custom JSON serialization for EvaluationReason.
 func (r EvaluationReason) MarshalJSON() ([]byte, error) {
 	return jwriter.MarshalJSONWithWriter(r)
@@ -205,6 +249,8 @@ func (r *EvaluationReason) ReadFromJSONReader(reader *jreader.Reader) {
 			ret.prerequisiteKey = reader.String()
 		case "inExperiment":
 			ret.inExperiment = reader.Bool()
+		case "bigSegmentsStatus":
+			ret.bigSegmentsStatus = BigSegmentsStatus(reader.String())
 		}
 	}
 	if reader.Error() == nil {
@@ -233,6 +279,9 @@ func (r EvaluationReason) WriteToJSONWriter(w *jwriter.Writer) {
 	}
 	if r.kind == EvalReasonError {
 		obj.Name("errorKind").String(string(r.errorKind))
+	}
+	if r.bigSegmentsStatus != "" {
+		obj.Name("bigSegmentsStatus").String(string(r.bigSegmentsStatus))
 	}
 	obj.End()
 }
