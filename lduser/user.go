@@ -105,7 +105,7 @@ func (u User) GetKey() string {
 // GetSecondaryKey returns the secondary key of the user, if any.
 //
 // This affects feature flag targeting
-// (https://docs.launchdarkly.com/docs/targeting-users#section-targeting-rules-based-on-user-attributes)
+// (https://docs.launchdarkly.com/home/flags/targeting-users#targeting-rules-based-on-user-attributes)
 // as follows: if you have chosen to bucket users by a specific attribute, the secondary key (if set)
 // is used to further distinguish between users who are otherwise identical according to that attribute.
 func (u User) GetSecondaryKey() ldvalue.OptionalString {
