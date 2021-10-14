@@ -2,6 +2,10 @@
 
 All notable changes to the project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [2.5.0] - 2021-10-14
+### Added:
+- Convenience methods for working with JSON object and array values: `LdValue.Dictionary`, `LdValue.List`, `LdValue.ObjectBuilder.Set`, and `LdValue.ObjectBuilder.Copy`.
+
 ## [2.4.0] - 2021-07-19
 ### Added:
 - In `ldreason`, added new optional status information related to the new big segments feature.
