@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream" //nolint:staticcheck // using a deprecated API
-
 	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
 	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
 )
@@ -148,14 +146,6 @@ func (o OptionalInt) WriteToJSONWriter(w *jwriter.Writer) {
 	} else {
 		w.Null()
 	}
-}
-
-// WriteToJSONBuffer provides JSON serialization for use with the deprecated jsonstream API.
-//
-// Deprecated: this method is provided for backward compatibility. The LaunchDarkly SDK no longer
-// uses this API; instead it uses the newer https://github.com/launchdarkly/go-jsonstream.
-func (o OptionalInt) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
-	o.AsValue().WriteToJSONBuffer(j)
 }
 
 // MarshalText implements the encoding.TextMarshaler interface.
