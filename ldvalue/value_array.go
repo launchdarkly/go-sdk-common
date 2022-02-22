@@ -3,8 +3,6 @@ package ldvalue
 import (
 	"encoding/json"
 
-	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream" //nolint:staticcheck // using a deprecated API
-
 	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
 	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
 )
@@ -326,20 +324,6 @@ func (a ValueArray) WriteToJSONWriter(w *jwriter.Writer) {
 		v.WriteToJSONWriter(w)
 	}
 	arr.End()
-}
-
-// WriteToJSONBuffer provides JSON serialization for use with the deprecated jsonstream API.
-//
-// Deprecated: this method is provided for backward compatibility. The LaunchDarkly SDK no longer
-// uses this API; instead it uses the newer https://github.com/launchdarkly/go-jsonstream.
-//
-// Like a Go slice, a ValueArray in an uninitialized/nil state produces a JSON null rather than an empty [].
-func (a ValueArray) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
-	if a.data == nil {
-		j.WriteNull()
-		return
-	}
-	jsonstream.WriteToJSONBufferThroughWriter(a, j)
 }
 
 func (a *ValueArray) readFromJSONArray(r *jreader.Reader, arr *jreader.ArrayState) {

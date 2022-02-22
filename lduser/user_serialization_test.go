@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
 	"gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
 
 	"github.com/stretchr/testify/assert"
@@ -93,17 +92,6 @@ func doUserMarshalingTests(t *testing.T, marshalFn func(interface{}) ([]byte, er
 		assert.Equal(t, "value", props2["name"])
 		assert.Equal(t, []interface{}{"name"}, props2["privateAttributeNames"])
 	})
-}
-
-func TestJSONMarshalWithDeprecatedAPI(t *testing.T) {
-	user := newUserBuilderWithAllPropertiesSet("some-key").Build()
-	expected, err := json.Marshal(user)
-	require.NoError(t, err)
-
-	var b jsonstream.JSONBuffer
-	user.WriteToJSONBuffer(&b)
-	actual, err := b.Get()
-	require.JSONEq(t, string(expected), string(actual))
 }
 
 func TestJSONUnmarshal(t *testing.T) {

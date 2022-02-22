@@ -7,7 +7,6 @@ import (
 
 	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
 	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
-	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -170,12 +169,6 @@ func TestReasonSerializationAndDeserialization(t *testing.T) {
 			param.reason.WriteToJSONWriter(&w)
 			assert.NoError(t, w.Error())
 			bytes := w.Bytes()
-			assert.JSONEq(t, param.expectedJSON, string(bytes))
-
-			var buf jsonstream.JSONBuffer
-			param.reason.WriteToJSONBuffer(&buf)
-			bytes, err = buf.Get()
-			assert.NoError(t, err)
 			assert.JSONEq(t, param.expectedJSON, string(bytes))
 		})
 	}

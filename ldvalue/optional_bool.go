@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"reflect"
 
-	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream" //nolint:staticcheck // using a deprecated API
-
 	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
 	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
 )
@@ -171,18 +169,6 @@ func (o OptionalBool) WriteToJSONWriter(w *jwriter.Writer) {
 		w.Bool(o.value)
 	} else {
 		w.Null()
-	}
-}
-
-// WriteToJSONBuffer provides JSON serialization for use with the deprecated jsonstream API.
-//
-// Deprecated: this method is provided for backward compatibility. The LaunchDarkly SDK no longer
-// uses this API; instead it uses the newer https://github.com/launchdarkly/go-jsonstream.
-func (o OptionalBool) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
-	if o.hasValue {
-		j.WriteBool(o.value)
-	} else {
-		j.WriteNull()
 	}
 }
 

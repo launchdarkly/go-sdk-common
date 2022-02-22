@@ -5,8 +5,6 @@ import (
 	"errors"
 	"strconv"
 
-	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream" //nolint:staticcheck // using a deprecated API
-
 	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
 	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
 )
@@ -139,12 +137,4 @@ func (v Value) WriteToJSONWriter(w *jwriter.Writer) {
 	case RawType:
 		w.Raw([]byte(v.stringValue))
 	}
-}
-
-// WriteToJSONBuffer provides JSON serialization for use with the deprecated jsonstream API.
-//
-// Deprecated: this method is provided for backward compatibility. The LaunchDarkly SDK no longer
-// uses this API; instead it uses the newer https://github.com/launchdarkly/go-jsonstream.
-func (v Value) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
-	jsonstream.WriteToJSONBufferThroughWriter(v, j)
 }

@@ -1,8 +1,6 @@
 package ldvalue
 
 import (
-	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream" //nolint:staticcheck // using a deprecated API
-
 	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
 	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
 )
@@ -347,16 +345,6 @@ func (m ValueMap) WriteToJSONWriter(w *jwriter.Writer) {
 		vv.WriteToJSONWriter(obj.Name(k))
 	}
 	obj.End()
-}
-
-// WriteToJSONBuffer provides JSON serialization for use with the deprecated jsonstream API.
-//
-// Deprecated: this method is provided for backward compatibility. The LaunchDarkly SDK no longer
-// uses this API; instead it uses the newer https://github.com/launchdarkly/go-jsonstream.
-//
-// Like a Go map, a ValueMap in an uninitialized/nil state produces a JSON null rather than an empty {}.
-func (m ValueMap) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
-	jsonstream.WriteToJSONBufferThroughWriter(m, j)
 }
 
 func (m *ValueMap) readFromJSONObject(r *jreader.Reader, obj *jreader.ObjectState) {
