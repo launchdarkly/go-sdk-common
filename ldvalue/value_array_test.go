@@ -7,7 +7,6 @@ import (
 
 	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
 	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
-	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -309,12 +308,6 @@ func TestValueArrayJSONMarshalUnmarshal(t *testing.T) {
 			item.valueArray.WriteToJSONWriter(&w)
 			assert.NoError(t, w.Error())
 			assert.Equal(t, item.json, string(w.Bytes()))
-
-			var buf jsonstream.JSONBuffer // deprecated API
-			item.valueArray.WriteToJSONBuffer(&buf)
-			bytes, err := buf.Get()
-			assert.NoError(t, err)
-			assert.Equal(t, item.json, string(bytes))
 		})
 	}
 
