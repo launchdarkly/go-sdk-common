@@ -5,6 +5,9 @@ import (
 )
 
 var (
+	errAttributeEmpty      = errors.New("attribute reference cannot be empty")
+	errAttributeExtraSlash = errors.New("attribute reference contained a double slash or a trailing slash")
+
 	errContextUninitialized              = errors.New("tried to use uninitialized Context")
 	errContextKeyEmpty                   = errors.New("context key must not be empty")
 	errContextKindCannotBeKind           = errors.New(`"kind" is not a valid context kind`)

@@ -144,7 +144,56 @@ func (c Context) GetOptionalAttributeNames(sliceIn []string) []string {
 // If there is no such attribute, the first return value is ldvalue.Null() and the second return value
 // is false.
 func (c Context) GetValue(attrName string) (ldvalue.Value, bool) {
-	return c.getTopLevelAttribute(attrName)
+	return c.GetValueForAttrRef(newSimpleAttrRef(attrName))
+}
+
+// GetValueForAttrRef looks up the value of any attribute of the Context based on an AttrRef.
+//
+// This implements the same behavior that the SDK uses to resolve attribute references during a flag
+// evaluation. In a single-kind context, the AttrRef can represent a simple attribute name-- either a
+// built-in one like "name" or "key", or a custom attribute that was set by methods like
+// Builder.SetString()-- or, it can be a slash-delimited path using a JSON-Pointer-like syntax. See
+// AttrRef for more details.
+//
+// For a multi-kind context, the only supported attribute name is "kind". Use MultiKindByIndex() or
+// MultiKindByName() to inspect a Context for a particular kind and then get its attributes.
+//
+// If the value is found, the first return value is the attribute value (using the type ldvalue.Value
+// to represent a value of any JSON type) and the second return value is true.
+//
+// If the value is not found, or if the AttrRef is invalid, the first return value is ldvalue.Null()
+// and the second return value is false.
+func (c Context) GetValueForAttrRef(ref AttrRef) (ldvalue.Value, bool) {
+	if ref.Err() != nil {
+		return ldvalue.Null(), false
+	}
+
+	firstPathComponent, _ := ref.Component(0)
+
+	if c.Multiple() {
+		if ref.Depth() == 1 && firstPathComponent == AttrNameKind {
+			return ldvalue.String(string(c.kind)), true
+		}
+		return ldvalue.Null(), false // multi-kind context has no other addressable attributes
+	}
+
+	// Look up attribute in single-kind context
+	value, ok := c.getTopLevelAttributeSingleKind(firstPathComponent)
+	if !ok {
+		return ldvalue.Null(), false
+	}
+	for i := 1; i < ref.Depth(); i++ {
+		name, index := ref.Component(i)
+		if index.IsDefined() && value.Type() == ldvalue.ArrayType {
+			value, ok = value.TryGetByIndex(index.IntValue())
+		} else {
+			value, ok = value.TryGetByKey(name)
+		}
+		if !ok {
+			return ldvalue.Null(), false
+		}
+	}
+	return value, true
 }
 
 // Transient returns true if this Context is only intended for flag evaluations and will not be indexed by
@@ -193,10 +242,7 @@ func (c Context) MultiKindByName(kind Kind) (Context, bool) {
 	return Context{}, false
 }
 
-func (c Context) getTopLevelAttribute(name string) (ldvalue.Value, bool) {
-	if c.Multiple() && name != AttrNameKind {
-		return ldvalue.Null(), false
-	}
+func (c Context) getTopLevelAttributeSingleKind(name string) (ldvalue.Value, bool) {
 	switch name {
 	case AttrNameKind:
 		return ldvalue.String(string(c.kind)), true
