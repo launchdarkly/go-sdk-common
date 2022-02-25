@@ -68,6 +68,11 @@ func TestMarshalRaw(t *testing.T) {
 	bytes, err := json.Marshal(value)
 	assert.NoError(t, err)
 	assert.Equal(t, s, string(bytes))
+
+	w := jwriter.NewWriter()
+	value.WriteToJSONWriter(&w)
+	assert.NoError(t, w.Error())
+	assert.Equal(t, s, string(w.Bytes()))
 }
 
 func TestUnmarshalErrorConditions(t *testing.T) {
