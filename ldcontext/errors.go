@@ -16,4 +16,5 @@ var (
 	errContextKindMultiWithinMulti       = errors.New("multi-kind context cannot contain other multi-kind contexts")
 	errContextKindMultiDuplicates        = errors.New("multi-kind context cannot have same kind more than once")
 	errContextKindInvalidChars           = errors.New("context kind contains disallowed characters")
+	errJSONKeyMissing                    = errors.New(`"key" property not found in JSON context object`)
 )

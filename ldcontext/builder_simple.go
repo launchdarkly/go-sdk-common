@@ -28,6 +28,7 @@ import (
 type Builder struct {
 	kind                  Kind
 	key                   string
+	allowEmptyKey         bool
 	name                  ldvalue.OptionalString
 	attributes            map[string]ldvalue.Value
 	attributesCopyOnWrite bool
@@ -94,7 +95,7 @@ func (b *Builder) Build() Context {
 	if err != nil {
 		return Context{err: err, kind: b.kind}
 	}
-	if b.key == "" {
+	if b.key == "" && !b.allowEmptyKey {
 		return Context{err: errContextKeyEmpty, kind: b.kind}
 	}
 	// We set the kind in the error cases above because that improves error reporting if this
@@ -194,6 +195,13 @@ func (b *Builder) Kind(kind Kind) *Builder {
 // The key attribute can be referenced by flag rules, flag target lists, and segments.
 func (b *Builder) Key(key string) *Builder {
 	b.key = key
+	return b
+}
+
+// Used internally when we are deserializing an old-style user from JSON; otherwise an empty key is
+// never allowed.
+func (b *Builder) setAllowEmptyKey(value bool) *Builder {
+	b.allowEmptyKey = value
 	return b
 }
 

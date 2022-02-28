@@ -21,3 +21,10 @@ const (
 	// method in Context and Builder. This is the name of the attribute in JSON representations and flag rules.
 	AttrNameTransient = "transient"
 )
+
+const (
+	jsonPropMeta             = "_meta"
+	jsonPropPrivate          = "privateAttributeNames"
+	jsonPropOldUserAnonymous = "anonymous"
+	jsonPropOldUserCustom    = "custom"
+)
