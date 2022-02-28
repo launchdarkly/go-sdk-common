@@ -78,6 +78,18 @@ func TestAttrRefSimpleWithLeadingSlash(t *testing.T) {
 	}
 }
 
+func TestAttrRefForName(t *testing.T) {
+	a0 := NewAttrRefForName("name")
+	assert.Equal(t, NewAttrRef("name"), a0)
+
+	a1 := NewAttrRefForName("a/b")
+	assert.Equal(t, NewAttrRef("a/b"), a1)
+
+	a2 := NewAttrRefForName("/a/b~c")
+	assert.Equal(t, NewAttrRef("/~1a~1b~0c"), a2)
+	assert.Equal(t, 1, a2.Depth())
+}
+
 func TestAttrRefComponents(t *testing.T) {
 	undefined := -99
 	for _, params := range []struct {

@@ -33,6 +33,8 @@ type Builder struct {
 	attributesCopyOnWrite bool
 	secondary             ldvalue.OptionalString
 	transient             bool
+	privateAttrs          []AttrRef
+	privateCopyOnWrite    bool
 }
 
 // NewBuilder creates a Builder for building a Context, initializing its Key property and
@@ -119,6 +121,10 @@ func (b *Builder) Build() Context {
 		// tries to modify it when ___CopyOnWrite is true. That is safe as long as no one is
 		// trying to modify Builder from two goroutines at once, which (per our documentation)
 		// is not supported anyway.
+	}
+	if b.privateAttrs != nil {
+		ret.privateAttrs = b.privateAttrs
+		b.privateCopyOnWrite = true
 	}
 
 	return ret
@@ -273,6 +279,11 @@ func (b *Builder) SetString(attributeName string, value string) *Builder {
 //
 // Values that are JSON arrays or objects have special behavior when referenced in flag/segment
 // rules.
+//
+// A value of ldvalue.Null() is equivalent to removing any current non-default value of the
+// attribute. Null is not a valid attribute value in the LaunchDarkly model; any expressions
+// in feature flags that reference an attribute with a null value will behave as if the
+// attribute did not exist.
 func (b *Builder) SetValue(attributeName string, value ldvalue.Value) *Builder {
 	switch attributeName {
 	case AttrNameKind:
@@ -286,6 +297,11 @@ func (b *Builder) SetValue(attributeName string, value ldvalue.Value) *Builder {
 	case AttrNameTransient:
 		return b.Transient(value.BoolValue())
 	default:
+		if value.IsNull() {
+			if _, found := b.attributes[attributeName]; !found {
+				return b
+			}
+		}
 		if b.attributes == nil {
 			b.attributes = make(map[string]ldvalue.Value)
 		} else if b.attributesCopyOnWrite {
@@ -297,7 +313,11 @@ func (b *Builder) SetValue(attributeName string, value ldvalue.Value) *Builder {
 			b.attributes = copied
 			b.attributesCopyOnWrite = false
 		}
-		b.attributes[attributeName] = value
+		if value.IsNull() {
+			delete(b.attributes, attributeName)
+		} else {
+			b.attributes[attributeName] = value
+		}
 		return b
 	}
 }
@@ -339,6 +359,99 @@ func (b *Builder) Transient(value bool) *Builder {
 	return b
 }
 
+// Private designates any number of Context attributes as private: that is, their values will not be sent
+// to LaunchDarkly.
+//
+// (TKTK: possibly move some of this conceptual information to a non-platform-specific docs page and/or
+// have docs team copyedit it here)
+//
+// Each parameter can be a simple attribute name, such as "email". Or, it can be a slash-delimited path in
+// the JSON-Pointer-like syntax that LaunchDarkly uses to reference properties within a JSON object. For
+// instance, if it is "/address/street", and if the value of the attribute "address" is a JSON object, then
+// the "street" property within that object would be treated as private but other properties within "address"
+// would not. However, numeric array index references such as "/addresses/0/street" do not work for this
+// purpose and will be ignored.
+//
+// This action only affects analytics events that involve this particular Context. To mark some (or all)
+// Context attributes as private for all users, use the overall event configuration for the SDK.
+//
+// The attributes "kind" and "key", and the metadata properties set by Secondary() and Transient(),
+// cannot be made private.
+//
+// In this example, firstName is marked as private, but lastName is not:
+//
+//     c := ldcontext.NewBuilder("org", "my-key").
+//         SetString("firstName", "Pierre").
+//         SetString("lastName", "Menard").
+//	       Private("firstName").
+//         Build()
+func (b *Builder) Private(attrRefStrings ...string) *Builder {
+	refs := make([]AttrRef, 0, 20) // arbitrary capacity that's likely greater than needed, to preallocate on stack
+	for _, s := range attrRefStrings {
+		refs = append(refs, NewAttrRef(s))
+	}
+	return b.PrivateRef(refs...)
+}
+
+// PrivateRef is equivalent to Private but uses the AttrRef type. It designates any number of
+// Context attributes as private: that is, their values will not be sent to LaunchDarkly.
+//
+// The difference between PrivateRef and Private is simply a minor optimization: Private parses
+// each attribute reference when it is called (in case the reference uses a slash-delimited format),
+// but PrivateRef uses existing AttrRef values. The overhead of parsing is fairly minor, but if you
+// are using any slash-delimited attribute references and you would like to keep the overhead of
+// constructing a user to the absolute minimum, you may wish to use PrivateRef instead of Private.
+// and precompute these references.
+//
+// In this example, firstName is marked as private, but lastName is not:
+//
+//     privateStreetAttr := ldcontext.NewAttrRef("/address/street")
+//     c := ldcontext.NewBuilder("org", "my-key").
+//         SetString("firstName", "Pierre").
+//         SetString("lastName", "Menard").
+//	       PrivateRef(privateStreetAttr).
+//         Build()
+func (b *Builder) PrivateRef(attrRefs ...AttrRef) *Builder {
+	if b.privateAttrs == nil {
+		b.privateAttrs = make([]AttrRef, 0, len(attrRefs))
+	} else if b.privateCopyOnWrite {
+		// See note in Build() on ___CopyOnWrite
+		b.privateAttrs = append([]AttrRef(nil), b.privateAttrs...)
+		b.privateCopyOnWrite = false
+	}
+	b.privateAttrs = append(b.privateAttrs, attrRefs...)
+	return b
+}
+
+// RemovePrivate removes any private attribute references previously added with AddPrivate or AddPrivateRef
+// that exactly match that of any of the specified attribute references.
+func (b *Builder) RemovePrivate(attrRefStrings ...string) *Builder {
+	refs := make([]AttrRef, 0, 20) // arbitrary capacity that's likely greater than needed, to preallocate on stack
+	for _, s := range attrRefStrings {
+		refs = append(refs, NewAttrRef(s))
+	}
+	return b.RemovePrivateRef(refs...)
+}
+
+// RemovePrivateRef removes any private attribute references previously added with AddPrivate or
+// AddPrivateRef that exactly match that of any of the specified attribute references.
+func (b *Builder) RemovePrivateRef(attrRefs ...AttrRef) *Builder {
+	if b.privateCopyOnWrite {
+		// See note in Build() on ___CopyOnWrite
+		b.privateAttrs = append([]AttrRef(nil), b.privateAttrs...)
+		b.privateCopyOnWrite = false
+	}
+	for _, attrRefToRemove := range attrRefs {
+		for i := 0; i < len(b.privateAttrs); i++ {
+			if b.privateAttrs[i].String() == attrRefToRemove.String() {
+				b.privateAttrs = append(b.privateAttrs[0:i], b.privateAttrs[i+1:]...)
+				i--
+			}
+		}
+	}
+	return b
+}
+
 func (b *Builder) copyFrom(fromContext Context) {
 	if fromContext.Multiple() {
 		return
@@ -350,6 +463,8 @@ func (b *Builder) copyFrom(fromContext Context) {
 	b.transient = fromContext.transient
 	b.attributes = fromContext.attributes
 	b.attributesCopyOnWrite = true
+	b.privateAttrs = fromContext.privateAttrs
+	b.privateCopyOnWrite = true
 }
 
 func makeFullyQualifiedKeySingleKind(kind Kind, key string, omitDefaultKind bool) string {

@@ -18,10 +18,10 @@ import (
 // SDK operations. Also, an AttrRef can be in an error state if it was built from an invalid string. See
 // AttrRef.Err().
 type AttrRef struct {
-	err        error
-	path       string
-	rawPath    string
-	components []attrRefComponent
+	err                 error
+	rawPath             string
+	singlePathComponent string
+	components          []attrRefComponent
 }
 
 type attrRefComponent struct {
@@ -46,13 +46,13 @@ func NewAttrRef(referenceString string) AttrRef {
 	}
 	if referenceString[0] != '/' {
 		// When there is no leading slash, this is a simple attribute reference with no character escaping.
-		return AttrRef{path: referenceString, rawPath: referenceString}
+		return AttrRef{singlePathComponent: referenceString, rawPath: referenceString}
 	}
 	path := referenceString[1:]
 	if !strings.Contains(path, "/") {
 		// There's only one segment, so this is still a simple attribute reference. However, we still may
 		// need to unescape special characters.
-		return AttrRef{path: unescapePath(path), rawPath: referenceString}
+		return AttrRef{singlePathComponent: unescapePath(path), rawPath: referenceString}
 	}
 	parts := strings.Split(path, "/")
 	ret := AttrRef{rawPath: referenceString, components: make([]attrRefComponent, 0, len(parts))}
@@ -72,16 +72,21 @@ func NewAttrRef(referenceString string) AttrRef {
 	return ret
 }
 
-// Used internally in cases where we do not need to support multi-component path expressions.
-func newSimpleAttrRef(attrName string) AttrRef {
+// NewAttrRefForName is similar to NewAttrRef except that it always interprets the string as a single
+// attribute name, never as a slash-delimited path expression. Use this in cases where you need an
+// AttrRef but might be referencing an attribute whose name actually starts with a slash.
+func NewAttrRefForName(attrName string) AttrRef {
 	if attrName == "" || attrName == "/" {
 		return AttrRef{err: errAttributeEmpty, rawPath: attrName}
 	}
 	if attrName[0] != '/' {
 		// When there is no leading slash, this is a simple attribute reference with no character escaping.
-		return AttrRef{path: attrName, rawPath: attrName}
+		return AttrRef{singlePathComponent: attrName, rawPath: attrName}
 	}
-	return AttrRef{path: attrName[1:], rawPath: attrName}
+	// If there is a leading slash, then the attribute name actually starts with a slash. To represent it
+	// as an AttrRef, it'll need to be escaped.
+	escapedPath := "/" + strings.ReplaceAll(strings.ReplaceAll(attrName, "~", "~0"), "/", "~1")
+	return AttrRef{singlePathComponent: attrName, rawPath: escapedPath}
 }
 
 // Err returns nil for a valid AttrRef, or a non-nil error value for an invalid AttrRef.
@@ -96,7 +101,7 @@ func newSimpleAttrRef(attrName string) AttrRef {
 // exists in any given Context. For instance, NewAttrRef("name") is a valid AttrRef,
 // but a specific Context might or might not have a name.
 func (a AttrRef) Err() error {
-	if a.err == nil && a.path == "" && a.components == nil {
+	if a.err == nil && a.singlePathComponent == "" && a.components == nil {
 		return errAttributeEmpty
 	}
 	return a.err
@@ -109,7 +114,7 @@ func (a AttrRef) Err() error {
 // For an attribute reference with a leading slash, it is the number of slash-delimited path
 // components after the initial slash. For instance, Attribute("/a/b").Depth() returns 2.
 func (a AttrRef) Depth() int {
-	if a.err != nil || (a.path == "" && a.components == nil) {
+	if a.err != nil || (a.singlePathComponent == "" && a.components == nil) {
 		return 0
 	}
 	if a.components == nil {
@@ -137,7 +142,7 @@ func (a AttrRef) Depth() int {
 //     Attribute("/a/3").Component(1)   // returns ("3", ldvalue.NewOptionalInt(3))
 func (a AttrRef) Component(index int) (string, ldvalue.OptionalInt) {
 	if index == 0 && len(a.components) == 0 {
-		return a.path, ldvalue.OptionalInt{}
+		return a.singlePathComponent, ldvalue.OptionalInt{}
 	}
 	if index < 0 || index >= len(a.components) {
 		return "", ldvalue.OptionalInt{}

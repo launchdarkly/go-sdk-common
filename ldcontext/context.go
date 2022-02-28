@@ -26,6 +26,7 @@ type Context struct {
 	attributes        map[string]ldvalue.Value
 	secondary         ldvalue.OptionalString
 	transient         bool
+	privateAttrs      []AttrRef
 }
 
 // Err returns nil for a valid Context, or a non-nil error value for an invalid Context.
@@ -144,7 +145,7 @@ func (c Context) GetOptionalAttributeNames(sliceIn []string) []string {
 // If there is no such attribute, the first return value is ldvalue.Null() and the second return value
 // is false.
 func (c Context) GetValue(attrName string) (ldvalue.Value, bool) {
-	return c.GetValueForAttrRef(newSimpleAttrRef(attrName))
+	return c.GetValueForAttrRef(NewAttrRefForName(attrName))
 }
 
 // GetValueForAttrRef looks up the value of any attribute of the Context based on an AttrRef.
@@ -216,6 +217,21 @@ func (c Context) Transient() bool {
 // MultiKindByIndex or MultiKindByName to inspect a Context for a particular kind and call Secondary() on it.
 func (c Context) Secondary() ldvalue.OptionalString {
 	return c.secondary
+}
+
+// PrivateAttributeCount returns the number of attributes that were marked as private for this Context
+// with Builder.Private().
+func (c Context) PrivateAttributeCount() int {
+	return len(c.privateAttrs)
+}
+
+// PrivateAttributeByIndex returns one of the attributes that were marked as private for thie Context
+// with Builder.Private().
+func (c Context) PrivateAttributeByIndex(index int) (AttrRef, bool) {
+	if index < 0 || index >= len(c.privateAttrs) {
+		return AttrRef{}, false
+	}
+	return c.privateAttrs[index], true
 }
 
 // MultiKindCount returns the number of Kinds if this is a multi-kind Context created with NewMulti()

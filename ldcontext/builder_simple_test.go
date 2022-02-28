@@ -136,7 +136,6 @@ func TestBuilderSetCustomAttributes(t *testing.T) {
 	t.Run("SetValue", func(t *testing.T) {
 		otherValue := ldvalue.String("other-value")
 		for _, value := range []ldvalue.Value{
-			ldvalue.Null(),
 			ldvalue.Bool(true),
 			ldvalue.Bool(false),
 			ldvalue.Int(0),
@@ -172,6 +171,19 @@ func TestBuilderSetCustomAttributes(t *testing.T) {
 		assert.Equal(t,
 			makeBasicBuilder().SetValue("my-attr", ldvalue.String("x")),
 			makeBasicBuilder().SetString("my-attr", "x"))
+	})
+
+	t.Run("setting to null does not add attribute", func(t *testing.T) {
+		assert.Equal(t,
+			makeBasicBuilder().SetString("attr1", "value1").SetString("attr3", "value3"),
+			makeBasicBuilder().SetString("attr1", "value1").SetValue("attr2", ldvalue.Null()).SetString("attr3", "value3"))
+	})
+
+	t.Run("setting to null removes existing attribute", func(t *testing.T) {
+		assert.Equal(t,
+			makeBasicBuilder().SetString("attr1", "value1").SetString("attr3", "value3"),
+			makeBasicBuilder().SetString("attr1", "value1").SetString("attr2", "value2").SetString("attr3", "value3").
+				SetValue("attr2", ldvalue.Null()))
 	})
 }
 
@@ -288,12 +300,82 @@ func TestBuilderAttributesCopyOnWrite(t *testing.T) {
 	m.In(t).Assert(c1.attributes["attr"], m.JSONEqual(value1)) // unchanged
 }
 
+func TestBuilderPrivate(t *testing.T) {
+	expectPrivateRefsToBe := func(t *testing.T, c Context, expectedRefs ...AttrRef) {
+		if assert.Equal(t, len(expectedRefs), c.PrivateAttributeCount()) {
+			for i, expectedRef := range expectedRefs {
+				a, ok := c.PrivateAttributeByIndex(i)
+				assert.True(t, ok)
+				assert.Equal(t, expectedRef, a)
+			}
+			_, ok := c.PrivateAttributeByIndex(len(expectedRefs))
+			assert.False(t, ok)
+		}
+		_, ok := c.PrivateAttributeByIndex(-1)
+		assert.False(t, ok)
+	}
+
+	t.Run("using AttrRefs", func(t *testing.T) {
+		attrRef1, attrRef2, attrRef3 := NewAttrRef("a"), NewAttrRef("/b/c"), NewAttrRef("d")
+		c := makeBasicBuilder().
+			PrivateRef(attrRef1, attrRef2).PrivateRef(attrRef3).
+			Build()
+
+		expectPrivateRefsToBe(t, c, attrRef1, attrRef2, attrRef3)
+	})
+
+	t.Run("using strings", func(t *testing.T) {
+		s1, s2, s3 := "a", "/b/c", "d"
+		b0 := makeBasicBuilder().
+			PrivateRef(NewAttrRef(s1), NewAttrRef(s2)).PrivateRef(NewAttrRef(s3))
+		b1 := makeBasicBuilder().
+			Private(s1, s2, s3)
+		assert.Equal(t, b0, b1)
+	})
+
+	t.Run("RemovePrivate", func(t *testing.T) {
+		b := makeBasicBuilder().Private("a", "/b/c", "d", "/b/c")
+		b.RemovePrivate("/b/c")
+		c := b.Build()
+
+		expectPrivateRefsToBe(t, c, NewAttrRef("a"), NewAttrRef("d"))
+	})
+
+	t.Run("RemovePrivateRef", func(t *testing.T) {
+		b := makeBasicBuilder().Private("a", "/b/c", "d", "/b/c")
+		b.RemovePrivateRef(NewAttrRef("/b/c"))
+		c := b.Build()
+
+		expectPrivateRefsToBe(t, c, NewAttrRef("a"), NewAttrRef("d"))
+	})
+
+	t.Run("copy on write", func(t *testing.T) {
+		b0 := makeBasicBuilder().Private("a")
+
+		c0 := b0.Build()
+		expectPrivateRefsToBe(t, c0, NewAttrRef("a"))
+
+		b0.Private("b")
+		c1 := b0.Build()
+		expectPrivateRefsToBe(t, c1, NewAttrRef("a"), NewAttrRef("b"))
+		expectPrivateRefsToBe(t, c0, NewAttrRef("a")) // unchanged
+
+		b0.RemovePrivateRef(NewAttrRef("a"))
+		c2 := b0.Build()
+		expectPrivateRefsToBe(t, c2, NewAttrRef("b"))
+		expectPrivateRefsToBe(t, c1, NewAttrRef("a"), NewAttrRef("b")) // unchanged
+		expectPrivateRefsToBe(t, c0, NewAttrRef("a"))                  // unchanged
+	})
+}
+
 func TestNewBuilderFromContext(t *testing.T) {
 	value1, value2 := ldvalue.String("value1"), ldvalue.String("value2")
 
 	b1 := NewBuilder("key1").Kind("kind1").Name("name1").Secondary("sec1").Transient(true).SetValue("attr", value1)
+	b1.Private("private1")
 	c1 := b1.Build()
 	m.In(t).Assert(c1.attributes["attr"], m.JSONEqual(value1))
+	assert.Len(t, c1.privateAttrs, 1)
 
 	b2 := NewBuilderFromContext(c1)
 	c2 := b2.Build()
@@ -302,12 +384,16 @@ func TestNewBuilderFromContext(t *testing.T) {
 	assert.Equal(t, ldvalue.NewOptionalString("sec1"), c2.Secondary())
 	assert.True(t, c2.Transient())
 	m.In(t).Assert(c2.attributes["attr"], m.JSONEqual(value1))
+	assert.Equal(t, c1.privateAttrs, c2.privateAttrs)
 
 	b3 := NewBuilderFromContext(c1)
 	b3.SetValue("attr", value2)
+	b3.Private("private2")
 	c3 := b3.Build()
 	m.In(t).Assert(c3.attributes["attr"], m.JSONEqual(value2))
 	m.In(t).Assert(c1.attributes["attr"], m.JSONEqual(value1)) // unchanged
+	assert.Len(t, c3.privateAttrs, 2)
+	assert.Len(t, c1.privateAttrs, 1) // unchanged
 
 	multi := NewMulti(NewWithKind("kind1", "key1"), NewWithKind("kind2", "key2"))
 	assert.NoError(t, multi.Err())

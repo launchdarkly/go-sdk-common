@@ -54,15 +54,16 @@ func TestGetOptionalAttributeNames(t *testing.T) {
 
 func TestGetValue(t *testing.T) {
 	t.Run("equivalent to GetValueForAttrRef for simple attribute name", func(t *testing.T) {
-		c := NewBuilder("my-key").Kind("org").Name("x").SetString("my-attr", "y").Build()
+		c := NewBuilder("my-key").Kind("org").Name("x").SetString("my-attr", "y").SetString("/starts-with-slash", "z").Build()
 		expectAttributeFoundForName(t, ldvalue.String("org"), c, "kind")
-		expectAttributeFoundForName(t, ldvalue.String("org"), c, "/kind")
 		expectAttributeFoundForName(t, ldvalue.String("my-key"), c, "key")
-		expectAttributeFoundForName(t, ldvalue.String("my-key"), c, "/key")
 		expectAttributeFoundForName(t, ldvalue.String("x"), c, "name")
-		expectAttributeFoundForName(t, ldvalue.String("x"), c, "/name")
 		expectAttributeFoundForName(t, ldvalue.String("y"), c, "my-attr")
-		expectAttributeFoundForName(t, ldvalue.String("y"), c, "/my-attr")
+		expectAttributeFoundForName(t, ldvalue.String("z"), c, "/starts-with-slash")
+		expectAttributeNotFoundForName(t, c, "/kind")
+		expectAttributeNotFoundForName(t, c, "/key")
+		expectAttributeNotFoundForName(t, c, "/name")
+		expectAttributeNotFoundForName(t, c, "/my-attr")
 		expectAttributeNotFoundForName(t, c, "other")
 
 		expectAttributeNotFoundForName(t, c, "")
@@ -70,7 +71,7 @@ func TestGetValue(t *testing.T) {
 
 		mc := NewMulti(c)
 		expectAttributeFoundForName(t, ldvalue.String("multi"), mc, "kind")
-		expectAttributeFoundForName(t, ldvalue.String("multi"), mc, "/kind")
+		expectAttributeNotFoundForName(t, mc, "/kind")
 		expectAttributeNotFoundForName(t, mc, "key")
 	})
 
