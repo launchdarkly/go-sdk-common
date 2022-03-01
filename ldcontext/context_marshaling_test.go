@@ -61,10 +61,10 @@ func makeContextMarshalingAndUnmarshalingParams() []contextSerializationParams {
 	}
 }
 
-func contextMarshalingTests(t *testing.T, marshalFn func(Context) ([]byte, error)) {
+func contextMarshalingTests(t *testing.T, marshalFn func(*Context) ([]byte, error)) {
 	for _, params := range makeContextMarshalingAndUnmarshalingParams() {
 		t.Run(params.json, func(t *testing.T) {
-			bytes, err := marshalFn(params.context)
+			bytes, err := marshalFn(&params.context)
 			assert.NoError(t, err)
 			m.In(t).Assert(bytes, m.JSONStrEqual(params.json))
 		})
@@ -72,7 +72,7 @@ func contextMarshalingTests(t *testing.T, marshalFn func(Context) ([]byte, error
 
 	t.Run("invalid context", func(t *testing.T) {
 		c := New("")
-		_, err := marshalFn(c)
+		_, err := marshalFn(&c)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), errContextKeyEmpty.Error())
 		// We compare the error string, rather than checking for equality to errContextKeyEmpty itself, because
@@ -80,14 +80,20 @@ func contextMarshalingTests(t *testing.T, marshalFn func(Context) ([]byte, error
 	})
 }
 
+func jsonMarshalTestFn(c *Context) ([]byte, error) {
+	return json.Marshal(c)
+}
+
+func jsonStreamMarshalTestFn(c *Context) ([]byte, error) {
+	w := jwriter.NewWriter()
+	c.WriteToJSONWriter(&w)
+	return w.Bytes(), w.Error()
+}
+
 func TestContextJSONMarshal(t *testing.T) {
-	contextMarshalingTests(t, func(c Context) ([]byte, error) { return json.Marshal(c) })
+	contextMarshalingTests(t, jsonMarshalTestFn)
 }
 
 func TestContextWriteToJSONWriter(t *testing.T) {
-	contextMarshalingTests(t, func(c Context) ([]byte, error) {
-		w := jwriter.NewWriter()
-		c.WriteToJSONWriter(&w)
-		return w.Bytes(), w.Error()
-	})
+	contextMarshalingTests(t, jsonStreamMarshalTestFn)
 }

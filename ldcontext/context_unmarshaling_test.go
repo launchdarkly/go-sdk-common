@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
 	"gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
 
 	"github.com/stretchr/testify/assert"
@@ -115,81 +116,93 @@ func contextUnmarshalingTests(t *testing.T, unmarshalFn func(*Context, []byte) e
 	params = append(params, makeContextUnmarshalUnimportantVariantsParams()...)
 	params = append(params, makeContextUnmarshalFromOldUserSchemaParams()...)
 
-	for _, p := range params {
-		t.Run(p.json, func(t *testing.T) {
-			var c Context
-			err := unmarshalFn(&c, []byte(p.json))
-			assert.NoError(t, err)
-			assert.Equal(t, p.context, c)
-		})
-	}
+	t.Run("valid data", func(t *testing.T) {
+		for _, p := range params {
+			t.Run(p.json, func(t *testing.T) {
+				var c Context
+				err := unmarshalFn(&c, []byte(p.json))
+				assert.NoError(t, err)
+				assert.Equal(t, p.context, c)
+			})
+		}
+	})
+
+	t.Run("error cases", func(t *testing.T) {
+		for _, badJSON := range []string{
+			`null`,
+			`false`,
+			`1`,
+			`"x"`,
+			`[]`,
+			`{}`,
+
+			// wrong type for top-level property
+			`{"kind": null}`,
+			`{"kind": true}`,
+			`{"kind": "org", "key": null}`,
+			`{"kind": "org", "key": true}`,
+			`{"kind": "multi", "org": null}`,
+			`{"kind": "multi", "org": true}`,
+			`{"kind": "org", "key": "my-key", "name": true}`,
+
+			`{"kind": "org"}`,             // missing key
+			`{"kind": "user", "key": ""}`, // empty key not allowed in new-style context
+			`{"kind": "kind"}`,            // illegal kind
+
+			// wrong type within _meta
+			`{"kind": "org", "key": "my-key", "_meta": true}}`,
+			`{"kind": "org", "key": "my-key", "_meta": {"secondary": true}}}`,
+			`{"kind": "org", "key": "my-key", "_meta": {"transient": "yes"}}}`,
+			`{"kind": "org", "key": "my-key", "_meta": {"transient": "yes"}}}`,
+			`{"kind": "org", "key": "my-key", "_meta": {"privateAttributeNames": true}}}`,
+
+			`{"kind": "multi"}`,                                           // multi kind with no kinds
+			`{"kind": "multi", "user": {"key": ""}}`,                      // multi kind where subcontext fails validation
+			`{"kind": "multi", "user": {"key": true}}`,                    // multi kind where subcontext is malformed
+			`{"kind": "multi", "org": {"key": "x"}, "org": {"key": "y"}}`, // multi kind with repeated kind
+
+			// wrong types in old user schema
+			`{"key": null}`,
+			`{"key": true}`,
+			`{"key": "my-key", "secondary": true}`,
+			`{"key": "my-key", "anonymous": "x"}`,
+			`{"key": "my-key", "name": true}`,
+			`{"key": "my-key", "firstName": true}`,
+			`{"key": "my-key", "lastName": true}`,
+			`{"key": "my-key", "email": true}`,
+			`{"key": "my-key", "country": true}`,
+			`{"key": "my-key", "avatar": true}`,
+			`{"key": "my-key", "ip": true}`,
+			`{"key": "my-key", "custom": true}`,
+			`{"key": "my-key", "privateAttributeNames": true}`,
+		} {
+			t.Run(badJSON, func(t *testing.T) {
+				var c Context
+				err := unmarshalFn(&c, []byte(badJSON))
+				assert.Error(t, err)
+			})
+		}
+	})
+}
+
+func jsonUnmarshalTestFn(c *Context, data []byte) error {
+	return json.Unmarshal(data, c)
+}
+
+func jsonStreamUnmarshalTestFn(c *Context, data []byte) error {
+	r := jreader.NewReader(data)
+	c.ReadFromJSONReader(&r)
+	return r.Error()
 }
 
 func TestContextJSONUnmarshal(t *testing.T) {
-	contextUnmarshalingTests(t, func(c *Context, b []byte) error { return json.Unmarshal(b, c) })
+	contextUnmarshalingTests(t, jsonUnmarshalTestFn)
 }
 
-// func TestContextReadFromJSONReader(t *testing.T) {
-// 	contextUnmarshalingTests(t, func(c *Context, b []byte) error {
-// 		r := jreader.NewReader(b)
-// 		c.ReadFromJSONReader(&r)
-// 		return r.Error()
-// 	})
-// }
-
-func TestContextUnmarshalErrors(t *testing.T) {
-	for _, badJSON := range []string{
-		`null`,
-		`false`,
-		`1`,
-		`"x"`,
-		`[]`,
-		`{}`,
-
-		// wrong type for top-level property
-		`{"kind": null}`,
-		`{"kind": true}`,
-		`{"kind": "org", "key": null}`,
-		`{"kind": "org", "key": true}`,
-		`{"kind": "multi", "org": null}`,
-		`{"kind": "multi", "org": true}`,
-		`{"kind": "org", "key": "my-key", "name": true}`,
-
-		`{"kind": "org"}`,             // missing key
-		`{"kind": "user", "key": ""}`, // empty key not allowed in new-style context
-		`{"kind": "kind"}`,            // illegal kind
-
-		// wrong type within _meta
-		`{"kind": "org", "key": "my-key", "_meta": true}}`,
-		`{"kind": "org", "key": "my-key", "_meta": {"secondary": true}}}`,
-		`{"kind": "org", "key": "my-key", "_meta": {"transient": "yes"}}}`,
-		`{"kind": "org", "key": "my-key", "_meta": {"transient": "yes"}}}`,
-		`{"kind": "org", "key": "my-key", "_meta": {"privateAttributeNames": true}}}`,
-
-		`{"kind": "multi"}`,                                           // multi kind with no kinds
-		`{"kind": "multi", "user": {"key": ""}}`,                      // multi kind where subcontext fails validation
-		`{"kind": "multi", "user": {"key": true}}`,                    // multi kind where subcontext is malformed
-		`{"kind": "multi", "org": {"key": "x"}, "org": {"key": "y"}}`, // multi kind with repeated kind
-
-		// wrong types in old user schema
-		`{"key": null}`,
-		`{"key": true}`,
-		`{"key": "my-key", "secondary": true}`,
-		`{"key": "my-key", "anonymous": "x"}`,
-		`{"key": "my-key", "name": true}`,
-		`{"key": "my-key", "firstName": true}`,
-		`{"key": "my-key", "lastName": true}`,
-		`{"key": "my-key", "email": true}`,
-		`{"key": "my-key", "country": true}`,
-		`{"key": "my-key", "avatar": true}`,
-		`{"key": "my-key", "ip": true}`,
-		`{"key": "my-key", "custom": true}`,
-		`{"key": "my-key", "privateAttributeNames": true}`,
-	} {
-		t.Run(badJSON, func(t *testing.T) {
-			var c Context
-			err := c.UnmarshalJSON([]byte(badJSON))
-			assert.Error(t, err)
-		})
-	}
+func TestContextReadFromJSONReader(t *testing.T) {
+	contextUnmarshalingTests(t, func(c *Context, b []byte) error {
+		r := jreader.NewReader(b)
+		c.ReadFromJSONReader(&r)
+		return r.Error()
+	})
 }

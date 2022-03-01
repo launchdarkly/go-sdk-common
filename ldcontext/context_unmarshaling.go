@@ -27,29 +27,38 @@ import (
 // json.UnmarshalTypeError. If you want to unmarshal optional context data that might be null, pass
 // a **Context rather than a *Context to json.Unmarshal.
 func (c *Context) UnmarshalJSON(data []byte) error {
-	return unmarshalInternal(c, data)
+	r := jreader.NewReader(data)
+	c.ReadFromJSONReader(&r)
+	return r.Error()
 }
 
-func unmarshalInternal(c *Context, data []byte) error {
+// ReadFromJSONReader provides JSON deserialization for use with the jsonstream API.
+//
+// This implementation is used by the SDK in cases where it is more efficient than JSON.Unmarshal.
+// See https://github.com/launchdarkly/go-jsonstream for more details.
+func (c *Context) ReadFromJSONReader(r *jreader.Reader) {
 	// Do a first pass where we just check for the "kind" property, because that determines what
 	// schema we use to parse everything else.
-	kind, hasKind, err := parseKindOnly(data)
+	copyOfReader := *r
+	kind, hasKind, err := parseKindOnly(&copyOfReader)
 	if err != nil {
-		return err
+		r.AddError(err)
+		return
 	}
-	r := jreader.NewReader(data)
 	switch {
 	case !hasKind:
-		return unmarshalOldUserSchema(c, &r)
+		err = unmarshalOldUserSchema(c, r)
 	case kind == MultiKind:
-		return unmarshalMultiKind(c, &r)
+		err = unmarshalMultiKind(c, r)
 	default:
-		return unmarshalSingleKind(c, &r, "")
+		err = unmarshalSingleKind(c, r, "")
+	}
+	if err != nil {
+		r.AddError(err)
 	}
 }
 
-func parseKindOnly(data []byte) (Kind, bool, error) {
-	r := jreader.NewReader(data)
+func parseKindOnly(r *jreader.Reader) (Kind, bool, error) {
 	for obj := r.Object(); obj.Next(); {
 		if string(obj.Name()) == AttrNameKind {
 			return Kind(r.String()), true, r.Error()
