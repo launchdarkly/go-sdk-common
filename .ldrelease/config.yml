@@ -6,18 +6,20 @@ repo:
 
 jobs:
   - docker:
-      image: golang:1.14-buster
+      image: golang:1.16-buster
     template:
       name: go
     env:
-      LD_RELEASE_GO_IMPORT_PATH: gopkg.in/launchdarkly/go-sdk-common.v2
+      LD_RELEASE_GO_IMPORT_PATH: gopkg.in/launchdarkly/go-sdk-common.v3
 
 branches:
+  - name: v3
+    description: 3.x - for Go SDK 6+
   - name: v2
     description: 2.x - for Go SDK 5+
   - name: v1
     description: 1.x - for Go SDK 4.x
 
 publications:
-  - url: https://godoc.org/gopkg.in/launchdarkly/go-sdk-common.v2
+  - url: https://godoc.org/gopkg.in/launchdarkly/go-sdk-common.v3
     description: documentation

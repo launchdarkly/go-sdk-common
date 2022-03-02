@@ -1,8 +1,8 @@
 package lduser
 
 import (
-	"gopkg.in/launchdarkly/go-sdk-common.v2/ldcontext"
-	"gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
+	"gopkg.in/launchdarkly/go-sdk-common.v3/ldcontext"
+	"gopkg.in/launchdarkly/go-sdk-common.v3/ldvalue"
 )
 
 // NewUser creates a new user context identified by the given key.

@@ -4,7 +4,7 @@ import (
 	"sort"
 	"testing"
 
-	"gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
+	"gopkg.in/launchdarkly/go-sdk-common.v3/ldvalue"
 
 	m "github.com/launchdarkly/go-test-helpers/v2/matchers"
 

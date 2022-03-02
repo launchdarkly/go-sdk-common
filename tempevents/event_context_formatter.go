@@ -3,8 +3,8 @@
 package tempevents
 
 import (
-	"gopkg.in/launchdarkly/go-sdk-common.v2/ldcontext"
-	"gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
+	"gopkg.in/launchdarkly/go-sdk-common.v3/ldcontext"
+	"gopkg.in/launchdarkly/go-sdk-common.v3/ldvalue"
 
 	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
 )
