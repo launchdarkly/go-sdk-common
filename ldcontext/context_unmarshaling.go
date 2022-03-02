@@ -5,6 +5,17 @@ import (
 	"gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
 )
 
+// See internalAttributeNameIfPossible().
+var internCommonAttributeNamesMap = makeInternCommonAttributeNamesMap() //nolint:gochecknoglobals
+
+func makeInternCommonAttributeNamesMap() map[string]string {
+	ret := make(map[string]string)
+	for _, a := range []string{"email", "firstName", "lastName", "country", "ip", "avatar"} {
+		ret[a] = a
+	}
+	return ret
+}
+
 // UnmarshalJSON provides JSON deserialization for Context when using json.UnmarshalJSON.
 //
 // LaunchDarkly's JSON schema for contexts is standardized across SDKs. For unmarshaling, there are
@@ -39,8 +50,7 @@ func (c *Context) UnmarshalJSON(data []byte) error {
 func (c *Context) ReadFromJSONReader(r *jreader.Reader) {
 	// Do a first pass where we just check for the "kind" property, because that determines what
 	// schema we use to parse everything else.
-	copyOfReader := *r
-	kind, hasKind, err := parseKindOnly(&copyOfReader)
+	kind, hasKind, err := parseKindOnly(r)
 	if err != nil {
 		r.AddError(err)
 		return
@@ -58,7 +68,11 @@ func (c *Context) ReadFromJSONReader(r *jreader.Reader) {
 	}
 }
 
-func parseKindOnly(r *jreader.Reader) (Kind, bool, error) {
+func parseKindOnly(originalReader *jreader.Reader) (Kind, bool, error) {
+	// Make an exact copy of the original Reader so that changes in its state will not
+	// affect the original Reader; both point to the same []byte array, but each has its
+	// own "current position" and "next token" fields.
+	r := *originalReader
 	for obj := r.Object(); obj.Next(); {
 		if string(obj.Name()) == AttrNameKind {
 			return Kind(r.String()), true, r.Error()
@@ -116,7 +130,7 @@ func unmarshalSingleKind(c *Context, r *jreader.Reader, knownKind Kind) error {
 		default:
 			var v ldvalue.Value
 			v.ReadFromJSONReader(r)
-			b.SetValue(string(obj.Name()), v)
+			b.SetValue(internAttributeNameIfPossible(obj.Name()), v)
 		}
 	}
 	if r.Error() != nil {
@@ -178,7 +192,7 @@ func unmarshalOldUserSchema(c *Context, r *jreader.Reader) error {
 			}
 		case "firstName", "lastName", "email", "country", "avatar", "ip":
 			if s := readOptString(r); s.IsDefined() {
-				b.SetString(string(obj.Name()), s.StringValue())
+				b.SetString(internAttributeNameIfPossible(obj.Name()), s.StringValue())
 			}
 		default:
 			// In the old user schema, unrecognized top-level property names are ignored. Calling SkipValue
@@ -194,4 +208,25 @@ func unmarshalOldUserSchema(c *Context, r *jreader.Reader) error {
 	}
 	*c = b.Build()
 	return c.Err()
+}
+
+// internAttributeNameIfPossible takes a byte slice representing a property name, and returns an existing
+// string if we already have a string literal equal to that name; otherwise it converts the bytes to a string.
+//
+// The reason for this logic is that LaunchDarkly-enabled applications will generally send the same attribute
+// names over and over again, and we can guess what many of them will be. The old user model had standard
+// top-level properties with predefined names like "email", which now are mostly considered custom attributes
+// that are stored as map entries instead of struct fields. In a high-traffic environment where many contexts
+// are being deserialized, i.e. the LD client-side service endpoints, if we are servicing 1000 requests that
+// each have users with "firstName" and "lastName" attributes, it's desirable to reuse those strings rather
+// than allocating a new string each time; the overall memory usage may be negligible but the allocation and
+// GC overhead still adds up.
+//
+// Recent versions of Go have an optimization for looking up string(x) as a string key in a map if x is a
+// byte slice, so that it does *not* have to allocate a string instance just to do this.
+func internAttributeNameIfPossible(nameBytes []byte) string {
+	if internedName, ok := internCommonAttributeNamesMap[string(nameBytes)]; ok {
+		return internedName
+	}
+	return string(nameBytes)
 }
