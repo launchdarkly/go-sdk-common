@@ -184,7 +184,7 @@ func unmarshalOldUserSchema(c *Context, r *jreader.Reader) error {
 				value.ReadFromJSONReader(r)
 				b.SetValue(name, value)
 			}
-		case jsonPropPrivate:
+		case jsonPropOldUserPrivate:
 			for privateArr := r.ArrayOrNull(); privateArr.Next(); {
 				b.Private(r.String())
 				// Note, we use Private here rather than PrivateRef, because the AttrRef syntax is not used

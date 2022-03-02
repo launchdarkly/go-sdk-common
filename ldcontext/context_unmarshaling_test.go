@@ -69,13 +69,13 @@ func makeContextUnmarshalFromOldUserSchemaParams() []contextSerializationParams 
 			`{"key": "key6", "custom": {"attr1": {"a": 1}}}`},
 
 		{NewBuilder("key6").Name("x").Private("name", "email").Build(),
-			`{"key": "key6", "name": "x", "privateAttributes":["name", "email"]}`},
+			`{"key": "key6", "name": "x", "privateAttributeNames":["name", "email"]}`},
 		{NewBuilder("key6").Name("x").Private("name", "email").Build(),
-			`{"key": "key6", "name": "x", "privateAttributes":["name", "email"]}`},
+			`{"key": "key6", "name": "x", "privateAttributeNames":["name", "email"]}`},
 		{NewBuilder("key6").Name("x").Build(),
-			`{"key": "key6", "name": "x", "privateAttributes":[]}`},
+			`{"key": "key6", "name": "x", "privateAttributeNames":[]}`},
 		{NewBuilder("key6").Name("x").Build(),
-			`{"key": "key6", "name": "x", "privateAttributes":null}`},
+			`{"key": "key6", "name": "x", "privateAttributeNames":null}`},
 
 		{NewBuilder("key7").Name("x").Build(),
 			`{"key": "key7", "unknownTopLevelPropIsIgnored": {"a": 1}, "name": "x"}`},
@@ -174,7 +174,7 @@ func contextUnmarshalingTests(t *testing.T, unmarshalFn func(*Context, []byte) e
 			`{"key": "my-key", "avatar": true}`,
 			`{"key": "my-key", "ip": true}`,
 			`{"key": "my-key", "custom": true}`,
-			`{"key": "my-key", "privateAttributes": true}`,
+			`{"key": "my-key", "privateAttributeNames": true}`,
 		} {
 			t.Run(badJSON, func(t *testing.T) {
 				var c Context

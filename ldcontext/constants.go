@@ -24,4 +24,5 @@ const (
 	jsonPropSecondary        = "secondary"
 	jsonPropOldUserAnonymous = "anonymous"
 	jsonPropOldUserCustom    = "custom"
+	jsonPropOldUserPrivate   = "privateAttributeNames"
 )
