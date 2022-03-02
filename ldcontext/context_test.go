@@ -127,23 +127,6 @@ func TestGetValueForAttrRefSpecialTopLevelAttributes(t *testing.T) {
 		})
 	})
 
-	t.Run("secondary", func(t *testing.T) {
-		t.Run("single-kind, defined", func(t *testing.T) {
-			c := makeBasicBuilder().Secondary("my-value").Build()
-			expectAttributeFoundForRef(t, ldvalue.String("my-value"), c, "secondary")
-		})
-
-		t.Run("single-kind, undefined", func(t *testing.T) {
-			c := makeBasicBuilder().Build()
-			expectAttributeNotFoundForRef(t, c, "secondary")
-		})
-
-		t.Run("multi-kind", func(t *testing.T) {
-			c := NewMultiBuilder().Add(makeBasicBuilder().Secondary("my-value").Build()).Build()
-			expectAttributeNotFoundForRef(t, c, "secondary")
-		})
-	})
-
 	t.Run("transient", func(t *testing.T) {
 		t.Run("single-kind, defined, true", func(t *testing.T) {
 			c := makeBasicBuilder().Transient(true).Build()
@@ -163,6 +146,42 @@ func TestGetValueForAttrRefSpecialTopLevelAttributes(t *testing.T) {
 		t.Run("multi-kind", func(t *testing.T) {
 			c := NewMultiBuilder().Add(makeBasicBuilder().Transient(true).Build()).Build()
 			expectAttributeNotFoundForRef(t, c, "transient")
+		})
+	})
+}
+
+func TestGetValueForAttrRefCannotGetMetaProperties(t *testing.T) {
+	t.Run("privateAttributeNames", func(t *testing.T) {
+		t.Run("single-kind, defined", func(t *testing.T) {
+			c := makeBasicBuilder().Private("attr").Build()
+			expectAttributeNotFoundForRef(t, c, "privateAttributeNames")
+		})
+
+		t.Run("single-kind, undefined", func(t *testing.T) {
+			c := makeBasicBuilder().Build()
+			expectAttributeNotFoundForRef(t, c, "privateAttributeNames")
+		})
+
+		t.Run("multi-kind", func(t *testing.T) {
+			c := NewMultiBuilder().Add(makeBasicBuilder().Private("attr").Build()).Build()
+			expectAttributeNotFoundForRef(t, c, "privateAttributeNames")
+		})
+	})
+
+	t.Run("secondary", func(t *testing.T) {
+		t.Run("single-kind, defined", func(t *testing.T) {
+			c := makeBasicBuilder().Secondary("my-value").Build()
+			expectAttributeNotFoundForRef(t, c, "secondary")
+		})
+
+		t.Run("single-kind, undefined", func(t *testing.T) {
+			c := makeBasicBuilder().Build()
+			expectAttributeNotFoundForRef(t, c, "secondary")
+		})
+
+		t.Run("multi-kind", func(t *testing.T) {
+			c := NewMultiBuilder().Add(makeBasicBuilder().Secondary("my-value").Build()).Build()
+			expectAttributeNotFoundForRef(t, c, "secondary")
 		})
 	})
 }
@@ -246,24 +265,28 @@ func TestGetValueForInvalidAttrRef(t *testing.T) {
 }
 
 func expectAttributeFoundForName(t *testing.T, expected ldvalue.Value, c Context, attrName string) {
+	t.Helper()
 	value, ok := c.GetValue(attrName)
 	assert.True(t, ok, "attribute %q should have been found, but was not", attrName)
 	m.In(t).Assert(value, m.JSONEqual(expected))
 }
 
 func expectAttributeNotFoundForName(t *testing.T, c Context, attrName string) {
+	t.Helper()
 	value, ok := c.GetValue(attrName)
 	assert.False(t, ok, "attribute %q should not have been found, but was", attrName)
 	m.In(t).Assert(value, m.JSONEqual(nil))
 }
 
 func expectAttributeFoundForRef(t *testing.T, expected ldvalue.Value, c Context, attrRefString string) {
+	t.Helper()
 	value, ok := c.GetValueForAttrRef(NewAttrRef(attrRefString))
 	assert.True(t, ok, "attribute %q should have been found, but was not", attrRefString)
 	m.In(t).Assert(value, m.JSONEqual(expected))
 }
 
 func expectAttributeNotFoundForRef(t *testing.T, c Context, attrRefString string) {
+	t.Helper()
 	value, ok := c.GetValueForAttrRef(NewAttrRef(attrRefString))
 	assert.False(t, ok, "attribute %q should not have been found, but was", attrRefString)
 	m.In(t).Assert(value, m.JSONEqual(nil))

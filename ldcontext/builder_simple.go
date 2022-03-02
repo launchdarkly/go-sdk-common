@@ -267,23 +267,24 @@ func (b *Builder) SetString(attributeName string, value string) *Builder {
 
 // SetValue sets the value of any attribute for the Context.
 //
+// This includes only attributes that are addressable in evaluations-- not metadata such as
+// Secondary() or Private(). If attributeName is "secondary" or "privateAttributeNames", it is
+// ignored and no attribute is set.
+//
 // This method uses the ldvalue.Value type to represent a value of any JSON type: null, boolean,
 // number, string, array, or object. For all attribute names that do not have special meaning
 // to LaunchDarkly, you may use any of those types. Values of different JSON types are always
 // treated as different values: for instance, null, false, and the empty string "" are not the
 // the same, and the number 1 is not the same as the string "1".
 //
-// The following attribute names have special restrictions:
+// The following attribute names have special restrictions on their value types, and any value
+// of an unsupported type will be ignored (leaving the attribute unchanged):
 //
-// - "kind", "key": Must be a string. Values of other types are treated as an empty string.
-// See Builder.Kind() and Builder.Key().
+// - "kind", "key": Must be a string. See Builder.Kind() and Builder.Key().
 //
-// - "name", "secondary": Must be a string or null. Null is equivalent to not setting any value
-// for this attribute. Values of other types are treated as null. See Builder.Name() and
-// Builder.Secondary().
+// - "name": Must be a string or null. See Builder.Name() and Builder.OptName().
 //
-// - "transient": Must be a boolean. Values of other types are treated as false.
-// See Builder.Transient().
+// - "transient": Must be a boolean. See Builder.Transient().
 //
 // Values that are JSON arrays or objects have special behavior when referenced in flag/segment
 // rules.
@@ -295,15 +296,27 @@ func (b *Builder) SetString(attributeName string, value string) *Builder {
 func (b *Builder) SetValue(attributeName string, value ldvalue.Value) *Builder {
 	switch attributeName {
 	case AttrNameKind:
+		if !value.IsString() {
+			return b
+		}
 		return b.Kind(Kind(value.StringValue()))
 	case AttrNameKey:
+		if !value.IsString() {
+			return b
+		}
 		return b.Key(value.StringValue())
 	case AttrNameName:
+		if !value.IsString() && !value.IsNull() {
+			return b
+		}
 		return b.OptName(value.AsOptionalString())
-	case AttrNameSecondary:
-		return b.OptSecondary(value.AsOptionalString())
 	case AttrNameTransient:
+		if !value.IsBool() {
+			return b
+		}
 		return b.Transient(value.BoolValue())
+	case jsonPropPrivate, jsonPropSecondary:
+		return b
 	default:
 		if value.IsNull() {
 			if _, found := b.attributes[attributeName]; !found {
@@ -330,12 +343,14 @@ func (b *Builder) SetValue(attributeName string, value ldvalue.Value) *Builder {
 	}
 }
 
-// Secondary sets a secondary key attribute for the Context.
+// Secondary sets a secondary key for the Context.
 //
 // This affects feature flag targeting
 // (https://docs.launchdarkly.com/home/flags/targeting-users#targeting-rules-based-on-user-attributes)
 // as follows: if you have chosen to bucket users by a specific attribute, the secondary key (if set)
 // is used to further distinguish between users who are otherwise identical according to that attribute.
+// This value is not addressable as an attribute in evaluations: that is, a rule clause cannot use the
+// attribute name "secondary".
 //
 // Setting this value to an empty string is not the same as leaving it unset. If you need to clear this
 // attribute to a "no value" state, use OptSecondary().
@@ -343,11 +358,14 @@ func (b *Builder) Secondary(value string) *Builder {
 	return b.OptSecondary(ldvalue.NewOptionalString(value))
 }
 
-// OptSecondary sets a secondary key attribute for the Context.
+// OptSecondary sets a secondary key for the Context.
 //
 // Calling b.OptSecondary(ldvalue.NewOptionalString("x")) is equivalent to b.Secondary("x"), but since it uses
 // the OptionalString type, it also allows clearing a previously set name with
 // b.OptSecondary(ldvalue.OptionalString{}).
+//
+// This value is not addressable as an attribute in evaluations: that is, a rule clause cannot use the
+// attribute name "secondary".
 func (b *Builder) OptSecondary(value ldvalue.OptionalString) *Builder {
 	b.secondary = value
 	return b
@@ -362,6 +380,9 @@ func (b *Builder) OptSecondary(value ldvalue.OptionalString) *Builder {
 // Setting Transient to true excludes this Context from the database that is used by the dashboard. It does
 // not exclude it from analytics event data, so it is not the same as making attributes private; all
 // non-private attributes will still be included in events and data export.
+//
+// This value is also addressable in evaluations as the attribute name "transient". It is always treated as
+// a boolean true or false in evaluations.
 func (b *Builder) Transient(value bool) *Builder {
 	b.transient = value
 	return b
@@ -402,7 +423,8 @@ func (b *Builder) Private(attrRefStrings ...string) *Builder {
 }
 
 // PrivateRef is equivalent to Private but uses the AttrRef type. It designates any number of
-// Context attributes as private: that is, their values will not be sent to LaunchDarkly.
+// Context attributes, or values within them, as private: that is, their values will not be sent to
+// LaunchDarkly.
 //
 // The difference between PrivateRef and Private is simply a minor optimization: Private parses
 // each attribute reference when it is called (in case the reference uses a slash-delimited format),

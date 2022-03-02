@@ -20,10 +20,10 @@ func makeContextUnmarshalUnimportantVariantsParams() []contextSerializationParam
 			`{"kind": "user", "key": "my-key", "_meta": {}}`},
 
 		{NewBuilder("my-key").Build(),
-			`{"kind": "user", "key": "my-key", "_meta": {"secondary": null}}`},
+			`{"kind": "user", "key": "my-key", "transient": false}`},
 
 		{NewBuilder("my-key").Build(),
-			`{"kind": "user", "key": "my-key", "_meta": {"transient": false}}`},
+			`{"kind": "user", "key": "my-key", "_meta": {"secondary": null}}`},
 
 		{NewBuilder("my-key").Build(),
 			`{"kind": "user", "key": "my-key", "_meta": {"unknownPropIsIgnored": false}}`},
@@ -144,6 +144,8 @@ func contextUnmarshalingTests(t *testing.T, unmarshalFn func(*Context, []byte) e
 			`{"kind": "multi", "org": null}`,
 			`{"kind": "multi", "org": true}`,
 			`{"kind": "org", "key": "my-key", "name": true}`,
+			`{"kind": "org", "key": "my-key", "transient": "yes"}}`,
+			`{"kind": "org", "key": "my-key", "transient": null}}`,
 
 			`{"kind": "org"}`,             // missing key
 			`{"kind": "user", "key": ""}`, // empty key not allowed in new-style context
@@ -152,8 +154,6 @@ func contextUnmarshalingTests(t *testing.T, unmarshalFn func(*Context, []byte) e
 			// wrong type within _meta
 			`{"kind": "org", "key": "my-key", "_meta": true}}`,
 			`{"kind": "org", "key": "my-key", "_meta": {"secondary": true}}}`,
-			`{"kind": "org", "key": "my-key", "_meta": {"transient": "yes"}}}`,
-			`{"kind": "org", "key": "my-key", "_meta": {"transient": "yes"}}}`,
 			`{"kind": "org", "key": "my-key", "_meta": {"privateAttributeNames": true}}}`,
 
 			`{"kind": "multi"}`,                                           // multi kind with no kinds

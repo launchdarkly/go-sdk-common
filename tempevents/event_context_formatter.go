@@ -138,7 +138,7 @@ func (f *EventContextFormatter) writeContextInternalSingle(w *jwriter.Writer, c 
 			metaJSON.Name(ldcontext.AttrNameTransient).Bool(true)
 		}
 		if s, defined := c.Secondary().Get(); defined {
-			metaJSON.Name(ldcontext.AttrNameSecondary).String(s)
+			metaJSON.Name("secondary").String(s)
 		}
 		if len(redactedAttrs) != 0 {
 			privateAttrsJSON := metaJSON.Name("privateAttrs").Array()

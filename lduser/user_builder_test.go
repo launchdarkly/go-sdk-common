@@ -68,8 +68,13 @@ func TestUserBuilderCanSetPrivateAttributes(t *testing.T) {
 
 			assert.Equal(t, ldvalue.NewOptionalString("value"), optionalStringGetters[a](c))
 			value, found := c.GetValue(string(a))
-			assert.True(t, found)
-			assert.Equal(t, ldvalue.String("value"), value)
+			if a == SecondaryKeyAttribute {
+				// "secondary" is no longer addressable as an attribute in evaluations
+				assert.False(t, found)
+			} else {
+				assert.True(t, found)
+				assert.Equal(t, ldvalue.String("value"), value)
+			}
 
 			for a1 := range optionalStringSetters {
 				if a1 != a {

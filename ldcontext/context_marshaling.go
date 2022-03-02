@@ -47,14 +47,14 @@ func (c *Context) writeToJSONWriterInternalSingle(w *jwriter.Writer, withinKind 
 		obj.Name(k)
 		v.WriteToJSONWriter(w)
 	}
+	if c.transient {
+		obj.Name(AttrNameTransient).Bool(true)
+	}
 
-	if c.transient || c.secondary.IsDefined() || len(c.privateAttrs) != 0 {
+	if c.secondary.IsDefined() || len(c.privateAttrs) != 0 {
 		metaJSON := obj.Name(jsonPropMeta).Object()
-		if c.transient {
-			metaJSON.Name(AttrNameTransient).Bool(true)
-		}
 		if c.secondary.IsDefined() {
-			metaJSON.Name(AttrNameSecondary).String(c.secondary.StringValue())
+			metaJSON.Name(jsonPropSecondary).String(c.secondary.StringValue())
 		}
 		if len(c.privateAttrs) != 0 {
 			privateAttrsJSON := metaJSON.Name(jsonPropPrivate).Array()
