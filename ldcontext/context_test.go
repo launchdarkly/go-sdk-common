@@ -151,20 +151,20 @@ func TestGetValueForAttrRefSpecialTopLevelAttributes(t *testing.T) {
 }
 
 func TestGetValueForAttrRefCannotGetMetaProperties(t *testing.T) {
-	t.Run("privateAttributeNames", func(t *testing.T) {
+	t.Run("privateAttributes", func(t *testing.T) {
 		t.Run("single-kind, defined", func(t *testing.T) {
 			c := makeBasicBuilder().Private("attr").Build()
-			expectAttributeNotFoundForRef(t, c, "privateAttributeNames")
+			expectAttributeNotFoundForRef(t, c, "privateAttributes")
 		})
 
 		t.Run("single-kind, undefined", func(t *testing.T) {
 			c := makeBasicBuilder().Build()
-			expectAttributeNotFoundForRef(t, c, "privateAttributeNames")
+			expectAttributeNotFoundForRef(t, c, "privateAttributes")
 		})
 
 		t.Run("multi-kind", func(t *testing.T) {
 			c := NewMultiBuilder().Add(makeBasicBuilder().Private("attr").Build()).Build()
-			expectAttributeNotFoundForRef(t, c, "privateAttributeNames")
+			expectAttributeNotFoundForRef(t, c, "privateAttributes")
 		})
 	})
 

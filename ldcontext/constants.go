@@ -20,7 +20,7 @@ const (
 
 const (
 	jsonPropMeta             = "_meta"
-	jsonPropPrivate          = "privateAttributeNames"
+	jsonPropPrivate          = "privateAttributes"
 	jsonPropSecondary        = "secondary"
 	jsonPropOldUserAnonymous = "anonymous"
 	jsonPropOldUserCustom    = "custom"

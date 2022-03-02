@@ -268,7 +268,7 @@ func (b *Builder) SetString(attributeName string, value string) *Builder {
 // SetValue sets the value of any attribute for the Context.
 //
 // This includes only attributes that are addressable in evaluations-- not metadata such as
-// Secondary() or Private(). If attributeName is "secondary" or "privateAttributeNames", it is
+// Secondary() or Private(). If attributeName is "secondary" or "privateAttributes", it is
 // ignored and no attribute is set.
 //
 // This method uses the ldvalue.Value type to represent a value of any JSON type: null, boolean,

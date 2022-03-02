@@ -69,13 +69,13 @@ func makeContextUnmarshalFromOldUserSchemaParams() []contextSerializationParams 
 			`{"key": "key6", "custom": {"attr1": {"a": 1}}}`},
 
 		{NewBuilder("key6").Name("x").Private("name", "email").Build(),
-			`{"key": "key6", "name": "x", "privateAttributeNames":["name", "email"]}`},
+			`{"key": "key6", "name": "x", "privateAttributes":["name", "email"]}`},
 		{NewBuilder("key6").Name("x").Private("name", "email").Build(),
-			`{"key": "key6", "name": "x", "privateAttributeNames":["name", "email"]}`},
+			`{"key": "key6", "name": "x", "privateAttributes":["name", "email"]}`},
 		{NewBuilder("key6").Name("x").Build(),
-			`{"key": "key6", "name": "x", "privateAttributeNames":[]}`},
+			`{"key": "key6", "name": "x", "privateAttributes":[]}`},
 		{NewBuilder("key6").Name("x").Build(),
-			`{"key": "key6", "name": "x", "privateAttributeNames":null}`},
+			`{"key": "key6", "name": "x", "privateAttributes":null}`},
 
 		{NewBuilder("key7").Name("x").Build(),
 			`{"key": "key7", "unknownTopLevelPropIsIgnored": {"a": 1}, "name": "x"}`},
@@ -154,7 +154,7 @@ func contextUnmarshalingTests(t *testing.T, unmarshalFn func(*Context, []byte) e
 			// wrong type within _meta
 			`{"kind": "org", "key": "my-key", "_meta": true}}`,
 			`{"kind": "org", "key": "my-key", "_meta": {"secondary": true}}}`,
-			`{"kind": "org", "key": "my-key", "_meta": {"privateAttributeNames": true}}}`,
+			`{"kind": "org", "key": "my-key", "_meta": {"privateAttributes": true}}}`,
 
 			`{"kind": "multi"}`,                                           // multi kind with no kinds
 			`{"kind": "multi", "user": {"key": ""}}`,                      // multi kind where subcontext fails validation
@@ -174,7 +174,7 @@ func contextUnmarshalingTests(t *testing.T, unmarshalFn func(*Context, []byte) e
 			`{"key": "my-key", "avatar": true}`,
 			`{"key": "my-key", "ip": true}`,
 			`{"key": "my-key", "custom": true}`,
-			`{"key": "my-key", "privateAttributeNames": true}`,
+			`{"key": "my-key", "privateAttributes": true}`,
 		} {
 			t.Run(badJSON, func(t *testing.T) {
 				var c Context

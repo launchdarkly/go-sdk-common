@@ -54,7 +54,7 @@ func makeContextMarshalingAndUnmarshalingParams() []contextSerializationParams {
 			`{"kind": "user", "key": "key6", "attr1": {"a": 1}}`},
 
 		{NewBuilder("key7").Private("a").PrivateRef(NewAttrRef("/b/c")).Build(),
-			`{"kind": "user", "key": "key7", "_meta": {"privateAttributeNames": ["a", "/b/c"]}}`},
+			`{"kind": "user", "key": "key7", "_meta": {"privateAttributes": ["a", "/b/c"]}}`},
 
 		{NewMulti(NewWithKind("org", "my-org-key"), New("my-user-key")),
 			`{"kind": "multi", "org": {"key": "my-org-key"}, "user": {"key": "my-user-key"}}`},
