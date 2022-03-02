@@ -1,7 +1,7 @@
 package ldcontext
 
 import (
-	"gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
+	"gopkg.in/launchdarkly/go-sdk-common.v3/ldvalue"
 )
 
 // Context is a collection of attributes that can be referenced in flag evaluations and analytics events.
