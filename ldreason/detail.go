@@ -1,7 +1,7 @@
 package ldreason
 
 import (
-	"gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
+	"gopkg.in/launchdarkly/go-sdk-common.v3/ldvalue"
 )
 
 // EvaluationDetail is an object returned by LDClient.VariationDetail, combining the result of a

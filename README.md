@@ -1,6 +1,6 @@
 # LaunchDarkly Go SDK Core Packages
 
-[![Circle CI](https://circleci.com/gh/launchdarkly/go-sdk-common.svg?style=shield)](https://circleci.com/gh/launchdarkly/go-sdk-common) [![Documentation](https://img.shields.io/static/v1?label=go.dev&message=reference&color=00add8)](https://pkg.go.dev/gopkg.in/launchdarkly/go-sdk-common.v2)
+[![Circle CI](https://circleci.com/gh/launchdarkly/go-sdk-common.svg?style=shield)](https://circleci.com/gh/launchdarkly/go-sdk-common) [![Documentation](https://img.shields.io/static/v1?label=go.dev&message=reference&color=00add8)](https://pkg.go.dev/gopkg.in/launchdarkly/go-sdk-common.v3)
 
 ## Overview
 
@@ -8,13 +8,13 @@ This repository contains packages and types that are shared between the [LaunchD
 
 Applications using the LaunchDarkly Go SDK will generally use the `lduser` subpackage, which contains the `User` type, and may also use the `ldvalue` package, which contains the `Value` type that represents arbitrary JSON values. Other packages are less frequently used.
 
-Note that the base import path is `gopkg.in/launchdarkly/go-sdk-common.v2`, not `github.com/launchdarkly/go-sdk-common`. This ensures that the package can be referenced not only as a Go module, but also by projects that use older tools like `dep` and `govendor`, because the 5.x release of the Go SDK supports either module or non-module usage. Future releases of this package, and of the Go SDK, may drop support for non-module usage.
+Note that the base import path is `gopkg.in/launchdarkly/go-sdk-common.v3`, not `github.com/launchdarkly/go-sdk-common`. This ensures that the package can be referenced not only as a Go module, but also by projects that use older tools like `dep` and `govendor`, because the 5.x release of the Go SDK supports either module or non-module usage. Future releases of this package, and of the Go SDK, may drop support for non-module usage.
 
 Also, unlike `go-server-sdk` this does not have `server` in the name, because nothing in this repository is specific to the LaunchDarkly server-side model; it could be used in a client-side context.
 
 ## Supported Go versions
 
-This version of the project has been tested with Go 1.14 and higher.
+This version of the project has been tested with Go 1.16 and higher.
 
 ## Integration with easyjson
 
@@ -24,7 +24,7 @@ If you do not set the `launchdarkly_easyjson` build tag, `go-sdk-common` does no
 
 ## Learn more
 
-Check out our [documentation](http://docs.launchdarkly.com) for in-depth instructions on configuring and using LaunchDarkly. You can also head straight to the [complete reference guide for the Go SDK](http://docs.launchdarkly.com/docs/go-sdk-reference), or the [generated API documentation](https://godoc.org/gopkg.in/launchdarkly/go-sdk-common.v2) for this project.
+Check out our [documentation](http://docs.launchdarkly.com) for in-depth instructions on configuring and using LaunchDarkly. You can also head straight to the [complete reference guide for the Go SDK](http://docs.launchdarkly.com/docs/go-sdk-reference), or the [generated API documentation](https://godoc.org/gopkg.in/launchdarkly/go-sdk-common.v3) for this project.
 
 ## Contributing
 

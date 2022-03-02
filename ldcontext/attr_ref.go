@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"strings"
 
-	"gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
+	"gopkg.in/launchdarkly/go-sdk-common.v3/ldvalue"
 )
 
 // AttrRef is an attribute name or path expression identifying an attribute within a Context.

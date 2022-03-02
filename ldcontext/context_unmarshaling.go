@@ -2,7 +2,7 @@ package ldcontext
 
 import (
 	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
-	"gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
+	"gopkg.in/launchdarkly/go-sdk-common.v3/ldvalue"
 )
 
 // See internalAttributeNameIfPossible().
