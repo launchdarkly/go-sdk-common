@@ -31,10 +31,12 @@ clean:
 	go clean
 
 test: build
-	go test -race -v ./...
+	go test -run=not-a-real-test ./...  # just ensures that the tests compile
+	go test -race ./...
 
 test-easyjson: build-easyjson
-	go test -tags $(EASYJSON_TAG) -race -v ./...
+	go test -run=not-a-real-test -tags $(EASYJSON_TAG) ./...  # just ensures that the tests compile
+	go test -tags $(EASYJSON_TAG) -race ./...
 
 test-coverage: $(COVERAGE_PROFILE_RAW)
 	go run github.com/launchdarkly-labs/go-coverage-enforcer@latest $(COVERAGE_ENFORCER_FLAGS) -outprofile $(COVERAGE_PROFILE_FILTERED) $(COVERAGE_PROFILE_RAW)

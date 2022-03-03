@@ -92,16 +92,16 @@ func unmarshalSingleKindEasyJSON(c *Context, in *jlexer.Lexer, knownKind Kind) {
 			hasKey = true
 		case AttrNameName:
 			c.name = readOptStringEasyJSON(in)
+		case AttrNameTransient:
+			c.transient = in.Bool()
 		case jsonPropMeta:
 			in.Delim('{')
 			for !in.IsDelim('}') {
 				key := in.UnsafeBytes() // see comment above
 				in.WantColon()
 				switch string(key) {
-				case AttrNameSecondary:
+				case jsonPropSecondary:
 					c.secondary = readOptStringEasyJSON(in)
-				case AttrNameTransient:
-					c.transient = in.Bool()
 				case jsonPropPrivate:
 					if in.IsNull() {
 						in.Skip()
@@ -195,7 +195,7 @@ func unmarshalOldUserSchemaEasyJSON(c *Context, in *jlexer.Lexer) {
 			hasKey = true
 		case AttrNameName:
 			c.name = readOptStringEasyJSON(in)
-		case AttrNameSecondary:
+		case jsonPropSecondary:
 			c.secondary = readOptStringEasyJSON(in)
 		case jsonPropOldUserAnonymous:
 			if in.IsNull() {

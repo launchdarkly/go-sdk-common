@@ -126,7 +126,8 @@ func (c Context) GetOptionalAttributeNames(sliceIn []string) []string {
 	return slice
 }
 
-// GetValue looks up the value of any attribute of the Context by name.
+// GetValue looks up the value of any attribute of the Context by name. This includes only attributes
+// that are addressable in evaluations-- not metadata such as Secondary() or Private().
 //
 // For a single-kind context, the attribute name can be any custom attribute that was set by methods
 // like Builder.SetString(). It can also be one of the built-in ones like "kind", "key", or "name"; in
@@ -148,7 +149,9 @@ func (c Context) GetValue(attrName string) (ldvalue.Value, bool) {
 	return c.GetValueForAttrRef(NewAttrRefForName(attrName))
 }
 
-// GetValueForAttrRef looks up the value of any attribute of the Context based on an AttrRef.
+// GetValueForAttrRef looks up the value of any attribute of the Context, or a value contained within
+// an attribute, based on an AttrRef. This includes only attributes that are addressable in evaluations--
+// not metadata such as Secondary() or Private().
 //
 // This implements the same behavior that the SDK uses to resolve attribute references during a flag
 // evaluation. In a single-kind context, the AttrRef can represent a simple attribute name-- either a
@@ -179,7 +182,7 @@ func (c Context) GetValueForAttrRef(ref AttrRef) (ldvalue.Value, bool) {
 	}
 
 	// Look up attribute in single-kind context
-	value, ok := c.getTopLevelAttributeSingleKind(firstPathComponent)
+	value, ok := c.getTopLevelAddressableAttributeSingleKind(firstPathComponent)
 	if !ok {
 		return ldvalue.Null(), false
 	}
@@ -258,7 +261,7 @@ func (c Context) MultiKindByName(kind Kind) (Context, bool) {
 	return Context{}, false
 }
 
-func (c Context) getTopLevelAttributeSingleKind(name string) (ldvalue.Value, bool) {
+func (c Context) getTopLevelAddressableAttributeSingleKind(name string) (ldvalue.Value, bool) {
 	switch name {
 	case AttrNameKind:
 		return ldvalue.String(string(c.kind)), true
@@ -266,8 +269,6 @@ func (c Context) getTopLevelAttributeSingleKind(name string) (ldvalue.Value, boo
 		return ldvalue.String(c.key), true
 	case AttrNameName:
 		return c.name.AsValue(), c.name.IsDefined()
-	case AttrNameSecondary:
-		return c.secondary.AsValue(), c.secondary.IsDefined()
 	case AttrNameTransient:
 		return ldvalue.Bool(c.transient), true
 	default:

@@ -13,10 +13,6 @@ const (
 	// Context and Builder. This is the name of the attribute in JSON representations and flag rules.
 	AttrNameName = "name"
 
-	// AttrNameSecondary is a constant for the attribute name that corresponds to the Secondary()
-	// method in Context and Builder. This is the name of the attribute in JSON representations and flag rules.
-	AttrNameSecondary = "secondary"
-
 	// AttrNameTransient is a constant for the attribute name that corresponds to the Transient()
 	// method in Context and Builder. This is the name of the attribute in JSON representations and flag rules.
 	AttrNameTransient = "transient"
@@ -25,6 +21,7 @@ const (
 const (
 	jsonPropMeta             = "_meta"
 	jsonPropPrivate          = "privateAttributeNames"
+	jsonPropSecondary        = "secondary"
 	jsonPropOldUserAnonymous = "anonymous"
 	jsonPropOldUserCustom    = "custom"
 )

@@ -276,19 +276,10 @@ func (b *userBuilderImpl) SetAttribute(
 ) UserBuilderCanMakeAttributePrivate {
 	// The defined behavior of SetAttribute is that if it's used with the name of a built-in attribute
 	// like key or name, it modifies that attribute if and only if the value is of a compatible type.
+	// That's the same as the behavior of ldcontext.Builder.SetValue, except that UserBuilder also
+	// supports setting Secondary by name-- and, UserBuilder enforces that formerly-built-in
+	// attributes like Email can only be a string or null.
 	switch attribute {
-	case KeyAttribute:
-		if value.IsString() {
-			b.builder.Key(value.StringValue())
-		}
-	case NameAttribute:
-		if value.IsString() || value.IsNull() {
-			b.builder.OptName(value.AsOptionalString())
-		}
-	case FirstNameAttribute, LastNameAttribute, EmailAttribute, CountryAttribute, AvatarAttribute, IPAttribute:
-		if value.IsString() || value.IsNull() {
-			b.builder.SetValue(string(attribute), value)
-		}
 	case SecondaryKeyAttribute:
 		if value.IsString() || value.IsNull() {
 			b.builder.OptSecondary(value.AsOptionalString())
@@ -296,6 +287,10 @@ func (b *userBuilderImpl) SetAttribute(
 	case AnonymousAttribute:
 		if value.IsBool() || value.IsNull() {
 			b.builder.Transient(value.BoolValue())
+		}
+	case FirstNameAttribute, LastNameAttribute, EmailAttribute, CountryAttribute, AvatarAttribute, IPAttribute:
+		if value.IsString() || value.IsNull() {
+			b.builder.SetValue(string(attribute), value)
 		}
 	default:
 		b.builder.SetValue(string(attribute), value)

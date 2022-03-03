@@ -31,7 +31,7 @@ func makeStringGetter(name string) func(c ldcontext.Context) ldvalue.OptionalStr
 }
 
 var optionalStringGetters = map[UserAttribute]func(ldcontext.Context) ldvalue.OptionalString{
-	SecondaryKeyAttribute: makeStringGetter("secondary"),
+	SecondaryKeyAttribute: ldcontext.Context.Secondary, // Context doesn't consider this to be an addressable attribute
 	IPAttribute:           makeStringGetter("ip"),
 	CountryAttribute:      makeStringGetter("country"),
 	EmailAttribute:        makeStringGetter("email"),

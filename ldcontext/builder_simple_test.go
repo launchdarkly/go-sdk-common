@@ -201,12 +201,8 @@ func TestBuilderSetBuiltInAttributesByName(t *testing.T) {
 			makeBasicBuilder().SetString("kind", nonEmptyString))
 
 		assert.Equal(t,
-			makeBasicBuilder().Kind(nonEmptyString).Kind(""),                         // set it and then clear it
-			makeBasicBuilder().Kind(nonEmptyString).SetValue("kind", ldvalue.Null())) // using wrong type clears it
-
-		assert.Equal(t,
-			makeBasicBuilder().Kind(nonEmptyString).Kind(""),                             // set it and then clear it
-			makeBasicBuilder().Kind(nonEmptyString).SetValue("kind", ldvalue.Bool(true))) // using wrong type clears it
+			makeBasicBuilder().Kind(nonEmptyString),
+			makeBasicBuilder().Kind(nonEmptyString).SetValue("kind", ldvalue.Null())) // wrong type, ignored
 	})
 
 	t.Run("Key", func(t *testing.T) {
@@ -219,12 +215,8 @@ func TestBuilderSetBuiltInAttributesByName(t *testing.T) {
 			makeBasicBuilder().SetString("key", nonEmptyString))
 
 		assert.Equal(t,
-			makeBasicBuilder().Key(nonEmptyString).Key(""),                         // set it and then clear it
-			makeBasicBuilder().Key(nonEmptyString).SetValue("key", ldvalue.Null())) // using wrong type clears it
-
-		assert.Equal(t,
-			makeBasicBuilder().Key(nonEmptyString).Key(""),                             // set it and then clear it
-			makeBasicBuilder().Key(nonEmptyString).SetValue("key", ldvalue.Bool(true))) // using wrong type clears it
+			makeBasicBuilder().Key(nonEmptyString),
+			makeBasicBuilder().Key(nonEmptyString).SetValue("key", ldvalue.Null())) // wrong type, ignored
 	})
 
 	testNullableStringAttr := func(
@@ -246,8 +238,8 @@ func TestBuilderSetBuiltInAttributesByName(t *testing.T) {
 			setter(makeBasicBuilder(), nonEmptyString).SetValue(attrName, ldvalue.Null())) // null value clears previous value
 
 		assert.Equal(t,
-			makeBasicBuilder(), // attribute not set, defaults to null
-			setter(makeBasicBuilder(), nonEmptyString).SetValue(attrName, ldvalue.Bool(true))) // wrong type clears previous value
+			setter(makeBasicBuilder(), nonEmptyString),
+			setter(makeBasicBuilder(), nonEmptyString).SetValue(attrName, ldvalue.Bool(true))) // wrong type, ignored
 
 		assert.Equal(t,
 			setter(makeBasicBuilder(), ""), // "" is distinct from null
@@ -262,10 +254,6 @@ func TestBuilderSetBuiltInAttributesByName(t *testing.T) {
 		testNullableStringAttr(t, "name", (*Builder).Name, (*Builder).OptName)
 	})
 
-	t.Run("Secondary", func(t *testing.T) {
-		testNullableStringAttr(t, "secondary", (*Builder).Secondary, (*Builder).OptSecondary)
-	})
-
 	t.Run("Transient", func(t *testing.T) {
 		assert.Equal(t,
 			makeBasicBuilder().Transient(true),
@@ -276,12 +264,22 @@ func TestBuilderSetBuiltInAttributesByName(t *testing.T) {
 			makeBasicBuilder().Transient(true).SetValue("transient", ldvalue.Bool(false))) // overwrites previous value
 
 		assert.Equal(t,
-			makeBasicBuilder().Transient(false),
-			makeBasicBuilder().Transient(true).SetValue("transient", ldvalue.Null()))
+			makeBasicBuilder().Transient(true),
+			makeBasicBuilder().Transient(true).SetValue("transient", ldvalue.Null())) // wrong type, ignored
+	})
+}
 
+func TestBuilderSetValueCannotSetMetaProperties(t *testing.T) {
+	t.Run("privateAttributeNames", func(t *testing.T) {
 		assert.Equal(t,
-			makeBasicBuilder().Transient(false),
-			makeBasicBuilder().Transient(true).SetValue("transient", ldvalue.String("x"))) // wrong type sets it to false
+			makeBasicBuilder(),
+			makeBasicBuilder().SetValue("privateAttributeNames", ldvalue.ArrayOf(ldvalue.String("x"))))
+	})
+
+	t.Run("secondary", func(t *testing.T) {
+		assert.Equal(t,
+			makeBasicBuilder(),
+			makeBasicBuilder().SetValue("secondary", ldvalue.String("x")))
 	})
 }
 

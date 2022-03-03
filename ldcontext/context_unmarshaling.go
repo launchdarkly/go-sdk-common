@@ -110,13 +110,13 @@ func unmarshalSingleKind(c *Context, r *jreader.Reader, knownKind Kind) error {
 			hasKey = true
 		case AttrNameName:
 			b.OptName(readOptString(r))
+		case AttrNameTransient:
+			b.Transient(r.Bool())
 		case jsonPropMeta:
 			for metaObj := r.Object(); metaObj.Next(); {
 				switch string(metaObj.Name()) {
-				case AttrNameSecondary:
+				case jsonPropSecondary:
 					b.OptSecondary(readOptString(r))
-				case AttrNameTransient:
-					b.Transient(r.Bool())
 				case jsonPropPrivate:
 					for privateArr := r.ArrayOrNull(); privateArr.Next(); {
 						b.PrivateRef(NewAttrRef(r.String()))
@@ -172,7 +172,7 @@ func unmarshalOldUserSchema(c *Context, r *jreader.Reader) error {
 			hasKey = true
 		case AttrNameName:
 			b.OptName(readOptString(r))
-		case AttrNameSecondary:
+		case jsonPropSecondary:
 			b.OptSecondary(readOptString(r))
 		case jsonPropOldUserAnonymous:
 			value, _ := r.BoolOrNull()
