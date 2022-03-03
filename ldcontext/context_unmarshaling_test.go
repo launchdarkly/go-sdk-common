@@ -154,7 +154,7 @@ func contextUnmarshalingTests(t *testing.T, unmarshalFn func(*Context, []byte) e
 			// wrong type within _meta
 			`{"kind": "org", "key": "my-key", "_meta": true}}`,
 			`{"kind": "org", "key": "my-key", "_meta": {"secondary": true}}}`,
-			`{"kind": "org", "key": "my-key", "_meta": {"privateAttributeNames": true}}}`,
+			`{"kind": "org", "key": "my-key", "_meta": {"privateAttributes": true}}}`,
 
 			`{"kind": "multi"}`,                                           // multi kind with no kinds
 			`{"kind": "multi", "user": {"key": ""}}`,                      // multi kind where subcontext fails validation

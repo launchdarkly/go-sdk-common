@@ -222,7 +222,7 @@ func unmarshalOldUserSchemaEasyJSON(c *Context, in *jlexer.Lexer) {
 				in.WantComma()
 			}
 			in.Delim('}')
-		case jsonPropPrivate:
+		case jsonPropOldUserPrivate:
 			if in.IsNull() {
 				in.Skip()
 			} else {

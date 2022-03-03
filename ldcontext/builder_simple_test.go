@@ -270,10 +270,10 @@ func TestBuilderSetBuiltInAttributesByName(t *testing.T) {
 }
 
 func TestBuilderSetValueCannotSetMetaProperties(t *testing.T) {
-	t.Run("privateAttributeNames", func(t *testing.T) {
+	t.Run("privateAttributes", func(t *testing.T) {
 		assert.Equal(t,
 			makeBasicBuilder(),
-			makeBasicBuilder().SetValue("privateAttributeNames", ldvalue.ArrayOf(ldvalue.String("x"))))
+			makeBasicBuilder().SetValue("privateAttributes", ldvalue.ArrayOf(ldvalue.String("x"))))
 	})
 
 	t.Run("secondary", func(t *testing.T) {
