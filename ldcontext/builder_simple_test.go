@@ -1,6 +1,7 @@
 package ldcontext
 
 import (
+	"fmt"
 	"testing"
 
 	"gopkg.in/launchdarkly/go-sdk-common.v3/ldvalue"
@@ -188,85 +189,104 @@ func TestBuilderSetCustomAttributes(t *testing.T) {
 }
 
 func TestBuilderSetBuiltInAttributesByName(t *testing.T) {
-	const nonEmptyString = "x"
-	nonEmptyStringValue := ldvalue.String(nonEmptyString)
+	var boolFalse, boolTrue, stringEmpty, stringNonEmpty = ldvalue.Bool(false), ldvalue.Bool(true),
+		ldvalue.String("x"), ldvalue.String("")
+	var nullValue, intValue, floatValue, arrayValue, objectValue = ldvalue.Null(),
+		ldvalue.Int(1), ldvalue.Float64(1.5), ldvalue.ArrayOf(), ldvalue.ObjectBuild().Build()
 
-	t.Run("Kind", func(t *testing.T) {
-		assert.Equal(t,
-			makeBasicBuilder().Kind(nonEmptyString),
-			makeBasicBuilder().SetValue("kind", nonEmptyStringValue))
-
-		assert.Equal(t,
-			makeBasicBuilder().Kind(nonEmptyString),
-			makeBasicBuilder().SetString("kind", nonEmptyString))
-
-		assert.Equal(t,
-			makeBasicBuilder().Kind(nonEmptyString),
-			makeBasicBuilder().Kind(nonEmptyString).SetValue("kind", ldvalue.Null())) // wrong type, ignored
-	})
-
-	t.Run("Key", func(t *testing.T) {
-		assert.Equal(t,
-			makeBasicBuilder().Key(nonEmptyString),
-			makeBasicBuilder().SetValue("key", nonEmptyStringValue))
-
-		assert.Equal(t,
-			makeBasicBuilder().Key(nonEmptyString),
-			makeBasicBuilder().SetString("key", nonEmptyString))
-
-		assert.Equal(t,
-			makeBasicBuilder().Key(nonEmptyString),
-			makeBasicBuilder().Key(nonEmptyString).SetValue("key", ldvalue.Null())) // wrong type, ignored
-	})
-
-	testNullableStringAttr := func(
-		t *testing.T,
-		attrName string,
-		setter func(*Builder, string) *Builder,
-		optSetter func(*Builder, ldvalue.OptionalString) *Builder,
-	) {
-		assert.Equal(t,
-			setter(makeBasicBuilder(), nonEmptyString),
-			makeBasicBuilder().SetValue(attrName, nonEmptyStringValue))
-
-		assert.Equal(t,
-			setter(makeBasicBuilder(), nonEmptyString),
-			makeBasicBuilder().SetString(attrName, nonEmptyString))
-
-		assert.Equal(t,
-			makeBasicBuilder(), // attribute not set, defaults to null
-			setter(makeBasicBuilder(), nonEmptyString).SetValue(attrName, ldvalue.Null())) // null value clears previous value
-
-		assert.Equal(t,
-			setter(makeBasicBuilder(), nonEmptyString),
-			setter(makeBasicBuilder(), nonEmptyString).SetValue(attrName, ldvalue.Bool(true))) // wrong type, ignored
-
-		assert.Equal(t,
-			setter(makeBasicBuilder(), ""), // "" is distinct from null
-			makeBasicBuilder().SetValue(attrName, ldvalue.String("")))
-
-		assert.Equal(t,
-			setter(makeBasicBuilder(), ""),
-			makeBasicBuilder().SetString(attrName, ""))
+	type params struct {
+		name             string
+		equivalentSetter func(*Builder, ldvalue.Value)
+		good, bad        []ldvalue.Value
 	}
 
-	t.Run("Name", func(t *testing.T) {
-		testNullableStringAttr(t, "name", (*Builder).Name, (*Builder).OptName)
-	})
+	for _, p := range []params{
+		{
+			name:             "kind",
+			equivalentSetter: func(b *Builder, v ldvalue.Value) { b.Kind(Kind(v.StringValue())) },
+			good:             []ldvalue.Value{stringNonEmpty, stringEmpty},
+			bad:              []ldvalue.Value{nullValue, boolFalse, intValue, floatValue, arrayValue, objectValue},
+		},
+		{
+			name:             "key",
+			equivalentSetter: func(b *Builder, v ldvalue.Value) { b.Key(v.StringValue()) },
+			good:             []ldvalue.Value{stringNonEmpty, stringEmpty},
+			bad:              []ldvalue.Value{nullValue, boolFalse, intValue, floatValue, arrayValue, objectValue},
+		},
+		{
+			name:             "name",
+			equivalentSetter: func(b *Builder, v ldvalue.Value) { b.OptName(v.AsOptionalString()) },
+			good:             []ldvalue.Value{stringNonEmpty, stringEmpty, nullValue},
+			bad:              []ldvalue.Value{boolFalse, intValue, floatValue, arrayValue, objectValue},
+		},
+		{
+			name:             "transient",
+			equivalentSetter: func(b *Builder, v ldvalue.Value) { b.Transient(v.BoolValue()) },
+			good:             []ldvalue.Value{boolTrue, boolFalse},
+			bad:              []ldvalue.Value{nullValue, intValue, floatValue, stringEmpty, stringNonEmpty, arrayValue, objectValue},
+		},
+	} {
+		t.Run(p.name, func(t *testing.T) {
+			builder := makeBasicBuilder() // we will reuse this to prove that SetValue overwrites previous values
+			var lastGoodNonNullValue ldvalue.Value
 
-	t.Run("Transient", func(t *testing.T) {
-		assert.Equal(t,
-			makeBasicBuilder().Transient(true),
-			makeBasicBuilder().SetValue("transient", ldvalue.Bool(true)))
+			for _, goodValue := range p.good {
+				t.Run(fmt.Sprintf("can set to %s", goodValue.JSONString()), func(t *testing.T) {
+					previousState := *builder
 
-		assert.Equal(t,
-			makeBasicBuilder().Transient(false),                                           // for clarity, but it defaults to false
-			makeBasicBuilder().Transient(true).SetValue("transient", ldvalue.Bool(false))) // overwrites previous value
+					if !goodValue.IsNull() {
+						lastGoodNonNullValue = goodValue
+					}
+					expected := makeBasicBuilder()
+					p.equivalentSetter(expected, goodValue)
 
-		assert.Equal(t,
-			makeBasicBuilder().Transient(true),
-			makeBasicBuilder().Transient(true).SetValue("transient", ldvalue.Null())) // wrong type, ignored
-	})
+					builder.SetValue(p.name, goodValue)
+					assert.Equal(t, expected, builder)
+
+					b1 := previousState
+					assert.True(t, b1.TrySetValue(p.name, goodValue))
+					assert.Equal(t, *expected, b1)
+
+					b2 := previousState
+					switch goodValue.Type() {
+					case ldvalue.BoolType:
+						assert.Equal(t, expected, b2.SetBool(p.name, goodValue.BoolValue()))
+					case ldvalue.StringType:
+						assert.Equal(t, expected, b2.SetString(p.name, goodValue.StringValue()))
+					}
+				})
+			}
+			for _, badValue := range p.bad {
+				t.Run(fmt.Sprintf("cannot set to %s", badValue.JSONString()), func(t *testing.T) {
+					startingState := func() *Builder {
+						if lastGoodNonNullValue.IsDefined() {
+							return makeBasicBuilder().SetValue(p.name, lastGoodNonNullValue)
+						}
+						return makeBasicBuilder()
+					}
+
+					assert.Equal(t, startingState(), startingState().SetValue(p.name, badValue))
+
+					b := startingState()
+					assert.False(t, b.TrySetValue(p.name, badValue))
+					assert.Equal(t, startingState(), b)
+
+					switch badValue.Type() {
+					case ldvalue.BoolType:
+						assert.Equal(t, startingState(), startingState().SetBool(p.name, badValue.BoolValue()))
+					case ldvalue.NumberType:
+						if badValue.IsInt() {
+							assert.Equal(t, startingState(), startingState().SetInt(p.name, badValue.IntValue()))
+						} else {
+							assert.Equal(t, startingState(), startingState().SetFloat64(p.name, badValue.Float64Value()))
+						}
+					case ldvalue.StringType:
+						assert.Equal(t, startingState(), makeBasicBuilder().SetString(p.name, badValue.StringValue()))
+					}
+				})
+			}
+		})
+	}
 }
 
 func TestBuilderSetValueCannotSetMetaProperties(t *testing.T) {

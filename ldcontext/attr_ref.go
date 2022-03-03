@@ -89,6 +89,12 @@ func NewAttrRefForName(attrName string) AttrRef {
 	return AttrRef{singlePathComponent: attrName, rawPath: escapedPath}
 }
 
+// IsDefined returns true if the AttrRef has a value, meaning that it is not an uninitialized
+// AttrRef{}. That does not guarantee that the value is valid; use Err() to test that.
+func (a AttrRef) IsDefined() bool {
+	return a.rawPath != "" || a.err != nil
+}
+
 // Err returns nil for a valid AttrRef, or a non-nil error value for an invalid AttrRef.
 //
 // An AttrRef can only be invalid for the following reasons:
@@ -101,7 +107,7 @@ func NewAttrRefForName(attrName string) AttrRef {
 // exists in any given Context. For instance, NewAttrRef("name") is a valid AttrRef,
 // but a specific Context might or might not have a name.
 func (a AttrRef) Err() error {
-	if a.err == nil && a.singlePathComponent == "" && a.components == nil {
+	if a.err == nil && a.rawPath == "" {
 		return errAttributeEmpty
 	}
 	return a.err

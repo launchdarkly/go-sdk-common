@@ -1,6 +1,7 @@
 package ldcontext
 
 import (
+	"encoding/json"
 	"sort"
 	"testing"
 
@@ -257,6 +258,13 @@ func TestGetValueForAttrRefCustomAttributeSingleKind(t *testing.T) {
 		c := makeBasicBuilder().SetValue("my-attr", ldvalue.String("xyz")).Build()
 		expectAttributeNotFoundForRef(t, c, "/my-attr/1")
 	})
+}
+
+func TestContextString(t *testing.T) {
+	c := makeBasicBuilder().Name("x").Transient(true).SetString("attr", "value").Build()
+	j, _ := json.Marshal(c)
+	s := c.String()
+	m.In(t).Assert(json.RawMessage(s), m.JSONEqual(json.RawMessage(j)))
 }
 
 func TestGetValueForInvalidAttrRef(t *testing.T) {

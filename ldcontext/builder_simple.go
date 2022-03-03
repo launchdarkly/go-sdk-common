@@ -293,34 +293,47 @@ func (b *Builder) SetString(attributeName string, value string) *Builder {
 // attribute. Null is not a valid attribute value in the LaunchDarkly model; any expressions
 // in feature flags that reference an attribute with a null value will behave as if the
 // attribute did not exist.
+//
+// The return value is always the same Builder, for convenience (to allow method chaining).
 func (b *Builder) SetValue(attributeName string, value ldvalue.Value) *Builder {
+	_ = b.TrySetValue(attributeName, value)
+	return b
+}
+
+// TrySetValue sets the value of any attribute for the Context.
+//
+// This is the same as SetValue, except that it returns true for success, or false if the
+// parameters violated one of the restrictions described for SetValue (for instance,
+// attempting to set "key" to a value that was not a string).
+func (b *Builder) TrySetValue(attributeName string, value ldvalue.Value) bool {
 	switch attributeName {
 	case AttrNameKind:
 		if !value.IsString() {
-			return b
+			return false
 		}
-		return b.Kind(Kind(value.StringValue()))
+		b.Kind(Kind(value.StringValue()))
 	case AttrNameKey:
 		if !value.IsString() {
-			return b
+			return false
 		}
-		return b.Key(value.StringValue())
+		b.Key(value.StringValue())
 	case AttrNameName:
 		if !value.IsString() && !value.IsNull() {
-			return b
+			return false
 		}
-		return b.OptName(value.AsOptionalString())
+		b.OptName(value.AsOptionalString())
 	case AttrNameTransient:
 		if !value.IsBool() {
-			return b
+			return false
 		}
-		return b.Transient(value.BoolValue())
+		b.Transient(value.BoolValue())
 	case jsonPropPrivate, jsonPropSecondary:
-		return b
+		return false
 	default:
 		if value.IsNull() {
 			if _, found := b.attributes[attributeName]; !found {
-				return b
+				// Setting to null is same as removing, so if it doesn't exist anyway, there's nothing to do
+				return true
 			}
 		}
 		if b.attributes == nil {
@@ -339,8 +352,8 @@ func (b *Builder) SetValue(attributeName string, value ldvalue.Value) *Builder {
 		} else {
 			b.attributes[attributeName] = value
 		}
-		return b
 	}
+	return true
 }
 
 // Secondary sets a secondary key for the Context.

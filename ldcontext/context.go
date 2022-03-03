@@ -1,6 +1,8 @@
 package ldcontext
 
 import (
+	"encoding/json"
+
 	"gopkg.in/launchdarkly/go-sdk-common.v3/ldvalue"
 )
 
@@ -259,6 +261,20 @@ func (c Context) MultiKindByName(kind Kind) (Context, bool) {
 		}
 	}
 	return Context{}, false
+}
+
+// String returns a string representation of the Context.
+//
+// This is currently defined as being the same as the JSON representation, since that is the simplest
+// way to represent all of the Context properties. However, Go's fmt.Stringer interface is deliberately
+// nonspecific about what format a type may use for its string representation, and application code
+// should not rely on String() always being the same as the JSON representation. If you specifically
+// want the latter, use json.Marshal. However, if you do use String() for convenience in debugging or
+// logging, you should assume that the output may contain any and all properties of the Context, so if
+// there is anything you do not want to be visible, you should write your own formatting logic.
+func (c Context) String() string {
+	data, _ := json.Marshal(c)
+	return string(data)
 }
 
 func (c Context) getTopLevelAddressableAttributeSingleKind(name string) (ldvalue.Value, bool) {
