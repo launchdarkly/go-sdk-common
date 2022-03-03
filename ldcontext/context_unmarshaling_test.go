@@ -127,28 +127,38 @@ func makeAllContextUnmarshalingParams() []contextSerializationParams {
 	return params
 }
 
-func makeAllContextUnmarshalingEventOutputFormatParams() []contextSerializationParams {
-	var ret []contextSerializationParams
+func makeEventOutputFormatUnmarshalingParams() []contextSerializationParams {
+	var params []contextSerializationParams
 	for _, p := range makeAllContextUnmarshalingParams() {
-		transformed := p
-
-		// In the regular test inputs, redactedAttributes and privateAttrs are property names we do *not*
-		// expect to see because they are for the event output format, so the test inputs that reference
-		// them have a "this should be ignored" expectation.
-		transformed.json = strings.ReplaceAll(transformed.json, `"redactedAttributes"`, `<temp1>`)
-		transformed.json = strings.ReplaceAll(transformed.json, `"privateAttrs"`, `<temp2>`) // old schema
-
-		transformed.json = strings.ReplaceAll(transformed.json, `"privateAttributes"`, `"redactedAttributes"`)
-		transformed.json = strings.ReplaceAll(transformed.json, `"privateAttributeNames"`, `"privateAttrs"`) // old schema
-
-		// ...so, in the event output format, we use privateAttributes and privateAttributeNames for the
-		// "this should be ignored" cases.
-		transformed.json = strings.ReplaceAll(transformed.json, `<temp1>`, `"privateAttributes"`)
-		transformed.json = strings.ReplaceAll(transformed.json, `<temp2>`, `"privateAttributeNames"`)
-
-		ret = append(ret, transformed)
+		// The regular input data includes some contexts with _meta.privateAttributes or privateAttributeNames--
+		// which in the regular format will get parsed, but in the event format they are ignored. It also
+		// includes some contexts with _meta.redactedAttributes or privateAttrs-- which in the regular format
+		// would be ignored, but are parsed in the event format.
+		if strings.Contains(p.json, `"redactedAttributes"`) || strings.Contains(p.json, `"privateAttrs"`) {
+			continue
+		}
+		p.context.privateAttrs = nil
+		params = append(params, p)
 	}
-	return ret
+	params = append(params,
+		contextSerializationParams{
+			NewBuilder("my-key").Build(),
+			`{"kind": "user", "key": "my-key", "_meta": {"redactedAttributes": []}}`,
+		},
+		contextSerializationParams{
+			NewBuilder("my-key").PreviouslyRedacted([]string{"a", "b"}).Build(),
+			`{"kind": "user", "key": "my-key", "_meta": {"redactedAttributes": ["a", "b"]}}`,
+		},
+		contextSerializationParams{
+			NewBuilder("my-key").Build(),
+			`{"key": "my-key", "privateAttrs": []}`, // old-style user
+		},
+		contextSerializationParams{
+			NewBuilder("my-key").PreviouslyRedacted([]string{"a", "b"}).Build(),
+			`{"key": "my-key", "privateAttrs": ["a", "b"]}`, // old-style user
+		},
+	)
+	return params
 }
 
 func contextUnmarshalingTests(t *testing.T, unmarshalFn func(*Context, []byte) error) {
@@ -240,15 +250,13 @@ func TestContextReadFromJSONReader(t *testing.T) {
 }
 
 func TestContextUnmarshalEventOutputFormat(t *testing.T) {
-	t.Run("valid data", func(t *testing.T) {
-		for _, p := range makeAllContextUnmarshalingEventOutputFormatParams() {
-			t.Run(p.json, func(t *testing.T) {
-				r := jreader.NewReader([]byte(p.json))
-				var c Context
-				ContextSerialization{}.UnmarshalFromJSONReaderEventOutputFormat(&r, &c)
-				assert.NoError(t, r.Error())
-				assert.Equal(t, p.context, c)
-			})
-		}
-	})
+	for _, p := range makeEventOutputFormatUnmarshalingParams() {
+		t.Run(p.json, func(t *testing.T) {
+			r := jreader.NewReader([]byte(p.json))
+			var c Context
+			ContextSerialization{}.UnmarshalFromJSONReaderEventOutputFormat(&r, &c)
+			assert.NoError(t, r.Error())
+			assert.Equal(t, p.context, c)
+		})
+	}
 }

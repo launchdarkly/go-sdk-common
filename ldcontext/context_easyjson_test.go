@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/mailru/easyjson"
+	"github.com/mailru/easyjson/jlexer"
+	"github.com/stretchr/testify/assert"
 )
 
 func easyJSONMarshalTestFn(c *Context) ([]byte, error) {
@@ -23,4 +25,16 @@ func TestContextEasyJSONMarshal(t *testing.T) {
 
 func TestContextEasyJSONUnmarshal(t *testing.T) {
 	contextUnmarshalingTests(t, easyJSONUnmarshalTestFn)
+}
+
+func TestContextEasyJSONUnmarshalEventOutputFormat(t *testing.T) {
+	for _, p := range makeEventOutputFormatUnmarshalingParams() {
+		t.Run(p.json, func(t *testing.T) {
+			in := jlexer.Lexer{Data: []byte(p.json)}
+			var c Context
+			ContextSerialization{}.UnmarshalFromEasyJSONLexerEventOutputFormat(&in, &c)
+			assert.NoError(t, in.Error())
+			assert.Equal(t, p.context, c)
+		})
+	}
 }

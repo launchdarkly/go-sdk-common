@@ -36,6 +36,10 @@ import (
 //
 // For more information, see: https://gopkg.in/launchdarkly/go-jsonstream.v1
 
+// Arbitrary preallocation size that's likely to be longer than we will need for private/redacted
+// attribute lists, to minimize reallocations during unmarshaling.
+const initialAttrListAllocSize = 10
+
 // MarshalEasyJSON is the marshaler method for Context when using the EasyJSON API. Because
 // marshaling of contexts is not a requirement in high-traffic LaunchDarkly services, the
 // current implementation delegates to the default non-EasyJSON marshaler.
@@ -73,15 +77,15 @@ func (s ContextSerialization) UnmarshalFromEasyJSONLexer(in *jlexer.Lexer, c *Co
 
 // UnmarshalFromEasyJSONLexerEventOutputFormat unmarshals a Context with the EasyJSON API,
 // using the alternate JSON schema that is used for contexts in analytics event data, where the
-// property _meta.redactedAttributes is translated to _meta.privateAttributes. This can be used
-// by the Relay Proxy or other LaunchDarkly services when reading events sent by SDKs.
+// property _meta.redactedAttributes is translated to Builder.PreviouslyRedacted(). This can be
+// used by the Relay Proxy or other LaunchDarkly services when reading events sent by SDKs.
 //
 // The marshaler for this schema is not implemented in go-sdk-common; all event output is
 // produced by the go-sdk-events package.
 //
 // This method is only available when compiling with the build tag "launchdarkly_easyjson".
 func (s ContextSerialization) UnmarshalFromEasyJSONLexerEventOutputFormat(in *jlexer.Lexer, c *Context) {
-	unmarshalFromEasyJSONLexer(in, c, false)
+	unmarshalFromEasyJSONLexer(in, c, true)
 }
 
 func unmarshalFromEasyJSONLexer(in *jlexer.Lexer, c *Context, isEventOutputFormat bool) {
@@ -145,13 +149,29 @@ func unmarshalSingleKindEasyJSON(c *Context, in *jlexer.Lexer, knownKind Kind, i
 					if isEventOutputFormat || in.IsNull() {
 						in.SkipRecursive()
 					} else {
-						readPrivateAttrRefsEasyJSON(in, c)
+						in.Delim('[')
+						for !in.IsDelim(']') {
+							if c.privateAttrs == nil {
+								c.privateAttrs = make([]AttrRef, 0, initialAttrListAllocSize)
+							}
+							c.privateAttrs = append(c.privateAttrs, NewAttrRef(in.String()))
+							in.WantComma()
+						}
+						in.Delim(']')
 					}
 				case jsonPropRedacted:
 					if !isEventOutputFormat || in.IsNull() {
 						in.SkipRecursive()
 					} else {
-						readPrivateAttrRefsEasyJSON(in, c)
+						in.Delim('[')
+						for !in.IsDelim(']') {
+							if c.redactedAttrs == nil {
+								c.redactedAttrs = make([]string, 0, initialAttrListAllocSize)
+							}
+							c.redactedAttrs = append(c.redactedAttrs, in.String())
+							in.WantComma()
+						}
+						in.Delim(']')
 					}
 				default:
 					// Unrecognized property names within _meta are ignored. Calling SkipRecursive makes the Lexer
@@ -266,13 +286,29 @@ func unmarshalOldUserSchemaEasyJSON(c *Context, in *jlexer.Lexer, isEventOutputF
 			if isEventOutputFormat || in.IsNull() {
 				in.SkipRecursive()
 			} else {
-				readPrivateAttrNamesEasyJSON(in, c)
+				in.Delim('[')
+				for !in.IsDelim(']') {
+					if c.privateAttrs == nil {
+						c.privateAttrs = make([]AttrRef, 0, initialAttrListAllocSize)
+					}
+					c.privateAttrs = append(c.privateAttrs, NewAttrRefForName(in.String()))
+					in.WantComma()
+				}
+				in.Delim(']')
 			}
 		case jsonPropOldUserRedacted:
 			if !isEventOutputFormat || in.IsNull() {
 				in.SkipRecursive()
 			} else {
-				readPrivateAttrNamesEasyJSON(in, c)
+				in.Delim('[')
+				for !in.IsDelim(']') {
+					if c.redactedAttrs == nil {
+						c.redactedAttrs = make([]string, 0, initialAttrListAllocSize)
+					}
+					c.redactedAttrs = append(c.redactedAttrs, in.String())
+					in.WantComma()
+				}
+				in.Delim(']')
 			}
 		case "firstName", "lastName", "email", "country", "avatar", "ip":
 			if in.IsNull() {
@@ -328,22 +364,4 @@ func readOptStringEasyJSON(in *jlexer.Lexer) ldvalue.OptionalString {
 	} else {
 		return ldvalue.NewOptionalString(in.String())
 	}
-}
-
-func readPrivateAttrRefsEasyJSON(in *jlexer.Lexer, c *Context) {
-	in.Delim('[')
-	for !in.IsDelim(']') {
-		c.privateAttrs = append(c.privateAttrs, NewAttrRef(in.String()))
-		in.WantComma()
-	}
-	in.Delim(']')
-}
-
-func readPrivateAttrNamesEasyJSON(in *jlexer.Lexer, c *Context) {
-	in.Delim('[')
-	for !in.IsDelim(']') {
-		c.privateAttrs = append(c.privateAttrs, NewAttrRefForName(in.String()))
-		in.WantComma()
-	}
-	in.Delim(']')
 }

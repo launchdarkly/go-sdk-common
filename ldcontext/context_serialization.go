@@ -20,8 +20,8 @@ func (s ContextSerialization) UnmarshalFromJSONReader(r *jreader.Reader, c *Cont
 
 // UnmarshalFromJSONReaderEventOutputFormat unmarshals a Context with the jsonstream Reader API,
 // using the alternate JSON schema that is used for contexts in analytics event data, where the
-// property _meta.redactedAttributes is translated to _meta.privateAttributes. This can be used
-// by the Relay Proxy or other LaunchDarkly services when reading events sent by SDKs.
+// property _meta.redactedAttributes is translated into Builder.PreviouslyRedacted(). This can be
+// used by the Relay Proxy or other LaunchDarkly services when reading events sent by SDKs.
 //
 // The marshaler for this schema is not implemented in go-sdk-common; all event output is
 // produced by the go-sdk-events package.

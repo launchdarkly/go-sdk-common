@@ -118,11 +118,17 @@ func unmarshalSingleKind(c *Context, r *jreader.Reader, knownKind Kind, isEventO
 					if isEventOutputFormat {
 						_ = r.SkipValue()
 					} else {
-						readPrivateAttrRefs(r, &b)
+						for privateArr := r.ArrayOrNull(); privateArr.Next(); {
+							b.PrivateRef(NewAttrRef(r.String()))
+						}
 					}
 				case jsonPropRedacted:
 					if isEventOutputFormat {
-						readPrivateAttrRefs(r, &b)
+						values := make([]string, 0, 10) // arbitrary initial capacity to minimize reallocations
+						for redactedArr := r.ArrayOrNull(); redactedArr.Next(); {
+							values = append(values, r.String())
+						}
+						b.PreviouslyRedacted(values)
 					} else {
 						_ = r.SkipValue()
 					}
@@ -193,11 +199,19 @@ func unmarshalOldUserSchema(c *Context, r *jreader.Reader, isEventOutputFormat b
 			if isEventOutputFormat {
 				_ = r.SkipValue()
 			} else {
-				readPrivateAttrNames(r, &b)
+				for privateArr := r.ArrayOrNull(); privateArr.Next(); {
+					b.Private(r.String())
+					// Note, we use Private here rather than PrivateRef, because the AttrRef syntax is not used
+					// in the old user schema; each string here is by definition a literal attribute name.
+				}
 			}
 		case jsonPropOldUserRedacted:
 			if isEventOutputFormat {
-				readPrivateAttrNames(r, &b)
+				values := make([]string, 0, 10) // arbitrary initial capacity to minimize reallocations
+				for redactedArr := r.ArrayOrNull(); redactedArr.Next(); {
+					values = append(values, r.String())
+				}
+				b.PreviouslyRedacted(values)
 			} else {
 				_ = r.SkipValue()
 			}
@@ -240,18 +254,4 @@ func internAttributeNameIfPossible(nameBytes []byte) string {
 		return internedName
 	}
 	return string(nameBytes)
-}
-
-func readPrivateAttrRefs(r *jreader.Reader, b *Builder) {
-	for privateArr := r.ArrayOrNull(); privateArr.Next(); {
-		b.PrivateRef(NewAttrRef(r.String()))
-	}
-}
-
-func readPrivateAttrNames(r *jreader.Reader, b *Builder) {
-	for privateArr := r.ArrayOrNull(); privateArr.Next(); {
-		b.Private(r.String())
-		// Note, we use Private here rather than PrivateRef, because the AttrRef syntax is not used
-		// in the old user schema; each string here is by definition a literal attribute name.
-	}
 }
