@@ -1,8 +1,9 @@
 package ldcontext
 
 import (
-	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
 	"gopkg.in/launchdarkly/go-sdk-common.v3/ldvalue"
+
+	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
 )
 
 // See internalAttributeNameIfPossible().
@@ -39,15 +40,11 @@ func makeInternCommonAttributeNamesMap() map[string]string {
 // a **Context rather than a *Context to json.Unmarshal.
 func (c *Context) UnmarshalJSON(data []byte) error {
 	r := jreader.NewReader(data)
-	c.ReadFromJSONReader(&r)
+	ContextSerialization{}.UnmarshalFromJSONReader(&r, c)
 	return r.Error()
 }
 
-// ReadFromJSONReader provides JSON deserialization for use with the jsonstream API.
-//
-// This implementation is used by the SDK in cases where it is more efficient than JSON.Unmarshal.
-// See https://github.com/launchdarkly/go-jsonstream for more details.
-func (c *Context) ReadFromJSONReader(r *jreader.Reader) {
+func unmarshalFromJSONReader(r *jreader.Reader, c *Context, isEventOutputFormat bool) {
 	// Do a first pass where we just check for the "kind" property, because that determines what
 	// schema we use to parse everything else.
 	kind, hasKind, err := parseKindOnly(r)
@@ -57,11 +54,11 @@ func (c *Context) ReadFromJSONReader(r *jreader.Reader) {
 	}
 	switch {
 	case !hasKind:
-		err = unmarshalOldUserSchema(c, r)
+		err = unmarshalOldUserSchema(c, r, isEventOutputFormat)
 	case kind == MultiKind:
-		err = unmarshalMultiKind(c, r)
+		err = unmarshalMultiKind(c, r, isEventOutputFormat)
 	default:
-		err = unmarshalSingleKind(c, r, "")
+		err = unmarshalSingleKind(c, r, "", isEventOutputFormat)
 	}
 	if err != nil {
 		r.AddError(err)
@@ -95,7 +92,7 @@ func readOptString(r *jreader.Reader) ldvalue.OptionalString {
 	return ldvalue.OptionalString{}
 }
 
-func unmarshalSingleKind(c *Context, r *jreader.Reader, knownKind Kind) error {
+func unmarshalSingleKind(c *Context, r *jreader.Reader, knownKind Kind, isEventOutputFormat bool) error {
 	var b Builder
 	if knownKind != "" {
 		b.Kind(knownKind)
@@ -118,8 +115,16 @@ func unmarshalSingleKind(c *Context, r *jreader.Reader, knownKind Kind) error {
 				case jsonPropSecondary:
 					b.OptSecondary(readOptString(r))
 				case jsonPropPrivate:
-					for privateArr := r.ArrayOrNull(); privateArr.Next(); {
-						b.PrivateRef(NewAttrRef(r.String()))
+					if isEventOutputFormat {
+						_ = r.SkipValue()
+					} else {
+						readPrivateAttrRefs(r, &b)
+					}
+				case jsonPropRedacted:
+					if isEventOutputFormat {
+						readPrivateAttrRefs(r, &b)
+					} else {
+						_ = r.SkipValue()
 					}
 				default:
 					// Unrecognized property names within _meta are ignored. Calling SkipValue makes the Reader
@@ -143,7 +148,7 @@ func unmarshalSingleKind(c *Context, r *jreader.Reader, knownKind Kind) error {
 	return c.Err()
 }
 
-func unmarshalMultiKind(c *Context, r *jreader.Reader) error {
+func unmarshalMultiKind(c *Context, r *jreader.Reader, isEventOutputFormat bool) error {
 	var b MultiBuilder
 	for obj := r.Object(); obj.Next(); {
 		name := string(obj.Name())
@@ -152,7 +157,7 @@ func unmarshalMultiKind(c *Context, r *jreader.Reader) error {
 			continue
 		}
 		var subContext Context
-		if err := unmarshalSingleKind(&subContext, r, Kind(name)); err != nil {
+		if err := unmarshalSingleKind(&subContext, r, Kind(name), isEventOutputFormat); err != nil {
 			return err
 		}
 		b.Add(subContext)
@@ -161,7 +166,7 @@ func unmarshalMultiKind(c *Context, r *jreader.Reader) error {
 	return c.Err()
 }
 
-func unmarshalOldUserSchema(c *Context, r *jreader.Reader) error {
+func unmarshalOldUserSchema(c *Context, r *jreader.Reader, isEventOutputFormat bool) error {
 	var b Builder
 	b.setAllowEmptyKey(true)
 	hasKey := false
@@ -185,10 +190,16 @@ func unmarshalOldUserSchema(c *Context, r *jreader.Reader) error {
 				b.SetValue(name, value)
 			}
 		case jsonPropOldUserPrivate:
-			for privateArr := r.ArrayOrNull(); privateArr.Next(); {
-				b.Private(r.String())
-				// Note, we use Private here rather than PrivateRef, because the AttrRef syntax is not used
-				// in the old user schema; each string here is by definition a literal attribute name.
+			if isEventOutputFormat {
+				_ = r.SkipValue()
+			} else {
+				readPrivateAttrNames(r, &b)
+			}
+		case jsonPropOldUserRedacted:
+			if isEventOutputFormat {
+				readPrivateAttrNames(r, &b)
+			} else {
+				_ = r.SkipValue()
 			}
 		case "firstName", "lastName", "email", "country", "avatar", "ip":
 			if s := readOptString(r); s.IsDefined() {
@@ -229,4 +240,18 @@ func internAttributeNameIfPossible(nameBytes []byte) string {
 		return internedName
 	}
 	return string(nameBytes)
+}
+
+func readPrivateAttrRefs(r *jreader.Reader, b *Builder) {
+	for privateArr := r.ArrayOrNull(); privateArr.Next(); {
+		b.PrivateRef(NewAttrRef(r.String()))
+	}
+}
+
+func readPrivateAttrNames(r *jreader.Reader, b *Builder) {
+	for privateArr := r.ArrayOrNull(); privateArr.Next(); {
+		b.Private(r.String())
+		// Note, we use Private here rather than PrivateRef, because the AttrRef syntax is not used
+		// in the old user schema; each string here is by definition a literal attribute name.
+	}
 }

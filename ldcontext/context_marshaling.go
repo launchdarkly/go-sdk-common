@@ -13,24 +13,9 @@ import (
 // If the Context is invalid (that is, it returns a non-nil Error()) then marshaling fails with the
 // same error.
 func (c Context) MarshalJSON() ([]byte, error) {
-	return jwriter.MarshalJSONWithWriter(c)
-}
-
-// WriteToJSONWriter provides JSON serialization for use with the jsonstream API. The output format is the
-// same used by Context's MarshalJSON method.
-//
-// This implementation is used by the SDK in cases where it is more efficient than JSON.Marshal.
-// See https://github.com/launchdarkly/go-jsonstream for more details.
-func (c Context) WriteToJSONWriter(w *jwriter.Writer) {
-	if c.err != nil {
-		w.AddError(c.err)
-		return
-	}
-	if c.multiContexts == nil {
-		c.writeToJSONWriterInternalSingle(w, "")
-	} else {
-		c.writeToJSONWriterInternalMulti(w)
-	}
+	w := jwriter.NewWriter()
+	ContextSerialization{}.MarshalToJSONWriter(&w, &c)
+	return w.Bytes(), w.Error()
 }
 
 func (c *Context) writeToJSONWriterInternalSingle(w *jwriter.Writer, withinKind Kind) {
