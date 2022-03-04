@@ -6,7 +6,7 @@
 
 This repository contains packages and types that are shared between the [LaunchDarkly Go SDK](https://github.com/launchdarkly/go-server-sdk) and other LaunchDarkly Go components.
 
-Applications using the LaunchDarkly Go SDK will generally use the `lduser` subpackage, which contains the `User` type, and may also use the `ldvalue` package, which contains the `Value` type that represents arbitrary JSON values. Other packages are less frequently used.
+Applications using the LaunchDarkly Go SDK will generally use the `ldcontext` subpackage, which contains the `Context` type, and may also use the `ldvalue` package, which contains the `Value` type that represents arbitrary JSON values. Other packages are less frequently used.
 
 Note that the base import path is `gopkg.in/launchdarkly/go-sdk-common.v3`, not `github.com/launchdarkly/go-sdk-common`. This ensures that the package can be referenced not only as a Go module, but also by projects that use older tools like `dep` and `govendor`, because the 5.x release of the Go SDK supports either module or non-module usage. Future releases of this package, and of the Go SDK, may drop support for non-module usage.
 

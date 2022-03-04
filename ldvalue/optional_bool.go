@@ -24,9 +24,6 @@ import (
 // For instance, this example causes myIntPointer to point to the bool value true:
 //
 //     var myBoolPointer *int = NewOptionalBool(true).AsPointer()
-//
-// This type is used in the Anonymous property of lduser.User, and for other similar fields in
-// the LaunchDarkly Go SDK where a bool value may or may not be defined.
 type OptionalBool struct {
 	value    bool
 	hasValue bool
