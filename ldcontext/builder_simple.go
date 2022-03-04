@@ -37,6 +37,7 @@ type Builder struct {
 	transient             bool
 	privateAttrs          []ldattr.Ref
 	privateCopyOnWrite    bool
+	previouslyRedacted    []string
 }
 
 // NewBuilder creates a Builder for building a Context, initializing its Key property and
@@ -103,12 +104,13 @@ func (b *Builder) Build() Context {
 	// context is used within a multi-kind context.
 
 	ret := Context{
-		defined:   true,
-		kind:      actualKind,
-		key:       b.key,
-		name:      b.name,
-		transient: b.transient,
-		secondary: b.secondary,
+		defined:       true,
+		kind:          actualKind,
+		key:           b.key,
+		name:          b.name,
+		transient:     b.transient,
+		secondary:     b.secondary,
+		redactedAttrs: b.previouslyRedacted,
 	}
 
 	ret.fullyQualifiedKey = makeFullyQualifiedKeySingleKind(actualKind, ret.key, true)
@@ -492,6 +494,18 @@ func (b *Builder) RemovePrivateRef(attrRefs ...ldattr.Ref) *Builder {
 				i--
 			}
 		}
+	}
+	return b
+}
+
+// PreviouslyRedacted is used only in LaunchDarkly services and test code. It stores a list of
+// private attribute references that were previously redacted when this Context was processed
+// by an SDK.
+func (b *Builder) PreviouslyRedacted(attrRefStrings []string) *Builder {
+	if len(attrRefStrings) == 0 {
+		b.previouslyRedacted = nil
+	} else {
+		b.previouslyRedacted = append([]string(nil), attrRefStrings...)
 	}
 	return b
 }
