@@ -5,8 +5,9 @@ import (
 	"strconv"
 	"strings"
 
-	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
 	"gopkg.in/launchdarkly/go-sdk-common.v3/ldvalue"
+
+	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
 )
 
 // Ref is an attribute name or path expression identifying a value within a Context.
