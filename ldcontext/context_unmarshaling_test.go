@@ -6,32 +6,51 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
 	"gopkg.in/launchdarkly/go-sdk-common.v3/ldvalue"
+
+	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func makeContextUnmarshalUnimportantVariantsParams() []contextSerializationParams {
+	// These are test cases that only apply to unmarshaling, because marshaling will never produce this specific JSON.
 	return []contextSerializationParams{
+		// explicit null is same as unset for optional string attrs
 		{NewBuilder("my-key").Build(),
 			`{"kind": "user", "key": "my-key", "name": null}`},
 
+		// explicit null is same as unset for custom attrs
 		{NewBuilder("my-key").Build(),
-			`{"kind": "user", "key": "my-key", "_meta": {}}`},
+			`{"kind": "user", "key": "my-key", "customAttr": null}`},
 
+		// explicit false is same as unset for transient
 		{NewBuilder("my-key").Build(),
 			`{"kind": "user", "key": "my-key", "transient": false}`},
 
+		// _meta: {} is same as no _meta
+		{NewBuilder("my-key").Build(),
+			`{"kind": "user", "key": "my-key", "_meta": {}}`},
+
+		// privateAttributes: [] is same as no privateAttributes
+		{NewBuilder("my-key").Build(),
+			`{"kind": "user", "key": "my-key", "_meta": {"privateAttributes": null}}`},
+
+		// privateAttributes: null is same as no privateAttributes
+		{NewBuilder("my-key").Build(),
+			`{"kind": "user", "key": "my-key", "_meta": {"privateAttributes": null}}`},
+
+		// explicit null is same as unset for secondary
 		{NewBuilder("my-key").Build(),
 			`{"kind": "user", "key": "my-key", "_meta": {"secondary": null}}`},
 
+		// unrecognized properties within _meta are ignored
 		{NewBuilder("my-key").Build(),
-			`{"kind": "user", "key": "my-key", "_meta": {"unknownPropIsIgnored": false}}`},
+			`{"kind": "user", "key": "my-key", "_meta": {"unknownProp": false}}`},
 
+		// redactedAttributes is only a thing in the event output format, not the regular format
 		{NewBuilder("my-key").Build(),
 			`{"kind": "user", "key": "my-key", "_meta": {"redactedAttributes": ["name"]}}`},
-		// redactedAttributes is only a thing in the event output format, not the regular format
 	}
 }
 
@@ -58,6 +77,8 @@ func makeContextUnmarshalFromOldUserSchemaParams() []contextSerializationParams 
 		{NewBuilder("key4").Build(),
 			`{"key": "key4", "anonymous": null}`},
 
+		{NewBuilder("key6").Build(),
+			`{"key": "key6", "custom": {"attr1": null}}`},
 		{NewBuilder("key6").SetBool("attr1", true).Build(),
 			`{"key": "key6", "custom": {"attr1": true}}`},
 		{NewBuilder("key6").SetBool("attr1", false).Build(),
@@ -195,7 +216,7 @@ func contextUnmarshalingTests(t *testing.T, unmarshalFn func(*Context, []byte) e
 
 			`{"kind": "org"}`,             // missing key
 			`{"kind": "user", "key": ""}`, // empty key not allowed in new-style context
-			`{"kind": "kind"}`,            // illegal kind
+			`{"kind": "ørg", "key": "x"}`, // illegal kind
 
 			// wrong type within _meta
 			`{"kind": "org", "key": "my-key", "_meta": true}}`,

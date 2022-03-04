@@ -22,6 +22,7 @@ func TestAttrRefInvalid(t *testing.T) {
 	} {
 		t.Run(fmt.Sprintf("input string %q", p.input), func(t *testing.T) {
 			a := NewAttrRef(p.input)
+			assert.True(t, a.IsDefined())
 			assert.Equal(t, p.expectedError, a.Err())
 			assert.Equal(t, p.input, a.String())
 			assert.Equal(t, 0, a.Depth())
@@ -30,6 +31,7 @@ func TestAttrRefInvalid(t *testing.T) {
 
 	t.Run("uninitialized", func(t *testing.T) {
 		var a AttrRef
+		assert.False(t, a.IsDefined())
 		assert.Equal(t, errAttributeEmpty, a.Err())
 		assert.Equal(t, "", a.String())
 		assert.Equal(t, 0, a.Depth())
@@ -46,6 +48,7 @@ func TestAttrRefWithNoLeadingSlash(t *testing.T) {
 	} {
 		t.Run(fmt.Sprintf("input string %q", s), func(t *testing.T) {
 			a := NewAttrRef(s)
+			assert.True(t, a.IsDefined())
 			assert.NoError(t, a.Err())
 			assert.Equal(t, s, a.String())
 			assert.Equal(t, 1, a.Depth())
@@ -69,6 +72,7 @@ func TestAttrRefSimpleWithLeadingSlash(t *testing.T) {
 	} {
 		t.Run(fmt.Sprintf("input string %q", params.input), func(t *testing.T) {
 			a := NewAttrRef(params.input)
+			assert.True(t, a.IsDefined())
 			assert.NoError(t, a.Err())
 			assert.Equal(t, params.input, a.String())
 			assert.Equal(t, 1, a.Depth())
