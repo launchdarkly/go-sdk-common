@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"gopkg.in/launchdarkly/go-sdk-common.v3/ldattr"
 	"gopkg.in/launchdarkly/go-sdk-common.v3/ldvalue"
 
 	m "github.com/launchdarkly/go-test-helpers/v2/matchers"
@@ -53,7 +54,7 @@ func makeContextMarshalingAndUnmarshalingParams() []contextSerializationParams {
 		{NewBuilder("key6").SetValue("attr1", ldvalue.ObjectBuild().Set("a", ldvalue.Int(1)).Build()).Build(),
 			`{"kind": "user", "key": "key6", "attr1": {"a": 1}}`},
 
-		{NewBuilder("key7").Private("a").PrivateRef(NewAttrRef("/b/c")).Build(),
+		{NewBuilder("key7").Private("a").PrivateRef(ldattr.NewRef("/b/c")).Build(),
 			`{"kind": "user", "key": "key7", "_meta": {"privateAttributes": ["a", "/b/c"]}}`},
 
 		{NewMulti(NewWithKind("org", "my-org-key"), New("my-user-key")),

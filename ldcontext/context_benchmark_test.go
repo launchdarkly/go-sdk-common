@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"gopkg.in/launchdarkly/go-sdk-common.v3/internal/sharedtest"
+	"gopkg.in/launchdarkly/go-sdk-common.v3/ldattr"
 	"gopkg.in/launchdarkly/go-sdk-common.v3/ldvalue"
 )
 
@@ -43,9 +44,9 @@ func BenchmarkContextGetCustomAttrNestedPropertyNoAlloc(b *testing.B) {
 	targetValue := ldvalue.String("17 Highbrow Street")
 	objectValue := ldvalue.ObjectBuild().Set("street", ldvalue.ObjectBuild().Set("line1", targetValue).Build()).Build()
 	c := makeBasicBuilder().SetValue("address", objectValue)
-	attrRef := NewAttrRef("/address/street/line1")
+	attrRef := ldattr.NewRef("/address/street/line1")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		benchmarkValue, _ = c.Build().GetValueForAttrRef(attrRef)
+		benchmarkValue, _ = c.Build().GetValueForRef(attrRef)
 	}
 }

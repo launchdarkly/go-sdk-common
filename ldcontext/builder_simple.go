@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 
+	"gopkg.in/launchdarkly/go-sdk-common.v3/ldattr"
 	"gopkg.in/launchdarkly/go-sdk-common.v3/ldvalue"
 )
 
@@ -34,7 +35,7 @@ type Builder struct {
 	attributesCopyOnWrite bool
 	secondary             ldvalue.OptionalString
 	transient             bool
-	privateAttrs          []AttrRef
+	privateAttrs          []ldattr.Ref
 	privateCopyOnWrite    bool
 	previouslyRedacted    []string
 }
@@ -309,22 +310,22 @@ func (b *Builder) SetValue(attributeName string, value ldvalue.Value) *Builder {
 // attempting to set "key" to a value that was not a string).
 func (b *Builder) TrySetValue(attributeName string, value ldvalue.Value) bool {
 	switch attributeName {
-	case AttrNameKind:
+	case ldattr.KindAttr:
 		if !value.IsString() {
 			return false
 		}
 		b.Kind(Kind(value.StringValue()))
-	case AttrNameKey:
+	case ldattr.KeyAttr:
 		if !value.IsString() {
 			return false
 		}
 		b.Key(value.StringValue())
-	case AttrNameName:
+	case ldattr.NameAttr:
 		if !value.IsString() && !value.IsNull() {
 			return false
 		}
 		b.OptName(value.AsOptionalString())
-	case AttrNameTransient:
+	case ldattr.TransientAttr:
 		if !value.IsBool() {
 			return false
 		}
@@ -430,38 +431,38 @@ func (b *Builder) Transient(value bool) *Builder {
 //	       Private("firstName").
 //         Build()
 func (b *Builder) Private(attrRefStrings ...string) *Builder {
-	refs := make([]AttrRef, 0, 20) // arbitrary capacity that's likely greater than needed, to preallocate on stack
+	refs := make([]ldattr.Ref, 0, 20) // arbitrary capacity that's likely greater than needed, to preallocate on stack
 	for _, s := range attrRefStrings {
-		refs = append(refs, NewAttrRef(s))
+		refs = append(refs, ldattr.NewRef(s))
 	}
 	return b.PrivateRef(refs...)
 }
 
-// PrivateRef is equivalent to Private but uses the AttrRef type. It designates any number of
+// PrivateRef is equivalent to Private but uses the ldattr.Ref type. It designates any number of
 // Context attributes, or values within them, as private: that is, their values will not be sent to
 // LaunchDarkly.
 //
 // The difference between PrivateRef and Private is simply a minor optimization: Private parses
 // each attribute reference when it is called (in case the reference uses a slash-delimited format),
-// but PrivateRef uses existing AttrRef values. The overhead of parsing is fairly minor, but if you
+// but PrivateRef uses existing Ref values. The overhead of parsing is fairly minor, but if you
 // are using any slash-delimited attribute references and you would like to keep the overhead of
 // constructing a user to the absolute minimum, you may wish to use PrivateRef instead of Private.
 // and precompute these references.
 //
 // In this example, firstName is marked as private, but lastName is not:
 //
-//     privateStreetAttr := ldcontext.NewAttrRef("/address/street")
+//     privateStreetAttr := ldattr.NewRef("/address/street")
 //     c := ldcontext.NewBuilder("org", "my-key").
 //         SetString("firstName", "Pierre").
 //         SetString("lastName", "Menard").
 //	       PrivateRef(privateStreetAttr).
 //         Build()
-func (b *Builder) PrivateRef(attrRefs ...AttrRef) *Builder {
+func (b *Builder) PrivateRef(attrRefs ...ldattr.Ref) *Builder {
 	if b.privateAttrs == nil {
-		b.privateAttrs = make([]AttrRef, 0, len(attrRefs))
+		b.privateAttrs = make([]ldattr.Ref, 0, len(attrRefs))
 	} else if b.privateCopyOnWrite {
 		// See note in Build() on ___CopyOnWrite
-		b.privateAttrs = append([]AttrRef(nil), b.privateAttrs...)
+		b.privateAttrs = append([]ldattr.Ref(nil), b.privateAttrs...)
 		b.privateCopyOnWrite = false
 	}
 	b.privateAttrs = append(b.privateAttrs, attrRefs...)
@@ -471,19 +472,19 @@ func (b *Builder) PrivateRef(attrRefs ...AttrRef) *Builder {
 // RemovePrivate removes any private attribute references previously added with AddPrivate or AddPrivateRef
 // that exactly match that of any of the specified attribute references.
 func (b *Builder) RemovePrivate(attrRefStrings ...string) *Builder {
-	refs := make([]AttrRef, 0, 20) // arbitrary capacity that's likely greater than needed, to preallocate on stack
+	refs := make([]ldattr.Ref, 0, 20) // arbitrary capacity that's likely greater than needed, to preallocate on stack
 	for _, s := range attrRefStrings {
-		refs = append(refs, NewAttrRef(s))
+		refs = append(refs, ldattr.NewRef(s))
 	}
 	return b.RemovePrivateRef(refs...)
 }
 
 // RemovePrivateRef removes any private attribute references previously added with AddPrivate or
 // AddPrivateRef that exactly match that of any of the specified attribute references.
-func (b *Builder) RemovePrivateRef(attrRefs ...AttrRef) *Builder {
+func (b *Builder) RemovePrivateRef(attrRefs ...ldattr.Ref) *Builder {
 	if b.privateCopyOnWrite {
 		// See note in Build() on ___CopyOnWrite
-		b.privateAttrs = append([]AttrRef(nil), b.privateAttrs...)
+		b.privateAttrs = append([]ldattr.Ref(nil), b.privateAttrs...)
 		b.privateCopyOnWrite = false
 	}
 	for _, attrRefToRemove := range attrRefs {
