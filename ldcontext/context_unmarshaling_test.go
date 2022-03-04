@@ -3,6 +3,7 @@ package ldcontext
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 
 	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
@@ -27,6 +28,10 @@ func makeContextUnmarshalUnimportantVariantsParams() []contextSerializationParam
 
 		{NewBuilder("my-key").Build(),
 			`{"kind": "user", "key": "my-key", "_meta": {"unknownPropIsIgnored": false}}`},
+
+		{NewBuilder("my-key").Build(),
+			`{"kind": "user", "key": "my-key", "_meta": {"redactedAttributes": ["name"]}}`},
+		// redactedAttributes is only a thing in the event output format, not the regular format
 	}
 }
 
@@ -79,6 +84,10 @@ func makeContextUnmarshalFromOldUserSchemaParams() []contextSerializationParams 
 
 		{NewBuilder("key7").Name("x").Build(),
 			`{"key": "key7", "unknownTopLevelPropIsIgnored": {"a": 1}, "name": "x"}`},
+
+		{NewBuilder("key8").Name("x").Build(),
+			`{"key": "key8", "name": "x", "privateAttrs": ["name"]}`},
+		// privateAttrs is only a thing in the event output format
 	}
 	for _, attr := range []string{"firstName", "lastName", "email", "country", "avatar", "ip"} {
 		ret = append(ret,
@@ -111,13 +120,50 @@ func makeContextUnmarshalFromOldUserSchemaParams() []contextSerializationParams 
 	return ret
 }
 
-func contextUnmarshalingTests(t *testing.T, unmarshalFn func(*Context, []byte) error) {
+func makeAllContextUnmarshalingParams() []contextSerializationParams {
 	params := makeContextMarshalingAndUnmarshalingParams()
 	params = append(params, makeContextUnmarshalUnimportantVariantsParams()...)
 	params = append(params, makeContextUnmarshalFromOldUserSchemaParams()...)
+	return params
+}
 
+func makeEventOutputFormatUnmarshalingParams() []contextSerializationParams {
+	var params []contextSerializationParams
+	for _, p := range makeAllContextUnmarshalingParams() {
+		// The regular input data includes some contexts with _meta.privateAttributes or privateAttributeNames--
+		// which in the regular format will get parsed, but in the event format they are ignored. It also
+		// includes some contexts with _meta.redactedAttributes or privateAttrs-- which in the regular format
+		// would be ignored, but are parsed in the event format.
+		if strings.Contains(p.json, `"redactedAttributes"`) || strings.Contains(p.json, `"privateAttrs"`) {
+			continue
+		}
+		p.context.privateAttrs = nil
+		params = append(params, p)
+	}
+	params = append(params,
+		contextSerializationParams{
+			NewBuilder("my-key").Build(),
+			`{"kind": "user", "key": "my-key", "_meta": {"redactedAttributes": []}}`,
+		},
+		contextSerializationParams{
+			NewBuilder("my-key").PreviouslyRedacted([]string{"a", "b"}).Build(),
+			`{"kind": "user", "key": "my-key", "_meta": {"redactedAttributes": ["a", "b"]}}`,
+		},
+		contextSerializationParams{
+			NewBuilder("my-key").Build(),
+			`{"key": "my-key", "privateAttrs": []}`, // old-style user
+		},
+		contextSerializationParams{
+			NewBuilder("my-key").PreviouslyRedacted([]string{"a", "b"}).Build(),
+			`{"key": "my-key", "privateAttrs": ["a", "b"]}`, // old-style user
+		},
+	)
+	return params
+}
+
+func contextUnmarshalingTests(t *testing.T, unmarshalFn func(*Context, []byte) error) {
 	t.Run("valid data", func(t *testing.T) {
-		for _, p := range params {
+		for _, p := range makeAllContextUnmarshalingParams() {
 			t.Run(p.json, func(t *testing.T) {
 				var c Context
 				err := unmarshalFn(&c, []byte(p.json))
@@ -191,7 +237,7 @@ func jsonUnmarshalTestFn(c *Context, data []byte) error {
 
 func jsonStreamUnmarshalTestFn(c *Context, data []byte) error {
 	r := jreader.NewReader(data)
-	c.ReadFromJSONReader(&r)
+	ContextSerialization{}.UnmarshalFromJSONReader(&r, c)
 	return r.Error()
 }
 
@@ -200,9 +246,17 @@ func TestContextJSONUnmarshal(t *testing.T) {
 }
 
 func TestContextReadFromJSONReader(t *testing.T) {
-	contextUnmarshalingTests(t, func(c *Context, b []byte) error {
-		r := jreader.NewReader(b)
-		c.ReadFromJSONReader(&r)
-		return r.Error()
-	})
+	contextUnmarshalingTests(t, jsonStreamUnmarshalTestFn)
+}
+
+func TestContextUnmarshalEventOutputFormat(t *testing.T) {
+	for _, p := range makeEventOutputFormatUnmarshalingParams() {
+		t.Run(p.json, func(t *testing.T) {
+			r := jreader.NewReader([]byte(p.json))
+			var c Context
+			ContextSerialization{}.UnmarshalFromJSONReaderEventOutputFormat(&r, &c)
+			assert.NoError(t, r.Error())
+			assert.Equal(t, p.context, c)
+		})
+	}
 }

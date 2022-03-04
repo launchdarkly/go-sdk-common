@@ -36,16 +36,59 @@ import (
 //
 // For more information, see: https://gopkg.in/launchdarkly/go-jsonstream.v1
 
+// Arbitrary preallocation size that's likely to be longer than we will need for private/redacted
+// attribute lists, to minimize reallocations during unmarshaling.
+const initialAttrListAllocSize = 10
+
+// MarshalEasyJSON is the marshaler method for Context when using the EasyJSON API. Because
+// marshaling of contexts is not a requirement in high-traffic LaunchDarkly services, the
+// current implementation delegates to the default non-EasyJSON marshaler.
+//
+// This method is only available when compiling with the build tag "launchdarkly_easyjson".
 func (c Context) MarshalEasyJSON(writer *ej_jwriter.Writer) {
 	if c.err != nil {
 		writer.Error = c.err
 		return
 	}
 	wrappedWriter := jwriter.NewWriterFromEasyJSONWriter(writer)
-	c.WriteToJSONWriter(&wrappedWriter)
+	ContextSerialization{}.MarshalToJSONWriter(&wrappedWriter, &c)
 }
 
+// UnmarshalEasyJSON is the unmarshaler method for Context when using the EasyJSON API. Because
+// unmarshaling of contexts is a requirement in high-traffic LaunchDarkly services, this
+// implementation is optimized for speed and memory usage and does not share code with the default
+// unmarshaler.
+//
+// This method is only available when compiling with the build tag "launchdarkly_easyjson".
 func (c *Context) UnmarshalEasyJSON(in *jlexer.Lexer) {
+	ContextSerialization{}.UnmarshalFromEasyJSONLexer(in, c)
+}
+
+// Note: other ContextSerialization methods are defined in context_serialization.go.
+
+// UnmarshalFromEasyJSONLexer unmarshals a Context with the EasyJSON API. Because unmarshaling
+// of contexts is a requirement in high-traffic LaunchDarkly services, this implementation is
+// optimized for speed and memory usage and does not share code with the default unmarshaler.
+//
+// This method is only available when compiling with the build tag "launchdarkly_easyjson".
+func (s ContextSerialization) UnmarshalFromEasyJSONLexer(in *jlexer.Lexer, c *Context) {
+	unmarshalFromEasyJSONLexer(in, c, false)
+}
+
+// UnmarshalFromEasyJSONLexerEventOutputFormat unmarshals a Context with the EasyJSON API,
+// using the alternate JSON schema that is used for contexts in analytics event data, where the
+// property _meta.redactedAttributes is translated to Builder.PreviouslyRedacted(). This can be
+// used by the Relay Proxy or other LaunchDarkly services when reading events sent by SDKs.
+//
+// The marshaler for this schema is not implemented in go-sdk-common; all event output is
+// produced by the go-sdk-events package.
+//
+// This method is only available when compiling with the build tag "launchdarkly_easyjson".
+func (s ContextSerialization) UnmarshalFromEasyJSONLexerEventOutputFormat(in *jlexer.Lexer, c *Context) {
+	unmarshalFromEasyJSONLexer(in, c, true)
+}
+
+func unmarshalFromEasyJSONLexer(in *jlexer.Lexer, c *Context, isEventOutputFormat bool) {
 	if in.IsNull() {
 		in.Delim('{') // to trigger an "expected an object, got null" error
 		return
@@ -61,15 +104,15 @@ func (c *Context) UnmarshalEasyJSON(in *jlexer.Lexer) {
 
 	switch {
 	case !hasKind:
-		unmarshalOldUserSchemaEasyJSON(c, in)
+		unmarshalOldUserSchemaEasyJSON(c, in, isEventOutputFormat)
 	case kind == MultiKind:
-		unmarshalMultiKindEasyJSON(c, in)
+		unmarshalMultiKindEasyJSON(c, in, isEventOutputFormat)
 	default:
-		unmarshalSingleKindEasyJSON(c, in, "")
+		unmarshalSingleKindEasyJSON(c, in, "", isEventOutputFormat)
 	}
 }
 
-func unmarshalSingleKindEasyJSON(c *Context, in *jlexer.Lexer, knownKind Kind) {
+func unmarshalSingleKindEasyJSON(c *Context, in *jlexer.Lexer, knownKind Kind, isEventOutputFormat bool) {
 	c.defined = true
 	if knownKind != "" {
 		c.kind = Kind(knownKind)
@@ -103,12 +146,29 @@ func unmarshalSingleKindEasyJSON(c *Context, in *jlexer.Lexer, knownKind Kind) {
 				case jsonPropSecondary:
 					c.secondary = readOptStringEasyJSON(in)
 				case jsonPropPrivate:
-					if in.IsNull() {
-						in.Skip()
+					if isEventOutputFormat || in.IsNull() {
+						in.SkipRecursive()
 					} else {
 						in.Delim('[')
 						for !in.IsDelim(']') {
+							if c.privateAttrs == nil {
+								c.privateAttrs = make([]AttrRef, 0, initialAttrListAllocSize)
+							}
 							c.privateAttrs = append(c.privateAttrs, NewAttrRef(in.String()))
+							in.WantComma()
+						}
+						in.Delim(']')
+					}
+				case jsonPropRedacted:
+					if !isEventOutputFormat || in.IsNull() {
+						in.SkipRecursive()
+					} else {
+						in.Delim('[')
+						for !in.IsDelim(']') {
+							if c.redactedAttrs == nil {
+								c.redactedAttrs = make([]string, 0, initialAttrListAllocSize)
+							}
+							c.redactedAttrs = append(c.redactedAttrs, in.String())
 							in.WantComma()
 						}
 						in.Delim(']')
@@ -156,7 +216,7 @@ func unmarshalSingleKindEasyJSON(c *Context, in *jlexer.Lexer, knownKind Kind) {
 	}
 }
 
-func unmarshalMultiKindEasyJSON(c *Context, in *jlexer.Lexer) {
+func unmarshalMultiKindEasyJSON(c *Context, in *jlexer.Lexer, isEventOutputFormat bool) {
 	var b MultiBuilder
 	in.Delim('{')
 	for !in.IsDelim('}') {
@@ -166,7 +226,7 @@ func unmarshalMultiKindEasyJSON(c *Context, in *jlexer.Lexer) {
 			in.SkipRecursive()
 		} else {
 			var subContext Context
-			unmarshalSingleKindEasyJSON(&subContext, in, Kind(name))
+			unmarshalSingleKindEasyJSON(&subContext, in, Kind(name), isEventOutputFormat)
 			b.Add(subContext)
 		}
 		in.WantComma()
@@ -180,7 +240,7 @@ func unmarshalMultiKindEasyJSON(c *Context, in *jlexer.Lexer) {
 	}
 }
 
-func unmarshalOldUserSchemaEasyJSON(c *Context, in *jlexer.Lexer) {
+func unmarshalOldUserSchemaEasyJSON(c *Context, in *jlexer.Lexer, isEventOutputFormat bool) {
 	c.defined = true
 	c.kind = DefaultKind
 	hasKey := false
@@ -223,12 +283,29 @@ func unmarshalOldUserSchemaEasyJSON(c *Context, in *jlexer.Lexer) {
 			}
 			in.Delim('}')
 		case jsonPropOldUserPrivate:
-			if in.IsNull() {
-				in.Skip()
+			if isEventOutputFormat || in.IsNull() {
+				in.SkipRecursive()
 			} else {
 				in.Delim('[')
 				for !in.IsDelim(']') {
+					if c.privateAttrs == nil {
+						c.privateAttrs = make([]AttrRef, 0, initialAttrListAllocSize)
+					}
 					c.privateAttrs = append(c.privateAttrs, NewAttrRefForName(in.String()))
+					in.WantComma()
+				}
+				in.Delim(']')
+			}
+		case jsonPropOldUserRedacted:
+			if !isEventOutputFormat || in.IsNull() {
+				in.SkipRecursive()
+			} else {
+				in.Delim('[')
+				for !in.IsDelim(']') {
+					if c.redactedAttrs == nil {
+						c.redactedAttrs = make([]string, 0, initialAttrListAllocSize)
+					}
+					c.redactedAttrs = append(c.redactedAttrs, in.String())
 					in.WantComma()
 				}
 				in.Delim(']')

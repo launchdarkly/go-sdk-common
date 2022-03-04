@@ -27,6 +27,7 @@ type Context struct {
 	secondary         ldvalue.OptionalString
 	transient         bool
 	privateAttrs      []AttrRef
+	redactedAttrs     []string
 }
 
 // Err returns nil for a valid Context, or a non-nil error value for an invalid Context.
@@ -235,6 +236,24 @@ func (c Context) PrivateAttributeByIndex(index int) (AttrRef, bool) {
 		return AttrRef{}, false
 	}
 	return c.privateAttrs[index], true
+}
+
+// PreviouslyRedactedAttributeCount is used only by LaunchDarkly services that receive event data. It
+// returns the number of private attributes that were redacted when this Context was previously
+// processed by an SDK.
+func (c Context) PreviouslyRedactedAttributeCount() int {
+	return len(c.redactedAttrs)
+}
+
+// PreviouslyRedactedAttributeByIndex is used only by LaunchDarkly services that receive event data. It
+// returns one of the private attributes that were redacted when this Context was previously processed
+// by an SDK. This is returned as a simple string rather than an AttrRef because it normally does not
+// require any further parsing.
+func (c Context) PreviouslyRedactedAttributeByIndex(index int) (string, bool) {
+	if index < 0 || index >= len(c.redactedAttrs) {
+		return "", false
+	}
+	return c.redactedAttrs[index], true
 }
 
 // MultiKindCount returns the number of Kinds if this is a multi-kind Context created with NewMulti()
