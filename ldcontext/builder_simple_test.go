@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"gopkg.in/launchdarkly/go-sdk-common.v3/ldattr"
 	"gopkg.in/launchdarkly/go-sdk-common.v3/ldvalue"
 
 	m "github.com/launchdarkly/go-test-helpers/v2/matchers"
@@ -319,7 +320,7 @@ func TestBuilderAttributesCopyOnWrite(t *testing.T) {
 }
 
 func TestBuilderPrivate(t *testing.T) {
-	expectPrivateRefsToBe := func(t *testing.T, c Context, expectedRefs ...AttrRef) {
+	expectPrivateRefsToBe := func(t *testing.T, c Context, expectedRefs ...ldattr.Ref) {
 		if assert.Equal(t, len(expectedRefs), c.PrivateAttributeCount()) {
 			for i, expectedRef := range expectedRefs {
 				a, ok := c.PrivateAttributeByIndex(i)
@@ -333,8 +334,8 @@ func TestBuilderPrivate(t *testing.T) {
 		assert.False(t, ok)
 	}
 
-	t.Run("using AttrRefs", func(t *testing.T) {
-		attrRef1, attrRef2, attrRef3 := NewAttrRef("a"), NewAttrRef("/b/c"), NewAttrRef("d")
+	t.Run("using Refs", func(t *testing.T) {
+		attrRef1, attrRef2, attrRef3 := ldattr.NewRef("a"), ldattr.NewRef("/b/c"), ldattr.NewRef("d")
 		c := makeBasicBuilder().
 			PrivateRef(attrRef1, attrRef2).PrivateRef(attrRef3).
 			Build()
@@ -345,7 +346,7 @@ func TestBuilderPrivate(t *testing.T) {
 	t.Run("using strings", func(t *testing.T) {
 		s1, s2, s3 := "a", "/b/c", "d"
 		b0 := makeBasicBuilder().
-			PrivateRef(NewAttrRef(s1), NewAttrRef(s2)).PrivateRef(NewAttrRef(s3))
+			PrivateRef(ldattr.NewRef(s1), ldattr.NewRef(s2)).PrivateRef(ldattr.NewRef(s3))
 		b1 := makeBasicBuilder().
 			Private(s1, s2, s3)
 		assert.Equal(t, b0, b1)
@@ -356,33 +357,33 @@ func TestBuilderPrivate(t *testing.T) {
 		b.RemovePrivate("/b/c")
 		c := b.Build()
 
-		expectPrivateRefsToBe(t, c, NewAttrRef("a"), NewAttrRef("d"))
+		expectPrivateRefsToBe(t, c, ldattr.NewRef("a"), ldattr.NewRef("d"))
 	})
 
 	t.Run("RemovePrivateRef", func(t *testing.T) {
 		b := makeBasicBuilder().Private("a", "/b/c", "d", "/b/c")
-		b.RemovePrivateRef(NewAttrRef("/b/c"))
+		b.RemovePrivateRef(ldattr.NewRef("/b/c"))
 		c := b.Build()
 
-		expectPrivateRefsToBe(t, c, NewAttrRef("a"), NewAttrRef("d"))
+		expectPrivateRefsToBe(t, c, ldattr.NewRef("a"), ldattr.NewRef("d"))
 	})
 
 	t.Run("copy on write", func(t *testing.T) {
 		b0 := makeBasicBuilder().Private("a")
 
 		c0 := b0.Build()
-		expectPrivateRefsToBe(t, c0, NewAttrRef("a"))
+		expectPrivateRefsToBe(t, c0, ldattr.NewRef("a"))
 
 		b0.Private("b")
 		c1 := b0.Build()
-		expectPrivateRefsToBe(t, c1, NewAttrRef("a"), NewAttrRef("b"))
-		expectPrivateRefsToBe(t, c0, NewAttrRef("a")) // unchanged
+		expectPrivateRefsToBe(t, c1, ldattr.NewRef("a"), ldattr.NewRef("b"))
+		expectPrivateRefsToBe(t, c0, ldattr.NewRef("a")) // unchanged
 
-		b0.RemovePrivateRef(NewAttrRef("a"))
+		b0.RemovePrivateRef(ldattr.NewRef("a"))
 		c2 := b0.Build()
-		expectPrivateRefsToBe(t, c2, NewAttrRef("b"))
-		expectPrivateRefsToBe(t, c1, NewAttrRef("a"), NewAttrRef("b")) // unchanged
-		expectPrivateRefsToBe(t, c0, NewAttrRef("a"))                  // unchanged
+		expectPrivateRefsToBe(t, c2, ldattr.NewRef("b"))
+		expectPrivateRefsToBe(t, c1, ldattr.NewRef("a"), ldattr.NewRef("b")) // unchanged
+		expectPrivateRefsToBe(t, c0, ldattr.NewRef("a"))                     // unchanged
 	})
 }
 

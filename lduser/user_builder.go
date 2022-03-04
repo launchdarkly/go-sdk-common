@@ -1,6 +1,7 @@
 package lduser
 
 import (
+	"gopkg.in/launchdarkly/go-sdk-common.v3/ldattr"
 	"gopkg.in/launchdarkly/go-sdk-common.v3/ldcontext"
 	"gopkg.in/launchdarkly/go-sdk-common.v3/ldvalue"
 )
@@ -308,14 +309,14 @@ func (b *userBuilderImpl) Build() ldcontext.Context {
 
 func (b *userBuilderImpl) AsPrivateAttribute() UserBuilder {
 	if b.lastAttributeCanMakePrivate != "" {
-		b.builder.PrivateRef(ldcontext.NewAttrRefForName(b.lastAttributeCanMakePrivate))
+		b.builder.PrivateRef(ldattr.NewNameRef(b.lastAttributeCanMakePrivate))
 	}
 	return b
 }
 
 func (b *userBuilderImpl) AsNonPrivateAttribute() UserBuilder {
 	if b.lastAttributeCanMakePrivate != "" {
-		b.builder.RemovePrivateRef(ldcontext.NewAttrRefForName(b.lastAttributeCanMakePrivate))
+		b.builder.RemovePrivateRef(ldattr.NewNameRef(b.lastAttributeCanMakePrivate))
 	}
 	return b
 }

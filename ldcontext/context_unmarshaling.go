@@ -1,8 +1,10 @@
 package ldcontext
 
 import (
-	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
+	"gopkg.in/launchdarkly/go-sdk-common.v3/ldattr"
 	"gopkg.in/launchdarkly/go-sdk-common.v3/ldvalue"
+
+	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
 )
 
 // See internalAttributeNameIfPossible().
@@ -74,7 +76,7 @@ func parseKindOnly(originalReader *jreader.Reader) (Kind, bool, error) {
 	// own "current position" and "next token" fields.
 	r := *originalReader
 	for obj := r.Object(); obj.Next(); {
-		if string(obj.Name()) == AttrNameKind {
+		if string(obj.Name()) == ldattr.KindAttr {
 			return Kind(r.String()), true, r.Error()
 			// We can immediately return here and not bother parsing the rest of the JSON object; we'll be
 			// creating another Reader that'll start over with the same byte slice for the second pass.
@@ -103,14 +105,14 @@ func unmarshalSingleKind(c *Context, r *jreader.Reader, knownKind Kind) error {
 	hasKey := false
 	for obj := r.Object(); obj.Next(); {
 		switch string(obj.Name()) {
-		case AttrNameKind:
+		case ldattr.KindAttr:
 			b.Kind(Kind(r.String()))
-		case AttrNameKey:
+		case ldattr.KeyAttr:
 			b.Key(r.String())
 			hasKey = true
-		case AttrNameName:
+		case ldattr.NameAttr:
 			b.OptName(readOptString(r))
-		case AttrNameTransient:
+		case ldattr.TransientAttr:
 			b.Transient(r.Bool())
 		case jsonPropMeta:
 			for metaObj := r.Object(); metaObj.Next(); {
@@ -119,7 +121,7 @@ func unmarshalSingleKind(c *Context, r *jreader.Reader, knownKind Kind) error {
 					b.OptSecondary(readOptString(r))
 				case jsonPropPrivate:
 					for privateArr := r.ArrayOrNull(); privateArr.Next(); {
-						b.PrivateRef(NewAttrRef(r.String()))
+						b.PrivateRef(ldattr.NewRef(r.String()))
 					}
 				default:
 					// Unrecognized property names within _meta are ignored. Calling SkipValue makes the Reader
@@ -147,7 +149,7 @@ func unmarshalMultiKind(c *Context, r *jreader.Reader) error {
 	var b MultiBuilder
 	for obj := r.Object(); obj.Next(); {
 		name := string(obj.Name())
-		if name == AttrNameKind {
+		if name == ldattr.KindAttr {
 			_ = r.SkipValue()
 			continue
 		}
@@ -167,10 +169,10 @@ func unmarshalOldUserSchema(c *Context, r *jreader.Reader) error {
 	hasKey := false
 	for obj := r.Object(); obj.Next(); {
 		switch string(obj.Name()) {
-		case AttrNameKey:
+		case ldattr.KeyAttr:
 			b.Key(r.String())
 			hasKey = true
-		case AttrNameName:
+		case ldattr.NameAttr:
 			b.OptName(readOptString(r))
 		case jsonPropSecondary:
 			b.OptSecondary(readOptString(r))
@@ -187,7 +189,7 @@ func unmarshalOldUserSchema(c *Context, r *jreader.Reader) error {
 		case jsonPropOldUserPrivate:
 			for privateArr := r.ArrayOrNull(); privateArr.Next(); {
 				b.Private(r.String())
-				// Note, we use Private here rather than PrivateRef, because the AttrRef syntax is not used
+				// Note, we use Private here rather than PrivateRef, because the Ref syntax is not used
 				// in the old user schema; each string here is by definition a literal attribute name.
 			}
 		case "firstName", "lastName", "email", "country", "avatar", "ip":

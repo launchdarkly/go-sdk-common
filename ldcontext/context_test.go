@@ -5,6 +5,7 @@ import (
 	"sort"
 	"testing"
 
+	"gopkg.in/launchdarkly/go-sdk-common.v3/ldattr"
 	"gopkg.in/launchdarkly/go-sdk-common.v3/ldvalue"
 
 	m "github.com/launchdarkly/go-test-helpers/v2/matchers"
@@ -54,7 +55,7 @@ func TestGetOptionalAttributeNames(t *testing.T) {
 }
 
 func TestGetValue(t *testing.T) {
-	t.Run("equivalent to GetValueForAttrRef for simple attribute name", func(t *testing.T) {
+	t.Run("equivalent to GetValueForRef for simple attribute name", func(t *testing.T) {
 		c := NewBuilder("my-key").Kind("org").Name("x").SetString("my-attr", "y").SetString("/starts-with-slash", "z").Build()
 		expectAttributeFoundForName(t, ldvalue.String("org"), c, "kind")
 		expectAttributeFoundForName(t, ldvalue.String("my-key"), c, "key")
@@ -86,7 +87,7 @@ func TestGetValue(t *testing.T) {
 		expectAttributeNotFoundForName(t, c, "/array-attr/0")
 	})
 }
-func TestGetValueForAttrRefSpecialTopLevelAttributes(t *testing.T) {
+func TestGetValueForRefSpecialTopLevelAttributes(t *testing.T) {
 	t.Run("kind", func(t *testing.T) {
 		t.Run("single-kind", func(t *testing.T) {
 			c := NewWithKind("org", "my-key")
@@ -151,7 +152,7 @@ func TestGetValueForAttrRefSpecialTopLevelAttributes(t *testing.T) {
 	})
 }
 
-func TestGetValueForAttrRefCannotGetMetaProperties(t *testing.T) {
+func TestGetValueForRefCannotGetMetaProperties(t *testing.T) {
 	t.Run("privateAttributes", func(t *testing.T) {
 		t.Run("single-kind, defined", func(t *testing.T) {
 			c := makeBasicBuilder().Private("attr").Build()
@@ -187,7 +188,7 @@ func TestGetValueForAttrRefCannotGetMetaProperties(t *testing.T) {
 	})
 }
 
-func TestGetValueForAttrRefCustomAttributeSingleKind(t *testing.T) {
+func TestGetValueForRefCustomAttributeSingleKind(t *testing.T) {
 	t.Run("simple attribute name", func(t *testing.T) {
 		expected := ldvalue.String("abc")
 		c := makeBasicBuilder().SetValue("my-attr", expected).Build()
@@ -267,7 +268,7 @@ func TestContextString(t *testing.T) {
 	m.In(t).Assert(json.RawMessage(s), m.JSONEqual(json.RawMessage(j)))
 }
 
-func TestGetValueForInvalidAttrRef(t *testing.T) {
+func TestGetValueForInvalidRef(t *testing.T) {
 	c := makeBasicBuilder().Build()
 	expectAttributeNotFoundForRef(t, c, "/")
 }
@@ -288,14 +289,14 @@ func expectAttributeNotFoundForName(t *testing.T, c Context, attrName string) {
 
 func expectAttributeFoundForRef(t *testing.T, expected ldvalue.Value, c Context, attrRefString string) {
 	t.Helper()
-	value, ok := c.GetValueForAttrRef(NewAttrRef(attrRefString))
+	value, ok := c.GetValueForRef(ldattr.NewRef(attrRefString))
 	assert.True(t, ok, "attribute %q should have been found, but was not", attrRefString)
 	m.In(t).Assert(value, m.JSONEqual(expected))
 }
 
 func expectAttributeNotFoundForRef(t *testing.T, c Context, attrRefString string) {
 	t.Helper()
-	value, ok := c.GetValueForAttrRef(NewAttrRef(attrRefString))
+	value, ok := c.GetValueForRef(ldattr.NewRef(attrRefString))
 	assert.False(t, ok, "attribute %q should not have been found, but was", attrRefString)
 	m.In(t).Assert(value, m.JSONEqual(nil))
 }

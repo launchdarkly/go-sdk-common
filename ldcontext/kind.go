@@ -1,5 +1,7 @@
 package ldcontext
 
+import "gopkg.in/launchdarkly/go-sdk-common.v3/ldattr"
+
 // Kind is a string type set by the application to describe what kind of entity a Context
 // represents. The meaning of this is completely up to the application. When no Kind is
 // specified, the default is "user".
@@ -27,7 +29,7 @@ func validateSingleKind(kind Kind) (Kind, error) {
 	case MultiKind:
 		return "", errContextKindMultiWithSimpleBuilder
 
-	case Kind(AttrNameKind):
+	case Kind(ldattr.KindAttr):
 		return "", errContextKindCannotBeKind
 
 	default:

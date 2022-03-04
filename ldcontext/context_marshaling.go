@@ -2,6 +2,7 @@ package ldcontext
 
 import (
 	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
+	"gopkg.in/launchdarkly/go-sdk-common.v3/ldattr"
 )
 
 // MarshalJSON provides JSON serialization for Context when using json.MarshalJSON.
@@ -36,19 +37,19 @@ func (c Context) WriteToJSONWriter(w *jwriter.Writer) {
 func (c *Context) writeToJSONWriterInternalSingle(w *jwriter.Writer, withinKind Kind) {
 	obj := w.Object()
 	if withinKind == "" {
-		obj.Name(AttrNameKind).String(string(c.kind))
+		obj.Name(ldattr.KindAttr).String(string(c.kind))
 	}
 
-	obj.Name(AttrNameKey).String(c.key)
+	obj.Name(ldattr.KeyAttr).String(c.key)
 	if c.name.IsDefined() {
-		obj.Name(AttrNameName).String(c.name.StringValue())
+		obj.Name(ldattr.NameAttr).String(c.name.StringValue())
 	}
 	for k, v := range c.attributes {
 		obj.Name(k)
 		v.WriteToJSONWriter(w)
 	}
 	if c.transient {
-		obj.Name(AttrNameTransient).Bool(true)
+		obj.Name(ldattr.TransientAttr).Bool(true)
 	}
 
 	if c.secondary.IsDefined() || len(c.privateAttrs) != 0 {
@@ -71,7 +72,7 @@ func (c *Context) writeToJSONWriterInternalSingle(w *jwriter.Writer, withinKind 
 
 func (c Context) writeToJSONWriterInternalMulti(w *jwriter.Writer) {
 	obj := w.Object()
-	obj.Name(AttrNameKind).String(string(MultiKind))
+	obj.Name(ldattr.KindAttr).String(string(MultiKind))
 
 	for _, mc := range c.multiContexts {
 		obj.Name(string(mc.Kind()))

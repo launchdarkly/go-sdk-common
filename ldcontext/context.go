@@ -3,6 +3,7 @@ package ldcontext
 import (
 	"encoding/json"
 
+	"gopkg.in/launchdarkly/go-sdk-common.v3/ldattr"
 	"gopkg.in/launchdarkly/go-sdk-common.v3/ldvalue"
 )
 
@@ -28,7 +29,7 @@ type Context struct {
 	attributes        map[string]ldvalue.Value
 	secondary         ldvalue.OptionalString
 	transient         bool
-	privateAttrs      []AttrRef
+	privateAttrs      []ldattr.Ref
 }
 
 // Err returns nil for a valid Context, or a non-nil error value for an invalid Context.
@@ -120,7 +121,7 @@ func (c Context) GetOptionalAttributeNames(sliceIn []string) []string {
 		return slice
 	}
 	if c.name.IsDefined() {
-		slice = append(slice, AttrNameName)
+		slice = append(slice, ldattr.NameAttr)
 	}
 	for key := range c.attributes {
 		slice = append(slice, key)
@@ -140,7 +141,7 @@ func (c Context) GetOptionalAttributeNames(sliceIn []string) []string {
 // MultiKindByName() to inspect a Context for a particular kind and then get its attributes.
 //
 // This method does not support complex expressions for getting individual values out of JSON objects
-// or arrays, such as "/address/street". Use GetValueForAttrRef() for that purpose.
+// or arrays, such as "/address/street". Use GetValueForRef() for that purpose.
 //
 // If the value is found, the first return value is the attribute value (using the type ldvalue.Value
 // to represent a value of any JSON type) and the second return value is true.
@@ -148,18 +149,18 @@ func (c Context) GetOptionalAttributeNames(sliceIn []string) []string {
 // If there is no such attribute, the first return value is ldvalue.Null() and the second return value
 // is false.
 func (c Context) GetValue(attrName string) (ldvalue.Value, bool) {
-	return c.GetValueForAttrRef(NewAttrRefForName(attrName))
+	return c.GetValueForRef(ldattr.NewNameRef(attrName))
 }
 
-// GetValueForAttrRef looks up the value of any attribute of the Context, or a value contained within
-// an attribute, based on an AttrRef. This includes only attributes that are addressable in evaluations--
+// GetValueForRef looks up the value of any attribute of the Context, or a value contained within an
+// attribute, based on an ldattr.Ref. This includes only attributes that are addressable in evaluations--
 // not metadata such as Secondary() or Private().
 //
 // This implements the same behavior that the SDK uses to resolve attribute references during a flag
-// evaluation. In a single-kind context, the AttrRef can represent a simple attribute name-- either a
+// evaluation. In a single-kind context, the ldattr.Ref can represent a simple attribute name-- either a
 // built-in one like "name" or "key", or a custom attribute that was set by methods like
 // Builder.SetString()-- or, it can be a slash-delimited path using a JSON-Pointer-like syntax. See
-// AttrRef for more details.
+// ldattr.Ref for more details.
 //
 // For a multi-kind context, the only supported attribute name is "kind". Use MultiKindByIndex() or
 // MultiKindByName() to inspect a Context for a particular kind and then get its attributes.
@@ -167,9 +168,9 @@ func (c Context) GetValue(attrName string) (ldvalue.Value, bool) {
 // If the value is found, the first return value is the attribute value (using the type ldvalue.Value
 // to represent a value of any JSON type) and the second return value is true.
 //
-// If the value is not found, or if the AttrRef is invalid, the first return value is ldvalue.Null()
+// If the value is not found, or if the ldattr.Ref is invalid, the first return value is ldvalue.Null()
 // and the second return value is false.
-func (c Context) GetValueForAttrRef(ref AttrRef) (ldvalue.Value, bool) {
+func (c Context) GetValueForRef(ref ldattr.Ref) (ldvalue.Value, bool) {
 	if ref.Err() != nil {
 		return ldvalue.Null(), false
 	}
@@ -177,7 +178,7 @@ func (c Context) GetValueForAttrRef(ref AttrRef) (ldvalue.Value, bool) {
 	firstPathComponent, _ := ref.Component(0)
 
 	if c.Multiple() {
-		if ref.Depth() == 1 && firstPathComponent == AttrNameKind {
+		if ref.Depth() == 1 && firstPathComponent == ldattr.KindAttr {
 			return ldvalue.String(string(c.kind)), true
 		}
 		return ldvalue.Null(), false // multi-kind context has no other addressable attributes
@@ -232,9 +233,9 @@ func (c Context) PrivateAttributeCount() int {
 
 // PrivateAttributeByIndex returns one of the attributes that were marked as private for thie Context
 // with Builder.Private().
-func (c Context) PrivateAttributeByIndex(index int) (AttrRef, bool) {
+func (c Context) PrivateAttributeByIndex(index int) (ldattr.Ref, bool) {
 	if index < 0 || index >= len(c.privateAttrs) {
-		return AttrRef{}, false
+		return ldattr.Ref{}, false
 	}
 	return c.privateAttrs[index], true
 }
@@ -279,13 +280,13 @@ func (c Context) String() string {
 
 func (c Context) getTopLevelAddressableAttributeSingleKind(name string) (ldvalue.Value, bool) {
 	switch name {
-	case AttrNameKind:
+	case ldattr.KindAttr:
 		return ldvalue.String(string(c.kind)), true
-	case AttrNameKey:
+	case ldattr.KeyAttr:
 		return ldvalue.String(c.key), true
-	case AttrNameName:
+	case ldattr.NameAttr:
 		return c.name.AsValue(), c.name.IsDefined()
-	case AttrNameTransient:
+	case ldattr.TransientAttr:
 		return ldvalue.Bool(c.transient), true
 	default:
 		value, ok := c.attributes[name]

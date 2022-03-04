@@ -4,6 +4,7 @@
 package ldcontext
 
 import (
+	"gopkg.in/launchdarkly/go-sdk-common.v3/ldattr"
 	"gopkg.in/launchdarkly/go-sdk-common.v3/ldvalue"
 
 	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
@@ -85,14 +86,14 @@ func unmarshalSingleKindEasyJSON(c *Context, in *jlexer.Lexer, knownKind Kind) {
 		key := in.UnsafeBytes()
 		in.WantColon()
 		switch string(key) {
-		case AttrNameKind:
+		case ldattr.KindAttr:
 			c.kind = Kind(in.String())
-		case AttrNameKey:
+		case ldattr.KeyAttr:
 			c.key = in.String()
 			hasKey = true
-		case AttrNameName:
+		case ldattr.NameAttr:
 			c.name = readOptStringEasyJSON(in)
-		case AttrNameTransient:
+		case ldattr.TransientAttr:
 			c.transient = in.Bool()
 		case jsonPropMeta:
 			in.Delim('{')
@@ -108,7 +109,7 @@ func unmarshalSingleKindEasyJSON(c *Context, in *jlexer.Lexer, knownKind Kind) {
 					} else {
 						in.Delim('[')
 						for !in.IsDelim(']') {
-							c.privateAttrs = append(c.privateAttrs, NewAttrRef(in.String()))
+							c.privateAttrs = append(c.privateAttrs, ldattr.NewRef(in.String()))
 							in.WantComma()
 						}
 						in.Delim(']')
@@ -162,7 +163,7 @@ func unmarshalMultiKindEasyJSON(c *Context, in *jlexer.Lexer) {
 	for !in.IsDelim('}') {
 		name := in.String()
 		in.WantColon()
-		if name == AttrNameKind {
+		if name == ldattr.KindAttr {
 			in.SkipRecursive()
 		} else {
 			var subContext Context
@@ -190,10 +191,10 @@ func unmarshalOldUserSchemaEasyJSON(c *Context, in *jlexer.Lexer) {
 		key := in.UnsafeBytes()
 		in.WantColon()
 		switch string(key) {
-		case AttrNameKey:
+		case ldattr.KeyAttr:
 			c.key = in.String()
 			hasKey = true
-		case AttrNameName:
+		case ldattr.NameAttr:
 			c.name = readOptStringEasyJSON(in)
 		case jsonPropSecondary:
 			c.secondary = readOptStringEasyJSON(in)
@@ -228,7 +229,7 @@ func unmarshalOldUserSchemaEasyJSON(c *Context, in *jlexer.Lexer) {
 			} else {
 				in.Delim('[')
 				for !in.IsDelim(']') {
-					c.privateAttrs = append(c.privateAttrs, NewAttrRefForName(in.String()))
+					c.privateAttrs = append(c.privateAttrs, ldattr.NewNameRef(in.String()))
 					in.WantComma()
 				}
 				in.Delim(']')
@@ -269,7 +270,7 @@ func parseKindOnlyEasyJSON(originalLexer *jlexer.Lexer) (Kind, bool, error) {
 	for !in.IsDelim('}') {
 		key := in.UnsafeFieldName(false)
 		in.WantColon()
-		if key == AttrNameKind {
+		if key == ldattr.KindAttr {
 			kind := in.String()
 			return Kind(kind), true, in.Error()
 		}
