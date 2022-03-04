@@ -86,7 +86,7 @@ func jsonMarshalTestFn(c *Context) ([]byte, error) {
 
 func jsonStreamMarshalTestFn(c *Context) ([]byte, error) {
 	w := jwriter.NewWriter()
-	c.WriteToJSONWriter(&w)
+	ContextSerialization{}.MarshalToJSONWriter(&w, c)
 	return w.Bytes(), w.Error()
 }
 
