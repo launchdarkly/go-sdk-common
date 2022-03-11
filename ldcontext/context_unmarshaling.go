@@ -41,11 +41,10 @@ func makeInternCommonAttributeNamesMap() map[string]string {
 // a **Context rather than a *Context to json.Unmarshal.
 func (c *Context) UnmarshalJSON(data []byte) error {
 	r := jreader.NewReader(data)
-	ContextSerialization{}.UnmarshalFromJSONReader(&r, c)
-	return r.Error()
+	return ContextSerialization.UnmarshalFromJSONReader(&r, c)
 }
 
-func unmarshalFromJSONReader(r *jreader.Reader, c *Context, isEventOutputFormat bool) {
+func unmarshalFromJSONReader(r *jreader.Reader, c *Context) {
 	// Do a first pass where we just check for the "kind" property, because that determines what
 	// schema we use to parse everything else.
 	kind, hasKind, err := parseKindOnly(r)
@@ -55,11 +54,11 @@ func unmarshalFromJSONReader(r *jreader.Reader, c *Context, isEventOutputFormat 
 	}
 	switch {
 	case !hasKind:
-		err = unmarshalOldUserSchema(c, r, isEventOutputFormat)
+		err = unmarshalOldUserSchema(c, r)
 	case kind == MultiKind:
-		err = unmarshalMultiKind(c, r, isEventOutputFormat)
+		err = unmarshalMultiKind(c, r)
 	default:
-		err = unmarshalSingleKind(c, r, "", isEventOutputFormat)
+		err = unmarshalSingleKind(c, r, "")
 	}
 	if err != nil {
 		r.AddError(err)
@@ -93,7 +92,7 @@ func readOptString(r *jreader.Reader) ldvalue.OptionalString {
 	return ldvalue.OptionalString{}
 }
 
-func unmarshalSingleKind(c *Context, r *jreader.Reader, knownKind Kind, isEventOutputFormat bool) error {
+func unmarshalSingleKind(c *Context, r *jreader.Reader, knownKind Kind) error {
 	var b Builder
 	if knownKind != "" {
 		b.Kind(knownKind)
@@ -116,22 +115,8 @@ func unmarshalSingleKind(c *Context, r *jreader.Reader, knownKind Kind, isEventO
 				case jsonPropSecondary:
 					b.OptSecondary(readOptString(r))
 				case jsonPropPrivate:
-					if isEventOutputFormat {
-						_ = r.SkipValue()
-					} else {
-						for privateArr := r.ArrayOrNull(); privateArr.Next(); {
-							b.PrivateRef(ldattr.NewRef(r.String()))
-						}
-					}
-				case jsonPropRedacted:
-					if isEventOutputFormat {
-						values := make([]string, 0, 10) // arbitrary initial capacity to minimize reallocations
-						for redactedArr := r.ArrayOrNull(); redactedArr.Next(); {
-							values = append(values, r.String())
-						}
-						b.PreviouslyRedacted(values)
-					} else {
-						_ = r.SkipValue()
+					for privateArr := r.ArrayOrNull(); privateArr.Next(); {
+						b.PrivateRef(ldattr.NewRef(r.String()))
 					}
 				default:
 					// Unrecognized property names within _meta are ignored. Calling SkipValue makes the Reader
@@ -155,7 +140,7 @@ func unmarshalSingleKind(c *Context, r *jreader.Reader, knownKind Kind, isEventO
 	return c.Err()
 }
 
-func unmarshalMultiKind(c *Context, r *jreader.Reader, isEventOutputFormat bool) error {
+func unmarshalMultiKind(c *Context, r *jreader.Reader) error {
 	var b MultiBuilder
 	for obj := r.Object(); obj.Next(); {
 		name := string(obj.Name())
@@ -164,7 +149,7 @@ func unmarshalMultiKind(c *Context, r *jreader.Reader, isEventOutputFormat bool)
 			continue
 		}
 		var subContext Context
-		if err := unmarshalSingleKind(&subContext, r, Kind(name), isEventOutputFormat); err != nil {
+		if err := unmarshalSingleKind(&subContext, r, Kind(name)); err != nil {
 			return err
 		}
 		b.Add(subContext)
@@ -173,7 +158,7 @@ func unmarshalMultiKind(c *Context, r *jreader.Reader, isEventOutputFormat bool)
 	return c.Err()
 }
 
-func unmarshalOldUserSchema(c *Context, r *jreader.Reader, isEventOutputFormat bool) error {
+func unmarshalOldUserSchema(c *Context, r *jreader.Reader) error {
 	var b Builder
 	b.setAllowEmptyKey(true)
 	hasKey := false
@@ -197,24 +182,10 @@ func unmarshalOldUserSchema(c *Context, r *jreader.Reader, isEventOutputFormat b
 				b.SetValue(name, value)
 			}
 		case jsonPropOldUserPrivate:
-			if isEventOutputFormat {
-				_ = r.SkipValue()
-			} else {
-				for privateArr := r.ArrayOrNull(); privateArr.Next(); {
-					b.Private(r.String())
-					// Note, we use Private here rather than PrivateRef, because the Ref syntax is not used
-					// in the old user schema; each string here is by definition a literal attribute name.
-				}
-			}
-		case jsonPropOldUserRedacted:
-			if isEventOutputFormat {
-				values := make([]string, 0, 10) // arbitrary initial capacity to minimize reallocations
-				for redactedArr := r.ArrayOrNull(); redactedArr.Next(); {
-					values = append(values, r.String())
-				}
-				b.PreviouslyRedacted(values)
-			} else {
-				_ = r.SkipValue()
+			for privateArr := r.ArrayOrNull(); privateArr.Next(); {
+				b.Private(r.String())
+				// Note, we use Private here rather than PrivateRef, because the Ref syntax is not used
+				// in the old user schema; each string here is by definition a literal attribute name.
 			}
 		case "firstName", "lastName", "email", "country", "avatar", "ip":
 			if s := readOptString(r); s.IsDefined() {
@@ -255,4 +226,76 @@ func internAttributeNameIfPossible(nameBytes []byte) string {
 		return internedName
 	}
 	return string(nameBytes)
+}
+
+func unmarshalWithKindAndKeyOnly(r *jreader.Reader, c *Context) {
+	kind, hasKind, err := parseKindOnly(r)
+	if err != nil {
+		r.AddError(err)
+		return
+	}
+	switch {
+	case !hasKind:
+		err = unmarshalWithKindAndKeyOnlyOldUser(r, c)
+	case kind == MultiKind:
+		var mb MultiBuilder
+		for obj := r.Object(); obj.Next(); {
+			switch string(obj.Name()) {
+			case ldattr.KindAttr:
+				_ = r.SkipValue()
+			default:
+				kind := Kind(obj.Name())
+				var mc Context
+				if err = unmarshalWithKindAndKeyOnlySingleKind(r, &mc, kind); err != nil {
+					break
+				}
+				mb.Add(mc)
+			}
+		}
+		*c = mb.Build()
+		err = c.Err()
+	default:
+		err = unmarshalWithKindAndKeyOnlySingleKind(r, c, "")
+	}
+	if err != nil {
+		r.AddError(err)
+	}
+}
+
+func unmarshalWithKindAndKeyOnlySingleKind(r *jreader.Reader, c *Context, kind Kind) error {
+	var key string
+	hasKey := false
+	for obj := r.Object(); obj.Next(); {
+		switch string(obj.Name()) {
+		case ldattr.KindAttr:
+			kind = Kind(r.String())
+		case ldattr.KeyAttr:
+			key = r.String()
+			hasKey = true
+		default:
+			_ = r.SkipValue()
+		}
+	}
+	if !hasKey {
+		r.AddError(errJSONKeyMissing)
+		return errJSONKeyMissing
+	}
+	*c = NewWithKind(kind, key)
+	return c.Err()
+}
+
+func unmarshalWithKindAndKeyOnlyOldUser(r *jreader.Reader, c *Context) error {
+	for obj := r.Object(); obj.Next(); {
+		switch string(obj.Name()) {
+		case ldattr.KeyAttr:
+			key := r.String()
+			var b Builder
+			*c = b.setAllowEmptyKey(true).Key(key).Build()
+			return c.Err()
+		default:
+			_ = r.SkipValue()
+		}
+	}
+	r.AddError(errJSONKeyMissing)
+	return errJSONKeyMissing
 }

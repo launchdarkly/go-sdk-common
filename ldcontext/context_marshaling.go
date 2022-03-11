@@ -16,7 +16,7 @@ import (
 // same error.
 func (c Context) MarshalJSON() ([]byte, error) {
 	w := jwriter.NewWriter()
-	ContextSerialization{}.MarshalToJSONWriter(&w, &c)
+	ContextSerialization.MarshalToJSONWriter(&w, &c)
 	return w.Bytes(), w.Error()
 }
 

@@ -3,7 +3,6 @@ package ldcontext
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 	"testing"
 
 	"gopkg.in/launchdarkly/go-sdk-common.v3/ldvalue"
@@ -11,6 +10,7 @@ import (
 	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func makeContextUnmarshalUnimportantVariantsParams() []contextSerializationParams {
@@ -148,38 +148,56 @@ func makeAllContextUnmarshalingParams() []contextSerializationParams {
 	return params
 }
 
-func makeEventOutputFormatUnmarshalingParams() []contextSerializationParams {
-	var params []contextSerializationParams
-	for _, p := range makeAllContextUnmarshalingParams() {
-		// The regular input data includes some contexts with _meta.privateAttributes or privateAttributeNames--
-		// which in the regular format will get parsed, but in the event format they are ignored. It also
-		// includes some contexts with _meta.redactedAttributes or privateAttrs-- which in the regular format
-		// would be ignored, but are parsed in the event format.
-		if strings.Contains(p.json, `"redactedAttributes"`) || strings.Contains(p.json, `"privateAttrs"`) {
-			continue
-		}
-		p.context.privateAttrs = nil
-		params = append(params, p)
+func makeContextUnmarshalingErrorInputs() []string {
+	return []string{
+		`null`,
+		`false`,
+		`1`,
+		`"x"`,
+		`[]`,
+		`{}`,
+
+		// wrong type for top-level property
+		`{"kind": null}`,
+		`{"kind": true}`,
+		`{"kind": "org", "key": null}`,
+		`{"kind": "org", "key": true}`,
+		`{"kind": "multi", "org": null}`,
+		`{"kind": "multi", "org": true}`,
+		`{"kind": "org", "key": "my-key", "name": true}`,
+		`{"kind": "org", "key": "my-key", "transient": "yes"}}`,
+		`{"kind": "org", "key": "my-key", "transient": null}}`,
+		`{"kind": "org", "key": "my-key", "_meta": true}}`,
+
+		`{"kind": "org"}`,             // missing key
+		`{"kind": "user", "key": ""}`, // empty key not allowed in new-style context
+		`{"kind": "ørg", "key": "x"}`, // illegal kind
+
+		// wrong type within _meta
+		`{"kind": "org", "key": "my-key", "_meta": true}}`,
+		`{"kind": "org", "key": "my-key", "_meta": {"secondary": true}}}`,
+		`{"kind": "org", "key": "my-key", "_meta": {"privateAttributes": true}}}`,
+
+		`{"kind": "multi"}`,                                           // multi kind with no kinds
+		`{"kind": "multi", "user": {"key": ""}}`,                      // multi kind where subcontext fails validation
+		`{"kind": "multi", "user": {"key": true}}`,                    // multi kind where subcontext is malformed
+		`{"kind": "multi", "org": {"key": "x"}, "org": {"key": "y"}}`, // multi kind with repeated kind
+
+		// wrong types in old user schema
+		`{"key": null}`,
+		`{"key": true}`,
+		`{"key": "my-key", "secondary": true}`,
+		`{"key": "my-key", "anonymous": "x"}`,
+		`{"key": "my-key", "name": true}`,
+		`{"key": "my-key", "firstName": true}`,
+		`{"key": "my-key", "lastName": true}`,
+		`{"key": "my-key", "email": true}`,
+		`{"key": "my-key", "country": true}`,
+		`{"key": "my-key", "avatar": true}`,
+		`{"key": "my-key", "ip": true}`,
+		`{"key": "my-key", "custom": true}`,
+		`{"key": "my-key", "privateAttributeNames": true}`,
 	}
-	params = append(params,
-		contextSerializationParams{
-			NewBuilder("my-key").Build(),
-			`{"kind": "user", "key": "my-key", "_meta": {"redactedAttributes": []}}`,
-		},
-		contextSerializationParams{
-			NewBuilder("my-key").PreviouslyRedacted([]string{"a", "b"}).Build(),
-			`{"kind": "user", "key": "my-key", "_meta": {"redactedAttributes": ["a", "b"]}}`,
-		},
-		contextSerializationParams{
-			NewBuilder("my-key").Build(),
-			`{"key": "my-key", "privateAttrs": []}`, // old-style user
-		},
-		contextSerializationParams{
-			NewBuilder("my-key").PreviouslyRedacted([]string{"a", "b"}).Build(),
-			`{"key": "my-key", "privateAttrs": ["a", "b"]}`, // old-style user
-		},
-	)
-	return params
 }
 
 func contextUnmarshalingTests(t *testing.T, unmarshalFn func(*Context, []byte) error) {
@@ -242,6 +260,9 @@ func contextUnmarshalingTests(t *testing.T, unmarshalFn func(*Context, []byte) e
 			`{"key": "my-key", "ip": true}`,
 			`{"key": "my-key", "custom": true}`,
 			`{"key": "my-key", "privateAttributeNames": true}`,
+
+			// missing key in old user schema
+			`{"name": "x"}`,
 		} {
 			t.Run(badJSON, func(t *testing.T) {
 				var c Context
@@ -258,7 +279,7 @@ func jsonUnmarshalTestFn(c *Context, data []byte) error {
 
 func jsonStreamUnmarshalTestFn(c *Context, data []byte) error {
 	r := jreader.NewReader(data)
-	ContextSerialization{}.UnmarshalFromJSONReader(&r, c)
+	ContextSerialization.UnmarshalFromJSONReader(&r, c)
 	return r.Error()
 }
 
@@ -270,14 +291,81 @@ func TestContextReadFromJSONReader(t *testing.T) {
 	contextUnmarshalingTests(t, jsonStreamUnmarshalTestFn)
 }
 
-func TestContextUnmarshalEventOutputFormat(t *testing.T) {
-	for _, p := range makeEventOutputFormatUnmarshalingParams() {
-		t.Run(p.json, func(t *testing.T) {
-			r := jreader.NewReader([]byte(p.json))
-			var c Context
-			ContextSerialization{}.UnmarshalFromJSONReaderEventOutputFormat(&r, &c)
-			assert.NoError(t, r.Error())
-			assert.Equal(t, p.context, c)
-		})
-	}
+func TestContextReadKindAndKeyOnly(t *testing.T) {
+	t.Run("valid data", func(t *testing.T) {
+		for _, p := range makeAllContextUnmarshalingParams() {
+			t.Run(p.json, func(t *testing.T) {
+				var fullContext, minimalContext Context
+
+				r1 := jreader.NewReader([]byte(p.json))
+				err := ContextSerialization.UnmarshalFromJSONReader(&r1, &fullContext)
+				require.NoError(t, err)
+				require.NoError(t, r1.Error())
+				r2 := jreader.NewReader([]byte(p.json))
+				err = ContextSerialization.UnmarshalWithKindAndKeyOnly(&r2, &minimalContext)
+				require.NoError(t, err)
+				require.NoError(t, r2.Error())
+
+				if fullContext.Multiple() {
+					assert.True(t, minimalContext.Multiple())
+					assert.Equal(t, fullContext.MultiKindCount(), minimalContext.MultiKindCount())
+					for i := 0; i < fullContext.MultiKindCount(); i++ {
+						fc, _ := fullContext.MultiKindByIndex(i)
+						mc, _ := minimalContext.MultiKindByIndex(i)
+						assert.Equal(t, fc.Kind(), mc.Kind())
+						assert.Equal(t, fc.Key(), mc.Key())
+					}
+				} else {
+					assert.False(t, minimalContext.Multiple())
+					assert.Equal(t, fullContext.Kind(), minimalContext.Kind())
+					assert.Equal(t, fullContext.Key(), minimalContext.Key())
+				}
+				assert.Equal(t, fullContext.FullyQualifiedKey(), minimalContext.FullyQualifiedKey())
+			})
+		}
+	})
+
+	t.Run("error cases", func(t *testing.T) {
+		for _, badJSON := range []string{
+			// This is a deliberately shorter list than the error cases in the regular unmarshaling tests,
+			// because this method does not validate every property.
+			`null`,
+			`false`,
+			`1`,
+			`"x"`,
+			`[]`,
+			`{}`,
+
+			// wrong type for kind/key, or individual context was not an object
+			`{"kind": null}`,
+			`{"kind": true}`,
+			`{"kind": "org", "key": null}`,
+			`{"kind": "org", "key": true}`,
+			`{"kind": "multi", "org": null}`,
+			`{"kind": "multi", "org": true}`,
+
+			`{"kind": "org"}`,             // missing key
+			`{"kind": "user", "key": ""}`, // empty key not allowed in new-style context
+			`{"kind": "ørg", "key": "x"}`, // illegal kind
+
+			`{"kind": "multi"}`,                                           // multi kind with no kinds
+			`{"kind": "multi", "user": {"key": ""}}`,                      // multi kind where subcontext fails validation
+			`{"kind": "multi", "user": {"key": true}}`,                    // multi kind where subcontext is malformed
+			`{"kind": "multi", "org": {"key": "x"}, "org": {"key": "y"}}`, // multi kind with repeated kind
+
+			// wrong types in old user schema
+			`{"key": null}`,
+			`{"key": true}`,
+
+			// missing key in old user schema
+			`{"name": "x"}`,
+		} {
+			t.Run(badJSON, func(t *testing.T) {
+				var c Context
+				r := jreader.NewReader([]byte(badJSON))
+				err := ContextSerialization.UnmarshalWithKindAndKeyOnly(&r, &c)
+				assert.Error(t, err)
+			})
+		}
+	})
 }

@@ -387,48 +387,6 @@ func TestBuilderPrivate(t *testing.T) {
 	})
 }
 
-func TestBuilderPreviouslyRedacted(t *testing.T) {
-	expectRedactedRefsToBe := func(t *testing.T, c Context, expectedRefs []string) {
-		var actual []string
-		for i := 0; i < c.PreviouslyRedactedAttributeCount(); i++ {
-			if s, ok := c.PreviouslyRedactedAttributeByIndex(i); ok {
-				actual = append(actual, s)
-			}
-		}
-		assert.Equal(t, expectedRefs, actual)
-	}
-
-	t.Run("setter", func(t *testing.T) {
-		expectRedactedRefsToBe(t, NewBuilder("key").Build(), nil)
-
-		expectRedactedRefsToBe(t, NewBuilder("key").PreviouslyRedacted([]string{"a", "b"}).Build(), []string{"a", "b"})
-
-		expectRedactedRefsToBe(t, NewBuilder("key").
-			PreviouslyRedacted([]string{"a", "b"}).
-			PreviouslyRedacted([]string{}).
-			Build(), nil) // setter overwrites rather than appending
-	})
-
-	t.Run("slice is copied, not retained", func(t *testing.T) {
-		slice := []string{"a", "b"}
-		builder := NewBuilder("key").PreviouslyRedacted(slice)
-		expectRedactedRefsToBe(t, builder.Build(), []string{"a", "b"})
-		slice[1] = "c"
-		expectRedactedRefsToBe(t, builder.Build(), []string{"a", "b"})
-	})
-
-	t.Run("getter is safe with out-of-range index", func(t *testing.T) {
-		c := NewBuilder("key").PreviouslyRedacted([]string{"a", "b"}).Build()
-		assert.Equal(t, 2, c.PreviouslyRedactedAttributeCount())
-		s, ok := c.PreviouslyRedactedAttributeByIndex(-1)
-		assert.False(t, ok)
-		assert.Equal(t, "", s)
-		s, ok = c.PreviouslyRedactedAttributeByIndex(2)
-		assert.False(t, ok)
-		assert.Equal(t, "", s)
-	})
-}
-
 func TestNewBuilderFromContext(t *testing.T) {
 	value1, value2 := ldvalue.String("value1"), ldvalue.String("value2")
 
