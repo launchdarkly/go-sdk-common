@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"reflect"
 
-	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
-	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
+	"github.com/launchdarkly/go-jsonstream/v2/jreader"
+	"github.com/launchdarkly/go-jsonstream/v2/jwriter"
 )
 
 // OptionalBool represents a bool that may or may not have a value. This is similar to using a

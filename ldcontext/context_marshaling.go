@@ -1,9 +1,9 @@
 package ldcontext
 
 import (
-	"gopkg.in/launchdarkly/go-sdk-common.v3/ldattr"
+	"github.com/launchdarkly/go-sdk-common/v3/ldattr"
 
-	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
+	"github.com/launchdarkly/go-jsonstream/v2/jwriter"
 )
 
 // MarshalJSON provides JSON serialization for Context when using json.MarshalJSON.

@@ -9,8 +9,6 @@ jobs:
       image: golang:1.16-buster
     template:
       name: go
-    env:
-      LD_RELEASE_GO_IMPORT_PATH: gopkg.in/launchdarkly/go-sdk-common.v3
 
 branches:
   - name: v3
@@ -21,5 +19,5 @@ branches:
     description: 1.x - for Go SDK 4.x
 
 publications:
-  - url: https://godoc.org/gopkg.in/launchdarkly/go-sdk-common.v3
+  - url: https://godoc.org/github.com/launchdarkly/go-sdk-common/v3
     description: documentation

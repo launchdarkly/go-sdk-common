@@ -3,8 +3,8 @@ package ldcontext
 import (
 	"encoding/json"
 
-	"gopkg.in/launchdarkly/go-sdk-common.v3/ldattr"
-	"gopkg.in/launchdarkly/go-sdk-common.v3/ldvalue"
+	"github.com/launchdarkly/go-sdk-common/v3/ldattr"
+	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
 )
 
 // Context is a collection of attributes that can be referenced in flag evaluations and analytics events.

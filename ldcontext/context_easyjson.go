@@ -4,10 +4,10 @@
 package ldcontext
 
 import (
-	"gopkg.in/launchdarkly/go-sdk-common.v3/ldattr"
-	"gopkg.in/launchdarkly/go-sdk-common.v3/ldvalue"
+	"github.com/launchdarkly/go-sdk-common/v3/ldattr"
+	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
 
-	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
+	"github.com/launchdarkly/go-jsonstream/v2/jwriter"
 
 	"github.com/mailru/easyjson/jlexer"
 	ej_jwriter "github.com/mailru/easyjson/jwriter"
@@ -35,7 +35,7 @@ import (
 // update both context_unmarshaling.go and context_easyjson.go. Our unit tests run the same test
 // data against both implementations to verify that they are in sync.
 //
-// For more information, see: https://gopkg.in/launchdarkly/go-jsonstream.v1
+// For more information, see: https://github.com/launchdarkly/go-jsonstream/v2
 
 // Arbitrary preallocation size that's likely to be longer than we will need for private/redacted
 // attribute lists, to minimize reallocations during unmarshaling.

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/url"
 
-	"gopkg.in/launchdarkly/go-sdk-common.v3/ldattr"
-	"gopkg.in/launchdarkly/go-sdk-common.v3/ldvalue"
+	"github.com/launchdarkly/go-sdk-common/v3/ldattr"
+	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
 )
 
 // Builder is a mutable object that uses the builder pattern to specify properties for a Context.

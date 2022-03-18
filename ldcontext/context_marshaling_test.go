@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"testing"
 
-	"gopkg.in/launchdarkly/go-sdk-common.v3/ldattr"
-	"gopkg.in/launchdarkly/go-sdk-common.v3/ldvalue"
+	"github.com/launchdarkly/go-sdk-common/v3/ldattr"
+	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
 
+	"github.com/launchdarkly/go-jsonstream/v2/jwriter"
 	m "github.com/launchdarkly/go-test-helpers/v2/matchers"
-	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

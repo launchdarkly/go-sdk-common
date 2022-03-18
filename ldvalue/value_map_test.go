@@ -6,8 +6,8 @@ import (
 	"sort"
 	"testing"
 
-	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
-	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
+	"github.com/launchdarkly/go-jsonstream/v2/jreader"
+	"github.com/launchdarkly/go-jsonstream/v2/jwriter"
 
 	"github.com/stretchr/testify/assert"
 )

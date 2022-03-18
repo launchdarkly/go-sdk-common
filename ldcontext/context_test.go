@@ -5,8 +5,8 @@ import (
 	"sort"
 	"testing"
 
-	"gopkg.in/launchdarkly/go-sdk-common.v3/ldattr"
-	"gopkg.in/launchdarkly/go-sdk-common.v3/ldvalue"
+	"github.com/launchdarkly/go-sdk-common/v3/ldattr"
+	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
 
 	m "github.com/launchdarkly/go-test-helpers/v2/matchers"
 

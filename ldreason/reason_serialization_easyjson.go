@@ -1,10 +1,11 @@
+//go:build launchdarkly_easyjson
 // +build launchdarkly_easyjson
 
 package ldreason
 
 import (
-	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
-	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
+	"github.com/launchdarkly/go-jsonstream/v2/jreader"
+	"github.com/launchdarkly/go-jsonstream/v2/jwriter"
 
 	"github.com/mailru/easyjson/jlexer"
 	ej_jwriter "github.com/mailru/easyjson/jwriter"
@@ -20,7 +21,7 @@ import (
 // and read from the EasyJSON Writer/Lexer directly. Our go-jsonstream library provides methods for
 // doing this, if the launchdarkly_easyjson build tag is set.package ldmodel
 //
-// For more information, see: https://gopkg.in/launchdarkly/go-jsonstream.v1
+// For more information, see: https://github.com/launchdarkly/go-jsonstream/v2
 
 func (r EvaluationReason) MarshalEasyJSON(writer *ej_jwriter.Writer) {
 	wrappedWriter := jwriter.NewWriterFromEasyJSONWriter(writer)
