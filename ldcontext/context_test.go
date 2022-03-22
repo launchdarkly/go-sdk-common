@@ -273,30 +273,80 @@ func TestGetValueForInvalidRef(t *testing.T) {
 	expectAttributeNotFoundForRef(t, c, "/")
 }
 
+func TestContextEqual(t *testing.T) {
+	// Each top-level element in makeInstances is a slice of factories that should produce contexts equal to
+	// each other, and unequal to the contexts produced by the factories in any other slice.
+	makeInstances := [][]func() Context{
+		{func() Context { return New("a") }},
+		{func() Context { return New("b") }},
+		{func() Context { return NewWithKind("k1", "a") }},
+		{func() Context { return NewWithKind("k2", "a") }},
+		{func() Context { return NewBuilder("a").Name("b").Build() }},
+		{func() Context { return NewBuilder("a").Name("c").Build() }},
+		{func() Context { return NewBuilder("a").Secondary("b").Build() }},
+		{func() Context { return NewBuilder("a").Secondary("").Build() }}, // "" is not the same as undefined
+		{func() Context { return NewBuilder("a").Transient(true).Build() }},
+		{func() Context { return NewBuilder("a").SetBool("b", true).Build() }},
+		{func() Context { return NewBuilder("a").SetBool("b", false).Build() }},
+		{func() Context { return NewBuilder("a").SetInt("b", 0).Build() }},
+		{func() Context { return NewBuilder("a").SetInt("b", 1).Build() }},
+		{func() Context { return NewBuilder("a").SetString("b", "").Build() }},
+		{func() Context { return NewBuilder("a").SetString("b", "c").Build() }},
+		{func() Context { return NewBuilder("a").SetBool("b", true).SetBool("c", false).Build() },
+			func() Context { return NewBuilder("a").SetBool("c", false).SetBool("b", true).Build() }},
+		{func() Context { return NewBuilder("a").Name("b").Private("name").Build() }},
+		{func() Context { return NewBuilder("a").Name("b").SetBool("c", true).Private("name").Build() }},
+		{func() Context { return NewBuilder("a").Name("b").SetBool("c", true).Private("name", "c").Build() },
+			func() Context { return NewBuilder("a").Name("b").SetBool("c", true).Private("c", "name").Build() }},
+		{func() Context { return NewBuilder("a").Name("b").SetBool("c", true).Private("name", "d").Build() }},
+		{func() Context { return NewMulti(NewWithKind("k1", "a")) }},
+		{func() Context { return NewMulti(NewWithKind("k1", "a"), NewWithKind("k2", "b")) },
+			func() Context { return NewMulti(NewWithKind("k2", "b"), NewWithKind("k1", "a")) }},
+		{func() Context { return NewMulti(NewWithKind("k1", "a"), NewWithKind("k2", "c")) }},
+		{func() Context { return NewMulti(NewWithKind("k1", "a"), NewWithKind("k3", "b")) }},
+	}
+	for i, equalGroup := range makeInstances {
+		for _, factory1 := range equalGroup {
+			c1 := factory1()
+			for _, factory2 := range equalGroup {
+				c2 := factory2()
+				assert.True(t, c1.Equal(c2), "%s should have equaled %s", c1, c2)
+			}
+			for j, unequalGroup := range makeInstances {
+				if i == j {
+					continue
+				}
+				c2 := unequalGroup[0]()
+				assert.False(t, c1.Equal(c2), "%s should not have equaled %s", c1, c2)
+			}
+		}
+	}
+}
+
 func expectAttributeFoundForName(t *testing.T, expected ldvalue.Value, c Context, attrName string) {
 	t.Helper()
-	value, ok := c.GetValue(attrName)
-	assert.True(t, ok, "attribute %q should have been found, but was not", attrName)
+	value := c.GetValue(attrName)
+	assert.True(t, value.IsDefined(), "attribute %q should have been found, but was not", attrName)
 	m.In(t).Assert(value, m.JSONEqual(expected))
 }
 
 func expectAttributeNotFoundForName(t *testing.T, c Context, attrName string) {
 	t.Helper()
-	value, ok := c.GetValue(attrName)
-	assert.False(t, ok, "attribute %q should not have been found, but was", attrName)
+	value := c.GetValue(attrName)
+	assert.False(t, value.IsDefined(), "attribute %q should not have been found, but was", attrName)
 	m.In(t).Assert(value, m.JSONEqual(nil))
 }
 
 func expectAttributeFoundForRef(t *testing.T, expected ldvalue.Value, c Context, attrRefString string) {
 	t.Helper()
-	value, ok := c.GetValueForRef(ldattr.NewRef(attrRefString))
-	assert.True(t, ok, "attribute %q should have been found, but was not", attrRefString)
+	value := c.GetValueForRef(ldattr.NewRef(attrRefString))
+	assert.True(t, value.IsDefined(), "attribute %q should have been found, but was not", attrRefString)
 	m.In(t).Assert(value, m.JSONEqual(expected))
 }
 
 func expectAttributeNotFoundForRef(t *testing.T, c Context, attrRefString string) {
 	t.Helper()
-	value, ok := c.GetValueForRef(ldattr.NewRef(attrRefString))
-	assert.False(t, ok, "attribute %q should not have been found, but was", attrRefString)
+	value := c.GetValueForRef(ldattr.NewRef(attrRefString))
+	assert.False(t, value.IsDefined(), "attribute %q should not have been found, but was", attrRefString)
 	m.In(t).Assert(value, m.JSONEqual(nil))
 }

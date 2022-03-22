@@ -51,7 +51,7 @@ func TestValueMapBuild(t *testing.T) {
 	valueMap := b.Build()
 
 	assert.Equal(t, 2, valueMap.Count())
-	keys := valueMap.Keys()
+	keys := valueMap.Keys(nil)
 	sort.Strings(keys)
 	assert.Equal(t, []string{"item0", "item1"}, keys)
 
@@ -74,6 +74,10 @@ func TestValueMapBuildFromMap(t *testing.T) {
 	assert.Equal(t, m0, m1)
 	shouldBeSameMap(t, m0.data, m1.data)
 
+	m2 := ValueMapBuild().Set("item2", Int(3))
+	m2.SetAllFromValueMap(m0)
+	assert.Equal(t, ValueMapBuild().Set("item0", Int(1)).Set("item1", Int(2)).Set("item2", Int(3)).Build(), m2.Build())
+
 	// test copy-on-write behavior
 	m3 := ValueMapBuild().Set("item0", Int(1)).Build()
 	m4 := ValueMapBuildFromMap(m3).Set("item1", Int(2)).Build()
@@ -93,6 +97,38 @@ func TestValueMapBuilderRemove(t *testing.T) {
 	assert.Equal(t, ValueMapBuild().Build(), m1)
 	assert.NotEqual(t, m0, m1)
 	shouldNotBeSameMap(t, m0.data, m1.data)
+}
+
+func TestValueMapBuilderHasKey(t *testing.T) {
+	var b ValueMapBuilder
+	assert.False(t, b.HasKey("key1"))
+	assert.False(t, b.HasKey("key2"))
+
+	b.Set("key1", Int(1))
+	assert.True(t, b.HasKey("key1"))
+	assert.False(t, b.HasKey("key2"))
+
+	b.Set("key2", Int(2))
+	assert.True(t, b.HasKey("key1"))
+	assert.True(t, b.HasKey("key2"))
+
+	b.Remove("key1")
+	assert.False(t, b.HasKey("key1"))
+	assert.True(t, b.HasKey("key2"))
+}
+
+func TestValueMapBuilderSafety(t *testing.T) {
+	// empty instance is safe to use
+	var emptyInstance ValueMapBuilder
+	emptyInstance.Set("key", Int(1))
+	assert.Equal(t, ValueMapBuild().Set("key", Int(1)).Build(), emptyInstance.Build())
+
+	// nil pointer is safe to use
+	var nilPtr *ValueMapBuilder
+	assert.Nil(t, nilPtr.Set("key", Int(1)))
+	assert.Nil(t, nilPtr.SetAllFromValueMap(ValueMap{}))
+	assert.Nil(t, nilPtr.Remove("key1"))
+	assert.Equal(t, ValueMap{}, nilPtr.Build())
 }
 
 func TestValueMapGetByKey(t *testing.T) {
@@ -152,9 +188,22 @@ func TestValueMapEqual(t *testing.T) {
 }
 
 func TestValueMapKeys(t *testing.T) {
-	assert.Nil(t, ValueMap{}.Keys())
-	assert.Equal(t, []string{}, ValueMapBuild().Build().Keys())
-	assert.Equal(t, []string{"a"}, ValueMapBuild().Set("a", Int(1)).Build().Keys())
+	assert.Nil(t, ValueMap{}.Keys(nil))
+	assert.Nil(t, ValueMapBuild().Build().Keys(nil))
+
+	m := ValueMapBuild().Set("a", Int(1)).Build()
+
+	assert.Equal(t, []string{"a"}, m.Keys(nil))
+	slice1 := []string{"x", "y", "z"}
+	assert.Equal(t, []string{"a"}, m.Keys(slice1))
+	assert.Equal(t, []string{"a", "y", "z"}, slice1) // proves slice was reused
+	slice2 := []string{}
+	assert.Equal(t, []string{"a"}, m.Keys(slice2))
+
+	m1 := ValueMapBuild().Set("a", Int(1)).Set("b", Int(2)).Set("c", Int(3)).Build()
+	keys := m1.Keys(nil)
+	sort.Strings(keys)
+	assert.Equal(t, []string{"a", "b", "c"}, keys)
 }
 
 func TestValueMapAsValue(t *testing.T) {
@@ -181,36 +230,6 @@ func TestValueMapAsArbitraryValueMap(t *testing.T) {
 	m := ValueMapBuild().Set("a", Bool(false)).Set("b", Bool(true)).Build()
 	mm := m.AsArbitraryValueMap()
 	assert.Equal(t, map[string]interface{}{"a": false, "b": true}, mm)
-}
-
-func recordValueMapEnumerateCalls(valueMap ValueMap, stopFn func(enumerateParams) bool) []enumerateParams {
-	ret := []enumerateParams{}
-	valueMap.Enumerate(func(key string, v Value) bool {
-		params := enumerateParams{0, key, v}
-		ret = append(ret, params)
-		if stopFn != nil && stopFn(params) {
-			return false
-		}
-		return true
-	})
-	return ret
-}
-
-func TestValueMapEnumerate(t *testing.T) {
-	assert.Equal(t, []enumerateParams{}, recordValueMapEnumerateCalls(ValueMap{}, nil))
-	assert.Equal(t, []enumerateParams{}, recordValueMapEnumerateCalls(ValueMapBuild().Build(), nil))
-
-	m1 := ValueMapBuild().Set("a", Int(1)).Set("b", Int(2)).Build()
-
-	e1 := recordValueMapEnumerateCalls(m1, nil)
-	sort.Slice(e1, func(i, j int) bool { return e1[i].key < e1[j].key })
-	assert.Equal(t, []enumerateParams{
-		enumerateParams{0, "a", Int(1)},
-		enumerateParams{0, "b", Int(2)},
-	}, e1)
-
-	e2 := recordValueMapEnumerateCalls(m1, func(p enumerateParams) bool { return true })
-	assert.Len(t, e2, 1)
 }
 
 func TestTransformValueMap(t *testing.T) {

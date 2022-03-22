@@ -152,9 +152,9 @@ func TestBuilderSetCustomAttributes(t *testing.T) {
 					SetValue("my-attr", value).
 					SetValue("other-attr", otherValue).
 					Build()
-				assert.Len(t, c.attributes, 2)
-				m.In(t).Assert(c.attributes["my-attr"], m.JSONEqual(value))
-				m.In(t).Assert(c.attributes["other-attr"], m.JSONEqual(otherValue))
+				assert.Len(t, c.attributes.Keys(nil), 2)
+				m.In(t).Assert(c.attributes.Get("my-attr"), m.JSONEqual(value))
+				m.In(t).Assert(c.attributes.Get("other-attr"), m.JSONEqual(otherValue))
 			})
 		}
 	})
@@ -310,13 +310,13 @@ func TestBuilderAttributesCopyOnWrite(t *testing.T) {
 	b := makeBasicBuilder().SetValue("attr", value1)
 
 	c1 := b.Build()
-	m.In(t).Assert(c1.attributes["attr"], m.JSONEqual(value1))
+	m.In(t).Assert(c1.attributes.Get("attr"), m.JSONEqual(value1))
 
 	b.SetValue("attr", value2)
 
 	c2 := b.Build()
-	m.In(t).Assert(c2.attributes["attr"], m.JSONEqual(value2))
-	m.In(t).Assert(c1.attributes["attr"], m.JSONEqual(value1)) // unchanged
+	m.In(t).Assert(c2.attributes.Get("attr"), m.JSONEqual(value2))
+	m.In(t).Assert(c1.attributes.Get("attr"), m.JSONEqual(value1)) // unchanged
 }
 
 func TestBuilderPrivate(t *testing.T) {
@@ -393,7 +393,7 @@ func TestNewBuilderFromContext(t *testing.T) {
 	b1 := NewBuilder("key1").Kind("kind1").Name("name1").Secondary("sec1").Transient(true).SetValue("attr", value1)
 	b1.Private("private1")
 	c1 := b1.Build()
-	m.In(t).Assert(c1.attributes["attr"], m.JSONEqual(value1))
+	m.In(t).Assert(c1.attributes.Get("attr"), m.JSONEqual(value1))
 	assert.Len(t, c1.privateAttrs, 1)
 
 	b2 := NewBuilderFromContext(c1)
@@ -402,15 +402,15 @@ func TestNewBuilderFromContext(t *testing.T) {
 	assert.Equal(t, "key1", c2.Key())
 	assert.Equal(t, ldvalue.NewOptionalString("sec1"), c2.Secondary())
 	assert.True(t, c2.Transient())
-	m.In(t).Assert(c2.attributes["attr"], m.JSONEqual(value1))
+	m.In(t).Assert(c2.attributes.Get("attr"), m.JSONEqual(value1))
 	assert.Equal(t, c1.privateAttrs, c2.privateAttrs)
 
 	b3 := NewBuilderFromContext(c1)
 	b3.SetValue("attr", value2)
 	b3.Private("private2")
 	c3 := b3.Build()
-	m.In(t).Assert(c3.attributes["attr"], m.JSONEqual(value2))
-	m.In(t).Assert(c1.attributes["attr"], m.JSONEqual(value1)) // unchanged
+	m.In(t).Assert(c3.attributes.Get("attr"), m.JSONEqual(value2))
+	m.In(t).Assert(c1.attributes.Get("attr"), m.JSONEqual(value1)) // unchanged
 	assert.Len(t, c3.privateAttrs, 2)
 	assert.Len(t, c1.privateAttrs, 1) // unchanged
 
@@ -418,4 +418,22 @@ func TestNewBuilderFromContext(t *testing.T) {
 	assert.NoError(t, multi.Err())
 	c4 := NewBuilderFromContext(multi).Build()
 	assert.Error(t, c4.Err()) // can't copy Builder from multi-kind context
+}
+
+func TestBuilderSafety(t *testing.T) {
+	// empty instance is safe to use
+	var emptyInstance Builder
+	emptyInstance.Key("a")
+	assert.Equal(t, New("a"), emptyInstance.Build())
+
+	// nil pointer is safe to use
+	var nilPtr *Builder
+	assert.Nil(t, nilPtr.Key("a"))
+	assert.Nil(t, nilPtr.Name("a"))
+	assert.Nil(t, nilPtr.Secondary("a"))
+	assert.Nil(t, nilPtr.Transient(true))
+	assert.Nil(t, nilPtr.SetValue("a", ldvalue.Bool(true)))
+	assert.Nil(t, nilPtr.Private("a"))
+	assert.Nil(t, nilPtr.RemovePrivate("a"))
+	assert.Equal(t, Context{}, nilPtr.Build())
 }

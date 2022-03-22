@@ -2,6 +2,7 @@ package ldcontext
 
 import (
 	"encoding/json"
+	"sort"
 
 	"github.com/launchdarkly/go-sdk-common/v3/ldattr"
 	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
@@ -26,7 +27,7 @@ type Context struct {
 	key               string
 	fullyQualifiedKey string
 	name              ldvalue.OptionalString
-	attributes        map[string]ldvalue.Value
+	attributes        ldvalue.ValueMap
 	secondary         ldvalue.OptionalString
 	transient         bool
 	privateAttrs      []ldattr.Ref
@@ -113,20 +114,18 @@ func (c Context) Name() ldvalue.OptionalString {
 
 // GetOptionalAttributeNames returns a slice containing the names of all regular optional attributes defined
 // on this Context. These do not include the mandatory Kind and Key, or the metadata attributes Secondary,
-// Transient, and Private. If a non-nil slice is passed in, it will be reused to hold the return values if
-// it has enough capacity.
+// Transient, and Private.
+//
+// If a non-nil slice is passed in, it will be reused to hold the return values if it has enough capacity.
 func (c Context) GetOptionalAttributeNames(sliceIn []string) []string {
-	slice := sliceIn[0:0]
 	if c.Multiple() {
-		return slice
+		return nil
 	}
+	ret := c.attributes.Keys(sliceIn)
 	if c.name.IsDefined() {
-		slice = append(slice, ldattr.NameAttr)
+		ret = append(ret, ldattr.NameAttr)
 	}
-	for key := range c.attributes {
-		slice = append(slice, key)
-	}
-	return slice
+	return ret
 }
 
 // GetValue looks up the value of any attribute of the Context by name. This includes only attributes
@@ -143,12 +142,12 @@ func (c Context) GetOptionalAttributeNames(sliceIn []string) []string {
 // This method does not support complex expressions for getting individual values out of JSON objects
 // or arrays, such as "/address/street". Use GetValueForRef() for that purpose.
 //
-// If the value is found, the first return value is the attribute value (using the type ldvalue.Value
-// to represent a value of any JSON type) and the second return value is true.
+// If the value is found, the return value is the attribute value, using the type ldvalue.Value to
+// represent a value of any JSON type).
 //
-// If there is no such attribute, the first return value is ldvalue.Null() and the second return value
-// is false.
-func (c Context) GetValue(attrName string) (ldvalue.Value, bool) {
+// If there is no such attribute, the return value is ldvalue.Null(). An attribute that actually
+// exists cannot have a null value.
+func (c Context) GetValue(attrName string) ldvalue.Value {
 	return c.GetValueForRef(ldattr.NewNameRef(attrName))
 }
 
@@ -165,29 +164,29 @@ func (c Context) GetValue(attrName string) (ldvalue.Value, bool) {
 // For a multi-kind context, the only supported attribute name is "kind". Use MultiKindByIndex() or
 // MultiKindByName() to inspect a Context for a particular kind and then get its attributes.
 //
-// If the value is found, the first return value is the attribute value (using the type ldvalue.Value
-// to represent a value of any JSON type) and the second return value is true.
+// If the value is found, the return value is the attribute value, using the type ldvalue.Value to
+// represent a value of any JSON type).
 //
-// If the value is not found, or if the ldattr.Ref is invalid, the first return value is ldvalue.Null()
-// and the second return value is false.
-func (c Context) GetValueForRef(ref ldattr.Ref) (ldvalue.Value, bool) {
+// If there is no such attribute, or if the ldattr.Ref is invalid, the return value is ldvalue.Null().
+// An attribute that actually exists cannot have a null value.
+func (c Context) GetValueForRef(ref ldattr.Ref) ldvalue.Value {
 	if ref.Err() != nil {
-		return ldvalue.Null(), false
+		return ldvalue.Null()
 	}
 
 	firstPathComponent, _ := ref.Component(0)
 
 	if c.Multiple() {
 		if ref.Depth() == 1 && firstPathComponent == ldattr.KindAttr {
-			return ldvalue.String(string(c.kind)), true
+			return ldvalue.String(string(c.kind))
 		}
-		return ldvalue.Null(), false // multi-kind context has no other addressable attributes
+		return ldvalue.Null() // multi-kind context has no other addressable attributes
 	}
 
 	// Look up attribute in single-kind context
 	value, ok := c.getTopLevelAddressableAttributeSingleKind(firstPathComponent)
 	if !ok {
-		return ldvalue.Null(), false
+		return ldvalue.Null()
 	}
 	for i := 1; i < ref.Depth(); i++ {
 		name, index := ref.Component(i)
@@ -197,10 +196,10 @@ func (c Context) GetValueForRef(ref ldattr.Ref) (ldvalue.Value, bool) {
 			value, ok = value.TryGetByKey(name)
 		}
 		if !ok {
-			return ldvalue.Null(), false
+			return ldvalue.Null()
 		}
 	}
-	return value, true
+	return value
 }
 
 // Transient returns true if this Context is only intended for flag evaluations and will not be indexed by
@@ -289,7 +288,57 @@ func (c Context) getTopLevelAddressableAttributeSingleKind(name string) (ldvalue
 	case ldattr.TransientAttr:
 		return ldvalue.Bool(c.transient), true
 	default:
-		value, ok := c.attributes[name]
-		return value, ok
+		return c.attributes.TryGet(name)
 	}
+}
+
+// Equal tests whether two contexts are logically equal.
+//
+// Two single-kind contexts are logically equal if they have the same attribute names and values.
+// Two multi-kind contexts are logically equal if they contain the same kinds (in any order) and
+// the individual contexts are equal. A single-kind context is never equal to a multi-kind context.
+func (c Context) Equal(other Context) bool {
+	if c.kind != other.kind {
+		return false
+	}
+
+	if c.Multiple() {
+		if len(c.multiContexts) != len(other.multiContexts) {
+			return false
+		}
+		for _, mc1 := range c.multiContexts {
+			if mc2, ok := other.MultiKindByName(mc1.kind); !ok || !mc1.Equal(mc2) {
+				return false
+			}
+		}
+		return true
+	}
+
+	if c.key != other.key ||
+		c.name != other.name ||
+		c.transient != other.transient ||
+		c.secondary != other.secondary {
+		return false
+	}
+	if !c.attributes.Equal(other.attributes) {
+		return false
+	}
+	if len(c.privateAttrs) != len(other.privateAttrs) {
+		return false
+	}
+	sortedPrivateAttrs := func(attrs []ldattr.Ref) []string {
+		ret := make([]string, 0, len(attrs))
+		for _, a := range attrs {
+			ret = append(ret, a.String())
+		}
+		sort.Strings(ret)
+		return ret
+	}
+	attrs1, attrs2 := sortedPrivateAttrs(c.privateAttrs), sortedPrivateAttrs(other.privateAttrs)
+	for i, a := range attrs1 {
+		if a != attrs2[i] {
+			return false
+		}
+	}
+	return true
 }

@@ -27,16 +27,15 @@ import (
 // the resulting Context is immutable and is safe to use from multiple goroutines. Instances
 // created with Build() are not affected by subsequent actions taken on the Builder.
 type Builder struct {
-	kind                  Kind
-	key                   string
-	allowEmptyKey         bool
-	name                  ldvalue.OptionalString
-	attributes            map[string]ldvalue.Value
-	attributesCopyOnWrite bool
-	secondary             ldvalue.OptionalString
-	transient             bool
-	privateAttrs          []ldattr.Ref
-	privateCopyOnWrite    bool
+	kind               Kind
+	key                string
+	allowEmptyKey      bool
+	name               ldvalue.OptionalString
+	attributes         ldvalue.ValueMapBuilder
+	secondary          ldvalue.OptionalString
+	transient          bool
+	privateAttrs       []ldattr.Ref
+	privateCopyOnWrite bool
 }
 
 // NewBuilder creates a Builder for building a Context, initializing its Key property and
@@ -92,6 +91,9 @@ func NewBuilderFromContext(fromContext Context) *Builder {
 // You may call TryBuild instead of Build if you prefer to use two-value return semantics, but
 // the validation behavior is the same for both.
 func (b *Builder) Build() Context {
+	if b == nil {
+		return Context{}
+	}
 	actualKind, err := validateSingleKind(b.kind)
 	if err != nil {
 		return Context{err: err, kind: b.kind}
@@ -112,10 +114,10 @@ func (b *Builder) Build() Context {
 	}
 
 	ret.fullyQualifiedKey = makeFullyQualifiedKeySingleKind(actualKind, ret.key, true)
-
-	if b.attributes != nil {
-		ret.attributes = b.attributes
-		b.attributesCopyOnWrite = true
+	ret.attributes = b.attributes.Build()
+	if b.privateAttrs != nil {
+		ret.privateAttrs = b.privateAttrs
+		b.privateCopyOnWrite = true
 		// The ___CopyOnWrite fields allow us to avoid the overhead of cloning maps/slices in
 		// the typical case where Builder properties do not get modified after calling Build().
 		// To guard against concurrent modification if someone does continue to modify the
@@ -123,10 +125,6 @@ func (b *Builder) Build() Context {
 		// tries to modify it when ___CopyOnWrite is true. That is safe as long as no one is
 		// trying to modify Builder from two goroutines at once, which (per our documentation)
 		// is not supported anyway.
-	}
-	if b.privateAttrs != nil {
-		ret.privateAttrs = b.privateAttrs
-		b.privateCopyOnWrite = true
 	}
 
 	return ret
@@ -180,10 +178,12 @@ func (b *Builder) TryBuild() (Context, error) {
 // If the value is invalid at the time Build() is called, you will receive an invalid Context
 // whose Err() value will describe the problem.
 func (b *Builder) Kind(kind Kind) *Builder {
-	if kind == "" {
-		b.kind = DefaultKind
-	} else {
-		b.kind = kind
+	if b != nil {
+		if kind == "" {
+			b.kind = DefaultKind
+		} else {
+			b.kind = kind
+		}
 	}
 	return b
 }
@@ -195,14 +195,18 @@ func (b *Builder) Kind(kind Kind) *Builder {
 //
 // The key attribute can be referenced by flag rules, flag target lists, and segments.
 func (b *Builder) Key(key string) *Builder {
-	b.key = key
+	if b != nil {
+		b.key = key
+	}
 	return b
 }
 
 // Used internally when we are deserializing an old-style user from JSON; otherwise an empty key is
 // never allowed.
 func (b *Builder) setAllowEmptyKey(value bool) *Builder {
-	b.allowEmptyKey = value
+	if b != nil {
+		b.allowEmptyKey = value
+	}
 	return b
 }
 
@@ -213,6 +217,9 @@ func (b *Builder) setAllowEmptyKey(value bool) *Builder {
 // - Unlike most other attributes, it is always a string if it is specified.
 // - The LaunchDarkly dashboard treats this attribute as the preferred display name for users.
 func (b *Builder) Name(name string) *Builder {
+	if b == nil {
+		return b
+	}
 	return b.OptName(ldvalue.NewOptionalString(name))
 }
 
@@ -222,7 +229,9 @@ func (b *Builder) Name(name string) *Builder {
 // the OptionalString type, it also allows clearing a previously set name with
 // b.OptName(ldvalue.OptionalString{}).
 func (b *Builder) OptName(name ldvalue.OptionalString) *Builder {
-	b.name = name
+	if b != nil {
+		b.name = name
+	}
 	return b
 }
 
@@ -307,6 +316,9 @@ func (b *Builder) SetValue(attributeName string, value ldvalue.Value) *Builder {
 // parameters violated one of the restrictions described for SetValue (for instance,
 // attempting to set "key" to a value that was not a string).
 func (b *Builder) TrySetValue(attributeName string, value ldvalue.Value) bool {
+	if b == nil {
+		return false
+	}
 	switch attributeName {
 	case ldattr.KindAttr:
 		if !value.IsString() {
@@ -332,27 +344,11 @@ func (b *Builder) TrySetValue(attributeName string, value ldvalue.Value) bool {
 		return false
 	default:
 		if value.IsNull() {
-			if _, found := b.attributes[attributeName]; !found {
-				// Setting to null is same as removing, so if it doesn't exist anyway, there's nothing to do
-				return true
-			}
-		}
-		if b.attributes == nil {
-			b.attributes = make(map[string]ldvalue.Value)
-		} else if b.attributesCopyOnWrite {
-			// See note in Build() on ___CopyOnWrite
-			copied := make(map[string]ldvalue.Value, len(b.attributes)+1)
-			for k, v := range b.attributes {
-				copied[k] = v
-			}
-			b.attributes = copied
-			b.attributesCopyOnWrite = false
-		}
-		if value.IsNull() {
-			delete(b.attributes, attributeName)
+			b.attributes.Remove(attributeName)
 		} else {
-			b.attributes[attributeName] = value
+			b.attributes.Set(attributeName, value)
 		}
+		return true
 	}
 	return true
 }
@@ -381,7 +377,9 @@ func (b *Builder) Secondary(value string) *Builder {
 // This value is not addressable as an attribute in evaluations: that is, a rule clause cannot use the
 // attribute name "secondary".
 func (b *Builder) OptSecondary(value ldvalue.OptionalString) *Builder {
-	b.secondary = value
+	if b != nil {
+		b.secondary = value
+	}
 	return b
 }
 
@@ -398,7 +396,9 @@ func (b *Builder) OptSecondary(value ldvalue.OptionalString) *Builder {
 // This value is also addressable in evaluations as the attribute name "transient". It is always treated as
 // a boolean true or false in evaluations.
 func (b *Builder) Transient(value bool) *Builder {
-	b.transient = value
+	if b != nil {
+		b.transient = value
+	}
 	return b
 }
 
@@ -456,6 +456,9 @@ func (b *Builder) Private(attrRefStrings ...string) *Builder {
 //	       PrivateRef(privateStreetAttr).
 //         Build()
 func (b *Builder) PrivateRef(attrRefs ...ldattr.Ref) *Builder {
+	if b == nil {
+		return b
+	}
 	if b.privateAttrs == nil {
 		b.privateAttrs = make([]ldattr.Ref, 0, len(attrRefs))
 	} else if b.privateCopyOnWrite {
@@ -480,6 +483,9 @@ func (b *Builder) RemovePrivate(attrRefStrings ...string) *Builder {
 // RemovePrivateRef removes any private attribute references previously added with AddPrivate or
 // AddPrivateRef that exactly match that of any of the specified attribute references.
 func (b *Builder) RemovePrivateRef(attrRefs ...ldattr.Ref) *Builder {
+	if b == nil {
+		return b
+	}
 	if b.privateCopyOnWrite {
 		// See note in Build() on ___CopyOnWrite
 		b.privateAttrs = append([]ldattr.Ref(nil), b.privateAttrs...)
@@ -497,7 +503,7 @@ func (b *Builder) RemovePrivateRef(attrRefs ...ldattr.Ref) *Builder {
 }
 
 func (b *Builder) copyFrom(fromContext Context) {
-	if fromContext.Multiple() {
+	if fromContext.Multiple() || b == nil {
 		return
 	}
 	b.kind = fromContext.kind
@@ -505,8 +511,8 @@ func (b *Builder) copyFrom(fromContext Context) {
 	b.name = fromContext.name
 	b.secondary = fromContext.secondary
 	b.transient = fromContext.transient
-	b.attributes = fromContext.attributes
-	b.attributesCopyOnWrite = true
+	b.attributes = ldvalue.ValueMapBuilder{}
+	b.attributes.SetAllFromValueMap(fromContext.attributes)
 	b.privateAttrs = fromContext.privateAttrs
 	b.privateCopyOnWrite = true
 }

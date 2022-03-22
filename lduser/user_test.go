@@ -25,8 +25,7 @@ var allBuiltInAttributes = []UserAttribute{
 
 func makeStringGetter(name string) func(c ldcontext.Context) ldvalue.OptionalString {
 	return func(c ldcontext.Context) ldvalue.OptionalString {
-		v, _ := c.GetValue(name)
-		return v.AsOptionalString()
+		return c.GetValue(name).AsOptionalString()
 	}
 }
 

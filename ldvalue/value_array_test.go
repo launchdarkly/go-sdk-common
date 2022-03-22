@@ -98,6 +98,19 @@ func TestValueArrayBuildFromArray(t *testing.T) {
 	assert.Equal(t, a4, a5)
 }
 
+func TestValueArrayBuilderSafety(t *testing.T) {
+	// empty instance is safe to use
+	var emptyInstance ValueArrayBuilder
+	emptyInstance.Add(Int(1))
+	assert.Equal(t, ValueArrayBuild().Add(Int(1)).Build(), emptyInstance.Build())
+
+	// nil pointer is safe to use
+	var nilPtr *ValueArrayBuilder
+	assert.Nil(t, nilPtr.Add(Int(1)))
+	assert.Nil(t, nilPtr.AddAllFromValueArray(ValueArray{}))
+	assert.Equal(t, ValueArray{}, nilPtr.Build())
+}
+
 func TestValueArrayGetByIndex(t *testing.T) {
 	item0 := String("a")
 	item1 := Int(1)
@@ -177,35 +190,6 @@ func TestValueArrayAsArbitraryValueSlice(t *testing.T) {
 	a := ValueArrayOf(String("a"), String("b"))
 	s := a.AsArbitraryValueSlice()
 	assert.Equal(t, []interface{}{"a", "b"}, s)
-}
-
-func recordValueArrayEnumerateCalls(a ValueArray, stopFn func(enumerateParams) bool) []enumerateParams {
-	ret := []enumerateParams{}
-	a.Enumerate(func(index int, v Value) bool {
-		params := enumerateParams{index, "", v}
-		ret = append(ret, params)
-		if stopFn != nil && stopFn(params) {
-			return false
-		}
-		return true
-	})
-	return ret
-}
-
-func TestValueArrayEnumerate(t *testing.T) {
-	assert.Equal(t, []enumerateParams{}, recordValueArrayEnumerateCalls(ValueArray{}, nil))
-	assert.Equal(t, []enumerateParams{}, recordValueArrayEnumerateCalls(ValueArrayBuild().Build(), nil))
-
-	a1 := ValueArrayOf(String("a"), String("b"))
-
-	e1 := recordValueArrayEnumerateCalls(a1, nil)
-	assert.Equal(t, []enumerateParams{
-		enumerateParams{0, "", String("a")},
-		enumerateParams{1, "", String("b")},
-	}, e1)
-
-	e2 := recordValueArrayEnumerateCalls(a1, func(p enumerateParams) bool { return true })
-	assert.Len(t, e2, 1)
 }
 
 func TestValueArrayTransform(t *testing.T) {

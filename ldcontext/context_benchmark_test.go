@@ -34,7 +34,7 @@ func BenchmarkContextGetCustomAttrNoAlloc(b *testing.B) {
 			lastAttr := attrs[n-1].Name
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				benchmarkValue, _ = c.GetValue(lastAttr)
+				benchmarkValue = c.GetValue(lastAttr)
 			}
 		})
 	}
@@ -47,6 +47,6 @@ func BenchmarkContextGetCustomAttrNestedPropertyNoAlloc(b *testing.B) {
 	attrRef := ldattr.NewRef("/address/street/line1")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		benchmarkValue, _ = c.Build().GetValueForRef(attrRef)
+		benchmarkValue = c.Build().GetValueForRef(attrRef)
 	}
 }

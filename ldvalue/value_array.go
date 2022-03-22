@@ -29,48 +29,16 @@ type ValueArray struct {
 // ValueArrayBuilder is a builder created by ValueArrayBuild(), for creating immutable JSON arrays.
 //
 // A ValueArrayBuilder should not be accessed by multiple goroutines at once.
-type ValueArrayBuilder interface {
-	// Add appends an element to the array builder.
-	Add(value Value) ValueArrayBuilder
-	// AddAllFromArray appends all elements from an existing ValueArray.
-	AddAllFromValueArray(ValueArray) ValueArrayBuilder
-	// Build creates a Value containing the previously added array elements. Continuing to modify the
-	// same builder by calling Add after that point does not affect the returned array.
-	Build() ValueArray
-}
-
-type valueArrayBuilderImpl struct {
+type ValueArrayBuilder struct {
 	copyOnWrite bool
 	output      []Value
 }
 
-// ValueArrayBuild creates a builder for constructing an immutable ValueArray.
-//
-//     ValueArray := ldvalue.ValueArrayBuild().Add(ldvalue.Int(100)).Add(ldvalue.Int(200)).Build()
-func ValueArrayBuild() ValueArrayBuilder {
-	return &valueArrayBuilderImpl{}
-}
-
-// ValueArrayBuildWithCapacity creates a builder for constructing an immutable ValueArray.
-//
-// The capacity parameter is the same as the capacity of a slice, allowing you to preallocate space
-// if you know the number of elements; otherwise you can pass zero.
-//
-//     arrayValue := ldvalue.ValueArrayBuildWithCapacity(2).Add(ldvalue.Int(100)).Add(ldvalue.Int(200)).Build()
-func ValueArrayBuildWithCapacity(capacity int) ValueArrayBuilder {
-	return &valueArrayBuilderImpl{output: make([]Value, 0, capacity)}
-}
-
-// ValueArrayBuildFromArray creates a builder for constructing an immutable ValueArray, initializing it
-// from an existing ValueArray.
-//
-// The builder has copy-on-write behavior, so if you make no changes before calling Build(), the
-// original array is used as-is.
-func ValueArrayBuildFromArray(a ValueArray) ValueArrayBuilder {
-	return &valueArrayBuilderImpl{output: a.data, copyOnWrite: true}
-}
-
-func (b *valueArrayBuilderImpl) Add(value Value) ValueArrayBuilder {
+// Add appends an element to the array builder.
+func (b *ValueArrayBuilder) Add(value Value) *ValueArrayBuilder {
+	if b == nil {
+		return b
+	}
 	if b.copyOnWrite {
 		n := len(b.output)
 		newSlice := make([]Value, n, n+1)
@@ -85,19 +53,51 @@ func (b *valueArrayBuilderImpl) Add(value Value) ValueArrayBuilder {
 	return b
 }
 
-func (b *valueArrayBuilderImpl) AddAllFromValueArray(a ValueArray) ValueArrayBuilder {
+// AddAllFromValueArray appends all elements from an existing ValueArray.
+func (b *ValueArrayBuilder) AddAllFromValueArray(a ValueArray) *ValueArrayBuilder {
 	for _, v := range a.data {
 		b.Add(v)
 	}
 	return b
 }
 
-func (b *valueArrayBuilderImpl) Build() ValueArray {
+// Build creates a Value containing the previously added array elements. Continuing to modify the
+// same builder by calling Add after that point does not affect the returned array.
+func (b *ValueArrayBuilder) Build() ValueArray {
+	if b == nil {
+		return ValueArray{}
+	}
 	if b.output == nil {
 		return ValueArray{emptyArray}
 	}
 	b.copyOnWrite = true
 	return ValueArray{b.output}
+}
+
+// ValueArrayBuild creates a builder for constructing an immutable ValueArray.
+//
+//     ValueArray := ldvalue.ValueArrayBuild().Add(ldvalue.Int(100)).Add(ldvalue.Int(200)).Build()
+func ValueArrayBuild() *ValueArrayBuilder {
+	return &ValueArrayBuilder{}
+}
+
+// ValueArrayBuildWithCapacity creates a builder for constructing an immutable ValueArray.
+//
+// The capacity parameter is the same as the capacity of a slice, allowing you to preallocate space
+// if you know the number of elements; otherwise you can pass zero.
+//
+//     arrayValue := ldvalue.ValueArrayBuildWithCapacity(2).Add(ldvalue.Int(100)).Add(ldvalue.Int(200)).Build()
+func ValueArrayBuildWithCapacity(capacity int) *ValueArrayBuilder {
+	return &ValueArrayBuilder{output: make([]Value, 0, capacity)}
+}
+
+// ValueArrayBuildFromArray creates a builder for constructing an immutable ValueArray, initializing it
+// from an existing ValueArray.
+//
+// The builder has copy-on-write behavior, so if you make no changes before calling Build(), the
+// original array is used as-is.
+func ValueArrayBuildFromArray(a ValueArray) *ValueArrayBuilder {
+	return &ValueArrayBuilder{output: a.data, copyOnWrite: true}
 }
 
 // ValueArrayOf creates a ValueArray from a list of Values.
@@ -224,17 +224,6 @@ func (a ValueArray) Equal(other ValueArray) bool {
 	return true
 }
 
-// Enumerate calls a function for each value within a ValueArray, passing the index with each.
-//
-// The return value of fn is true to continue enumerating, false to stop.
-func (a ValueArray) Enumerate(fn func(index int, value Value) bool) {
-	for i, v := range a.data {
-		if !fn(i, v) {
-			return
-		}
-	}
-}
-
 // Transform applies a transformation function to a ValueArray, returning a new ValueArray.
 //
 // The behavior is as follows:
@@ -336,18 +325,11 @@ func (a *ValueArray) readFromJSONArray(r *jreader.Reader, arr *jreader.ArrayStat
 	}
 	var ab ValueArrayBuilder
 	for arr.Next() {
-		if ab == nil {
-			ab = ValueArrayBuildWithCapacity(2)
-		}
 		var vv Value
 		vv.ReadFromJSONReader(r)
 		ab.Add(vv)
 	}
 	if r.Error() == nil {
-		if ab == nil {
-			*a = ValueArrayOf()
-		} else {
-			*a = ab.Build()
-		}
+		*a = ab.Build()
 	}
 }

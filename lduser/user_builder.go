@@ -264,7 +264,8 @@ func (b *userBuilderImpl) CustomAll(valueMap ldvalue.ValueMap) UserBuilderCanMak
 			b.builder.SetValue(name, ldvalue.Null())
 		}
 	}
-	for _, k := range valueMap.Keys() {
+	keys := make([]string, 0, 50) // arbitrary size to preallocate on stack
+	for _, k := range valueMap.Keys(keys) {
 		b.builder.SetValue(k, valueMap.Get(k))
 	}
 	b.lastAttributeCanMakePrivate = ""

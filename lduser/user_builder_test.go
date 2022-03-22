@@ -67,12 +67,11 @@ func TestUserBuilderCanSetPrivateAttributes(t *testing.T) {
 			assert.Equal(t, "some-key", c.Key())
 
 			assert.Equal(t, ldvalue.NewOptionalString("value"), optionalStringGetters[a](c))
-			value, found := c.GetValue(string(a))
+			value := c.GetValue(string(a))
 			if a == SecondaryKeyAttribute {
 				// "secondary" is no longer addressable as an attribute in evaluations
-				assert.False(t, found)
+				assert.False(t, value.IsDefined())
 			} else {
-				assert.True(t, found)
 				assert.Equal(t, ldvalue.String("value"), value)
 			}
 
@@ -96,8 +95,7 @@ func TestUserBuilderCanSetPrivateAttributes(t *testing.T) {
 		builder.Custom("my-attr", ldvalue.String("value")).AsPrivateAttribute()
 		c := builder.Build()
 
-		value, ok := c.GetValue("my-attr")
-		assert.True(t, ok)
+		value := c.GetValue("my-attr")
 		assert.Equal(t, ldvalue.String("value"), value)
 
 		assert.Equal(t, []string{"my-attr"}, sortedPrivateAttributes(c))
@@ -108,8 +106,7 @@ func TestUserBuilderCanSetPrivateAttributes(t *testing.T) {
 		builder.Custom("/my-attr", ldvalue.String("value")).AsPrivateAttribute()
 		c := builder.Build()
 
-		value, ok := c.GetValue("/my-attr")
-		assert.True(t, ok)
+		value := c.GetValue("/my-attr")
 		assert.Equal(t, ldvalue.String("value"), value)
 
 		assert.Equal(t, []string{"/~1my-attr"}, sortedPrivateAttributes(c))
@@ -125,7 +122,7 @@ func TestUserBuilderCanMakeAttributeNonPrivate(t *testing.T) {
 
 	c := builder.Build()
 
-	value, _ := c.GetValue("email")
+	value := c.GetValue("email")
 	assert.Equal(t, ldvalue.String("f"), value)
 
 	assert.Equal(t, []string{"name"}, sortedPrivateAttributes(c))
@@ -134,16 +131,13 @@ func TestUserBuilderCanMakeAttributeNonPrivate(t *testing.T) {
 func TestUserBuilderCanSetCustomAttributes(t *testing.T) {
 	c := NewUserBuilder("some-key").Custom("first", ldvalue.Int(1)).Custom("second", ldvalue.String("two")).Build()
 
-	value, ok := c.GetValue("first")
-	assert.True(t, ok)
+	value := c.GetValue("first")
 	assert.Equal(t, 1, value.IntValue())
 
-	value, ok = c.GetValue("second")
-	assert.True(t, ok)
+	value = c.GetValue("second")
 	assert.Equal(t, "two", value.StringValue())
 
-	value, ok = c.GetValue("no")
-	assert.False(t, ok)
+	value = c.GetValue("no")
 	assert.Equal(t, ldvalue.Null(), value)
 
 	assert.Equal(t, []string{"first", "second"}, sortedOptionalAttributes(c))
@@ -154,12 +148,10 @@ func TestUserBuilderCanSetCustomAttributesAsMap(t *testing.T) {
 	valueMap := ldvalue.ValueMapBuild().Set("first", ldvalue.Int(1)).Set("second", ldvalue.String("two")).Build()
 	c := NewUserBuilder("some-key").CustomAll(valueMap).Build()
 
-	value, ok := c.GetValue("first")
-	assert.True(t, ok)
+	value := c.GetValue("first")
 	assert.Equal(t, ldvalue.Int(1), value)
 
-	value, ok = c.GetValue("second")
-	assert.True(t, ok)
+	value = c.GetValue("second")
 	assert.Equal(t, ldvalue.String("two"), value)
 
 	assert.Equal(t, []string{"first", "second"}, sortedOptionalAttributes(c))
@@ -257,15 +249,14 @@ func TestUserBuilderGenericSetAttribute(t *testing.T) {
 
 		builder.SetAttribute(UserAttribute(name), value)
 		c0 := builder.Build()
-		v, _ := c0.GetValue(name)
+		v := c0.GetValue(name)
 		assert.Equal(t, value, v)
 		assert.Equal(t, []string{name}, sortedOptionalAttributes(c0))
 		assert.Len(t, sortedPrivateAttributes(c0), 0)
 
 		builder.SetAttribute(UserAttribute(name), ldvalue.Null())
 		c1 := builder.Build()
-		v, ok := c1.GetValue(name)
-		assert.False(t, ok)
+		v = c1.GetValue(name)
 		assert.Equal(t, ldvalue.Null(), v)
 		assert.Len(t, sortedOptionalAttributes(c1), 0)
 		assert.Len(t, sortedPrivateAttributes(c1), 0)
