@@ -40,8 +40,8 @@ func (s ContextSerializationMethods) UnmarshalWithKindAndKeyOnly(r *jreader.Read
 
 // MarshalToJSONWriter marshals a Context with the jsonstream Writer API.
 func (s ContextSerializationMethods) MarshalToJSONWriter(w *jwriter.Writer, c *Context) {
-	if c.err != nil {
-		w.AddError(c.err)
+	if err := c.Err(); err != nil {
+		w.AddError(err)
 		return
 	}
 	if c.multiContexts == nil {

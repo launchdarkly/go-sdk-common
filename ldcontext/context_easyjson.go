@@ -47,8 +47,8 @@ const initialAttrListAllocSize = 10
 //
 // This method is only available when compiling with the build tag "launchdarkly_easyjson".
 func (c Context) MarshalEasyJSON(writer *ej_jwriter.Writer) {
-	if c.err != nil {
-		writer.Error = c.err
+	if err := c.Err(); err != nil {
+		writer.Error = err
 		return
 	}
 	wrappedWriter := jwriter.NewWriterFromEasyJSONWriter(writer)
