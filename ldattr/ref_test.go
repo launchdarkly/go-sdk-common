@@ -144,6 +144,28 @@ func TestRefComponents(t *testing.T) {
 	}
 }
 
+func TestRefEqual(t *testing.T) {
+	refs := []Ref{
+		{},
+		NewRef(""),
+		NewRef("a"),
+		NewRef("b"),
+		NewRef("/a/b"),
+		NewRef("/a/c"),
+		NewRef("///"),
+	}
+	for i, a := range refs {
+		sameValue := a
+		assert.True(t, sameValue.Equal(a))
+		for j, differentValue := range refs {
+			if j == i {
+				continue
+			}
+			assert.False(t, differentValue.Equal(a))
+		}
+	}
+}
+
 func TestRefMarshalJSON(t *testing.T) {
 	for _, p := range []struct {
 		ref  Ref

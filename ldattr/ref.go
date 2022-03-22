@@ -123,6 +123,19 @@ func (a Ref) IsDefined() bool {
 	return a.rawPath != "" || a.err != nil
 }
 
+// Equal returns true if the two Ref instances have the same value.
+//
+// You cannot compare Ref instances with the == operator, because the struct may contain a slice;
+// reflect.DeepEqual will work, but is less efficient.
+func (a Ref) Equal(other Ref) bool {
+	if a.err != other.err || a.rawPath != other.rawPath || a.singlePathComponent != other.singlePathComponent {
+		return false
+	}
+	return true
+	// We don't need to check the components slice, because it's impossible for the components to be different
+	// if rawPath is the same.
+}
+
 // Err returns nil for a valid Ref, or a non-nil error value for an invalid Ref.
 //
 // A Ref can only be invalid for the following reasons:
