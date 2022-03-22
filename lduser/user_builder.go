@@ -1,37 +1,49 @@
 package lduser
 
-import "gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
+import (
+	"github.com/launchdarkly/go-sdk-common/v3/ldattr"
+	"github.com/launchdarkly/go-sdk-common/v3/ldcontext"
+	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
+)
 
-// NewUser creates a new user identified by the given key.
-func NewUser(key string) User {
-	return User{key: key}
+// NewUser creates a new user context identified by the given key.
+//
+// This is exactly equivalent to ldcontext.New(key). It is provided to ease migration of code
+// that previously used lduser instead of ldcontext.
+func NewUser(key string) ldcontext.Context {
+	return ldcontext.New(key)
 }
 
-// NewAnonymousUser creates a new anonymous user identified by the given key.
-func NewAnonymousUser(key string) User {
-	return User{key: key, anonymous: ldvalue.NewOptionalBool(true)}
+// NewAnonymousUser creates a new transient user context identified by the given key.
+//
+// This is exactly equivalent to ldcontext.NewBuilder(key).Transient(true).Build(). It is provided
+// to ease migration of code that previously used lduser instead of ldcontext.
+func NewAnonymousUser(key string) ldcontext.Context {
+	return ldcontext.NewBuilder(key).Transient(true).Build()
 }
 
-// UserBuilder is a mutable object that uses the Builder pattern to specify properties for a User.
-// This is the preferred method for constructing a User; direct access to User fields will be
-// removed in a future version.
+// UserBuilder is a mutable object that uses the Builder pattern to specify properties for a user
+// context.
 //
-// Obtain an instance of UserBuilder by calling NewUserBuilder, then call setter methods such as
-// Name to specify any additional user properties, then call Build() to construct the User. All of
-// the UserBuilder setters return a reference the same builder, so they can be chained together:
+// This is a compatibility helper that has been retained to ease migration of code from the older
+// "user" model to the newer "context" model. See the package description of lduser for more
+// about this.
 //
-//     user := NewUserBuilder("user-key").Name("Bob").Email("test@example.com").Build()
+// After obtaining an instance of UserBuilder by calling NewUserBuilder, call setter methods such as
+// Name to specify any additional user properties. Then, call Build() to construct the Context. All
+// of the UserBuilder setters return a reference the same builder, so they can be chained together:
 //
-// Setters for user attributes that can be designated private return the type
+//     context := NewUserBuilder("user-key").Name("Bob").Email("test@example.com").Build()
+//
+// Setters for attributes that can be designated private return the type
 // UserBuilderCanMakeAttributePrivate, so you can chain the AsPrivateAttribute method:
 //
-//     user := NewUserBuilder("user-key").Name("Bob").AsPrivateAttribute().Build() // Name is now private
+//     context := NewUserBuilder("user-key").Name("Bob").AsPrivateAttribute().Build() // Name is now private
 //
 // A UserBuilder should not be accessed by multiple goroutines at once.
 //
 // This is defined as an interface rather than a concrete type only for syntactic convenience (see
-// UserBuilderCanMakeAttributePrivate). Applications should not implement this interface since the package
-// may add methods to it in the future.
+// UserBuilderCanMakeAttributePrivate). Applications should not implement this interface.
 type UserBuilder interface {
 	// Key changes the unique key for the user being built.
 	Key(value string) UserBuilder
@@ -65,9 +77,11 @@ type UserBuilder interface {
 	// Name sets the full name attribute for the user being built.
 	Name(value string) UserBuilderCanMakeAttributePrivate
 
-	// Anonymous sets the anonymous attribute for the user being built.
+	// Anonymous sets the Transient attribute for the user context being built.
 	//
-	// If a user is anonymous, the user key will not appear on your LaunchDarkly dashboard.
+	// Transient means that the context will not be stored in the database that appears on your LaunchDarkly
+	// dashboard. LaunchDarkly previously called this property "anonymous", but it does not imply that the
+	// context has no name; you can still set Name or any other properties you want.
 	Anonymous(value bool) UserBuilder
 
 	// Custom sets a custom attribute for the user being built.
@@ -105,11 +119,11 @@ type UserBuilder interface {
 	// value will have no effect.
 	SetAttribute(attribute UserAttribute, value ldvalue.Value) UserBuilderCanMakeAttributePrivate
 
-	// Build creates a User from the current UserBuilder properties.
+	// Build creates a Context from the current UserBuilder properties.
 	//
-	// The User is independent of the UserBuilder once you have called Build(); modifying the UserBuilder
-	// will not affect an already-created User.
-	Build() User
+	// The Context is independent of the UserBuilder once you have called Build(); modifying the UserBuilder
+	// will not affect an already-created Context.
+	Build() ldcontext.Context
 }
 
 // UserBuilderCanMakeAttributePrivate is an extension of UserBuilder that allows attributes to be
@@ -152,20 +166,8 @@ type UserBuilderCanMakeAttributePrivate interface {
 }
 
 type userBuilderImpl struct {
-	key                         string
-	secondary                   ldvalue.OptionalString
-	ip                          ldvalue.OptionalString
-	country                     ldvalue.OptionalString
-	email                       ldvalue.OptionalString
-	firstName                   ldvalue.OptionalString
-	lastName                    ldvalue.OptionalString
-	avatar                      ldvalue.OptionalString
-	name                        ldvalue.OptionalString
-	anonymous                   ldvalue.OptionalBool
-	custom                      ldvalue.ValueMapBuilder
-	privateAttrs                map[UserAttribute]struct{}
-	privateAttrsCopyOnWrite     bool
-	lastAttributeCanMakePrivate UserAttribute
+	builder                     ldcontext.Builder
+	lastAttributeCanMakePrivate string
 }
 
 // NewUserBuilder constructs a new UserBuilder, specifying the user key.
@@ -173,7 +175,9 @@ type userBuilderImpl struct {
 // For authenticated users, the key may be a username or e-mail address. For anonymous users,
 // this could be an IP address or session ID.
 func NewUserBuilder(key string) UserBuilder {
-	return &userBuilderImpl{key: key}
+	b := &userBuilderImpl{}
+	b.builder.Kind("user").Key(key)
+	return b
 }
 
 // NewUserBuilderFromUser constructs a new UserBuilder, copying all attributes from an existing user. You may
@@ -183,95 +187,86 @@ func NewUserBuilder(key string) UserBuilder {
 // Since the User struct does not expose these maps, they are in effect immutable and will be reused from the
 // original User rather than copied whenever possible. The UserBuilder has copy-on-write behavior so that it
 // only makes copies of these data structures if you actually modify them.
-func NewUserBuilderFromUser(fromUser User) UserBuilder {
-	builder := &userBuilderImpl{
-		key:                     fromUser.key,
-		secondary:               fromUser.secondary,
-		ip:                      fromUser.ip,
-		country:                 fromUser.country,
-		email:                   fromUser.email,
-		firstName:               fromUser.firstName,
-		lastName:                fromUser.lastName,
-		avatar:                  fromUser.avatar,
-		name:                    fromUser.name,
-		anonymous:               fromUser.anonymous,
-		privateAttrs:            fromUser.privateAttributes,
-		privateAttrsCopyOnWrite: true,
-	}
-	if fromUser.custom.Count() > 0 {
-		builder.custom = ldvalue.ValueMapBuildFromMap(fromUser.custom)
-	}
-	return builder
+func NewUserBuilderFromUser(fromUser ldcontext.Context) UserBuilder {
+	return &userBuilderImpl{builder: *(ldcontext.NewBuilderFromContext(fromUser))}
 }
 
-func (b *userBuilderImpl) canMakeAttributePrivate(attribute UserAttribute) UserBuilderCanMakeAttributePrivate {
+func (b *userBuilderImpl) canMakeAttributePrivate(attribute string) UserBuilderCanMakeAttributePrivate {
 	b.lastAttributeCanMakePrivate = attribute
 	return b
 }
 
 func (b *userBuilderImpl) Key(value string) UserBuilder {
-	b.key = value
+	b.builder.Key(value)
 	return b
 }
 
 func (b *userBuilderImpl) Secondary(value string) UserBuilderCanMakeAttributePrivate {
-	b.secondary = ldvalue.NewOptionalString(value)
-	return b.canMakeAttributePrivate(SecondaryKeyAttribute)
+	b.builder.Secondary(value)
+	return b.canMakeAttributePrivate(string(SecondaryKeyAttribute))
 }
 
 func (b *userBuilderImpl) IP(value string) UserBuilderCanMakeAttributePrivate {
-	b.ip = ldvalue.NewOptionalString(value)
-	return b.canMakeAttributePrivate(IPAttribute)
+	b.builder.SetString("ip", value)
+	return b.canMakeAttributePrivate(string(IPAttribute))
 }
 
 func (b *userBuilderImpl) Country(value string) UserBuilderCanMakeAttributePrivate {
-	b.country = ldvalue.NewOptionalString(value)
-	return b.canMakeAttributePrivate(CountryAttribute)
+	b.builder.SetString("country", value)
+	return b.canMakeAttributePrivate(string(CountryAttribute))
 }
 
 func (b *userBuilderImpl) Email(value string) UserBuilderCanMakeAttributePrivate {
-	b.email = ldvalue.NewOptionalString(value)
-	return b.canMakeAttributePrivate(EmailAttribute)
+	b.builder.SetString("email", value)
+	return b.canMakeAttributePrivate(string(EmailAttribute))
 }
 
 func (b *userBuilderImpl) FirstName(value string) UserBuilderCanMakeAttributePrivate {
-	b.firstName = ldvalue.NewOptionalString(value)
-	return b.canMakeAttributePrivate(FirstNameAttribute)
+	b.builder.SetString("firstName", value)
+	return b.canMakeAttributePrivate(string(FirstNameAttribute))
 }
 
 func (b *userBuilderImpl) LastName(value string) UserBuilderCanMakeAttributePrivate {
-	b.lastName = ldvalue.NewOptionalString(value)
-	return b.canMakeAttributePrivate(LastNameAttribute)
+	b.builder.SetString("lastName", value)
+	return b.canMakeAttributePrivate(string(LastNameAttribute))
 }
 
 func (b *userBuilderImpl) Avatar(value string) UserBuilderCanMakeAttributePrivate {
-	b.avatar = ldvalue.NewOptionalString(value)
-	return b.canMakeAttributePrivate(AvatarAttribute)
+	b.builder.SetString("avatar", value)
+	return b.canMakeAttributePrivate(string(AvatarAttribute))
 }
 
 func (b *userBuilderImpl) Name(value string) UserBuilderCanMakeAttributePrivate {
-	b.name = ldvalue.NewOptionalString(value)
-	return b.canMakeAttributePrivate(NameAttribute)
+	b.builder.SetString("name", value)
+	return b.canMakeAttributePrivate(string(NameAttribute))
 }
 
 func (b *userBuilderImpl) Anonymous(value bool) UserBuilder {
-	b.anonymous = ldvalue.NewOptionalBool(value)
+	b.builder.Transient(value)
 	return b
 }
 
 func (b *userBuilderImpl) Custom(attribute string, value ldvalue.Value) UserBuilderCanMakeAttributePrivate {
-	if b.custom == nil {
-		b.custom = ldvalue.ValueMapBuild()
-	}
-	b.custom.Set(attribute, value)
-	return b.canMakeAttributePrivate(UserAttribute(attribute))
+	b.builder.SetValue(attribute, value)
+	return b.canMakeAttributePrivate(attribute)
 }
 
 func (b *userBuilderImpl) CustomAll(valueMap ldvalue.ValueMap) UserBuilderCanMakeAttributePrivate {
-	if valueMap.Count() == 0 {
-		b.custom = nil
-	} else {
-		b.custom = ldvalue.ValueMapBuildFromMap(valueMap)
+	// CustomAll is defined as replacing all existing custom attributes. The context builder doesn't
+	// have a method that applies to "all custom attributes" because it has a different notion of
+	// what is custom than User does, so we need to use the following awkward logic.
+	c := b.builder.Build()
+	for _, name := range c.GetOptionalAttributeNames(nil) {
+		switch name {
+		case "secondary", "name", "firstName", "lastName", "email", "country", "avatar", "ip":
+			continue
+		default:
+			b.builder.SetValue(name, ldvalue.Null())
+		}
+	}
+	keys := make([]string, 0, 50) // arbitrary size to preallocate on stack
+	for _, k := range valueMap.Keys(keys) {
+		b.builder.SetValue(k, valueMap.Get(k))
 	}
 	b.lastAttributeCanMakePrivate = ""
 	return b
@@ -281,97 +276,48 @@ func (b *userBuilderImpl) SetAttribute(
 	attribute UserAttribute,
 	value ldvalue.Value,
 ) UserBuilderCanMakeAttributePrivate {
-	okPrivate := true
-	setOptString := func(s *ldvalue.OptionalString) {
-		if value.IsString() {
-			*s = ldvalue.NewOptionalString(value.StringValue())
-		} else if value.IsNull() {
-			*s = ldvalue.OptionalString{}
-		}
-	}
+	// The defined behavior of SetAttribute is that if it's used with the name of a built-in attribute
+	// like key or name, it modifies that attribute if and only if the value is of a compatible type.
+	// That's the same as the behavior of ldcontext.Builder.SetValue, except that UserBuilder also
+	// supports setting Secondary by name-- and, UserBuilder enforces that formerly-built-in
+	// attributes like Email can only be a string or null.
 	switch attribute {
-	case KeyAttribute:
-		if value.IsString() {
-			b.key = value.StringValue()
-		}
-		okPrivate = false
 	case SecondaryKeyAttribute:
-		setOptString(&b.secondary)
-	case IPAttribute:
-		setOptString(&b.ip)
-	case CountryAttribute:
-		setOptString(&b.country)
-	case EmailAttribute:
-		setOptString(&b.email)
-	case FirstNameAttribute:
-		setOptString(&b.firstName)
-	case LastNameAttribute:
-		setOptString(&b.lastName)
-	case AvatarAttribute:
-		setOptString(&b.avatar)
-	case NameAttribute:
-		setOptString(&b.name)
-	case AnonymousAttribute:
-		switch {
-		case value.IsNull():
-			b.anonymous = ldvalue.OptionalBool{}
-		case value.IsBool():
-			b.anonymous = ldvalue.NewOptionalBool(value.BoolValue())
+		if value.IsString() || value.IsNull() {
+			b.builder.OptSecondary(value.AsOptionalString())
 		}
-		okPrivate = false
+	case AnonymousAttribute:
+		if value.IsBool() || value.IsNull() {
+			b.builder.Transient(value.BoolValue())
+		}
+	case FirstNameAttribute, LastNameAttribute, EmailAttribute, CountryAttribute, AvatarAttribute, IPAttribute:
+		if value.IsString() || value.IsNull() {
+			b.builder.SetValue(string(attribute), value)
+		}
 	default:
-		return b.Custom(string(attribute), value)
+		b.builder.SetValue(string(attribute), value)
 	}
-	if okPrivate {
-		return b.canMakeAttributePrivate(attribute)
+	if attribute != KeyAttribute && attribute != AnonymousAttribute {
+		return b.canMakeAttributePrivate(string(attribute))
 	}
 	b.lastAttributeCanMakePrivate = ""
 	return b
 }
 
-func (b *userBuilderImpl) Build() User {
-	u := User{
-		key:               b.key,
-		secondary:         b.secondary,
-		ip:                b.ip,
-		country:           b.country,
-		email:             b.email,
-		firstName:         b.firstName,
-		lastName:          b.lastName,
-		avatar:            b.avatar,
-		name:              b.name,
-		anonymous:         b.anonymous,
-		privateAttributes: b.privateAttrs,
-	}
-	if b.custom != nil {
-		u.custom = b.custom.Build()
-	}
-	b.privateAttrsCopyOnWrite = true
-	return u
+func (b *userBuilderImpl) Build() ldcontext.Context {
+	return b.builder.Build()
 }
 
 func (b *userBuilderImpl) AsPrivateAttribute() UserBuilder {
 	if b.lastAttributeCanMakePrivate != "" {
-		if b.privateAttrs == nil {
-			b.privateAttrs = make(map[UserAttribute]struct{})
-		} else if b.privateAttrsCopyOnWrite {
-			copied := make(map[UserAttribute]struct{}, len(b.privateAttrs))
-			for name := range b.privateAttrs {
-				copied[name] = struct{}{}
-			}
-			b.privateAttrs = copied
-		}
-		b.privateAttrs[b.lastAttributeCanMakePrivate] = struct{}{}
-		b.privateAttrsCopyOnWrite = false
+		b.builder.PrivateRef(ldattr.NewNameRef(b.lastAttributeCanMakePrivate))
 	}
 	return b
 }
 
 func (b *userBuilderImpl) AsNonPrivateAttribute() UserBuilder {
 	if b.lastAttributeCanMakePrivate != "" {
-		if b.privateAttrs != nil {
-			delete(b.privateAttrs, b.lastAttributeCanMakePrivate)
-		}
+		b.builder.RemovePrivateRef(ldattr.NewNameRef(b.lastAttributeCanMakePrivate))
 	}
 	return b
 }

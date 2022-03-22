@@ -1,3 +1,4 @@
+//go:build launchdarkly_easyjson
 // +build launchdarkly_easyjson
 
 package ldvalue
@@ -50,7 +51,7 @@ func TestEasyJsonUnmarshalErrorConditions(t *testing.T) {
 	var v Value
 	for _, data := range [][]byte{
 		nil,
-		[]byte{},
+		{},
 		[]byte("what"),
 		[]byte("["),
 		[]byte("[what"),

@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
-
-	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
-	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
+	"github.com/launchdarkly/go-jsonstream/v2/jreader"
+	"github.com/launchdarkly/go-jsonstream/v2/jwriter"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -58,12 +56,6 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 			bytes := w.Bytes()
 			assert.NoError(t, w.Error())
 			assert.Equal(t, item.json, string(bytes))
-
-			var buf jsonstream.JSONBuffer // deprecated API
-			item.value.WriteToJSONBuffer(&buf)
-			bytes, err = buf.Get()
-			assert.NoError(t, err)
-			assert.Equal(t, item.json, string(bytes))
 		})
 	}
 }
@@ -77,18 +69,17 @@ func TestMarshalRaw(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, s, string(bytes))
 
-	var buf jsonstream.JSONBuffer
-	value.WriteToJSONBuffer(&buf)
-	bytes, err = buf.Get()
-	assert.NoError(t, err)
-	assert.Equal(t, s, string(bytes))
+	w := jwriter.NewWriter()
+	value.WriteToJSONWriter(&w)
+	assert.NoError(t, w.Error())
+	assert.Equal(t, s, string(w.Bytes()))
 }
 
 func TestUnmarshalErrorConditions(t *testing.T) {
 	var v Value
 	for _, data := range [][]byte{
 		nil,
-		[]byte{},
+		{},
 		[]byte("what"),
 		[]byte("["),
 		[]byte("[what"),

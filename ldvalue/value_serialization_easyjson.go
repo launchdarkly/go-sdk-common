@@ -1,3 +1,4 @@
+//go:build launchdarkly_easyjson
 // +build launchdarkly_easyjson
 
 package ldvalue
@@ -18,7 +19,7 @@ import (
 // path in some LaunchDarkly code on the service side, the extra overhead of the go-jsonstream
 // abstraction is undesirable.
 
-// For more information, see: https://gopkg.in/launchdarkly/go-jsonstream.v1
+// For more information, see: https://github.com/launchdarkly/go-jsonstream/v2
 
 func (v Value) MarshalEasyJSON(writer *ej_jwriter.Writer) {
 	switch v.valueType {

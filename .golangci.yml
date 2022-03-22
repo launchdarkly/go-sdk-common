@@ -44,7 +44,7 @@ linters-settings:
   gofmt:
     simplify: false
   goimports:
-    local-prefixes: gopkg.in/launchdarkly,github.com/launchdarkly
+    local-prefixes: github.com/launchdarkly
   
 issues:
   exclude-use-default: false

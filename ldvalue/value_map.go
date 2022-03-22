@@ -1,10 +1,8 @@
 package ldvalue
 
 import (
-	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream" //nolint:staticcheck // using a deprecated API
-
-	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
-	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
+	"github.com/launchdarkly/go-jsonstream/v2/jreader"
+	"github.com/launchdarkly/go-jsonstream/v2/jwriter"
 )
 
 // we reuse this for all non-nil zero-length ValueMap instances
@@ -29,28 +27,82 @@ type ValueMap struct {
 // ValueMapBuilder is a builder created by ValueMapBuild(), for creating immutable JSON objects.
 //
 // A ValueMapBuilder should not be accessed by multiple goroutines at once.
-type ValueMapBuilder interface {
-	// Set sets a key-value pair in the map builder.
-	Set(key string, value Value) ValueMapBuilder
-	// SetAllFromValueMap copies all key-value pairs from an existing ValueMap.
-	SetAllFromValueMap(ValueMap) ValueMapBuilder
-	// Remove unsets a key if it was set.
-	Remove(key string) ValueMapBuilder
-	// Build creates a ValueMap containing the previously specified key-value pairs. Continuing to
-	// modify the same builder by calling Set after that point does not affect the returned ValueMap.
-	Build() ValueMap
-}
-
-type valueMapBuilderImpl struct {
+type ValueMapBuilder struct {
 	copyOnWrite bool
 	output      map[string]Value
+}
+
+// Set sets a key-value pair in the map builder.
+func (b *ValueMapBuilder) Set(key string, value Value) *ValueMapBuilder {
+	if b == nil {
+		return b
+	}
+	if b.copyOnWrite {
+		b.output = copyValueMap(b.output)
+		b.copyOnWrite = false
+	}
+	if b.output == nil {
+		b.output = make(map[string]Value, 1)
+	}
+	b.output[key] = value
+	return b
+}
+
+// SetAllFromValueMap copies all key-value pairs from an existing ValueMap.
+func (b *ValueMapBuilder) SetAllFromValueMap(m ValueMap) *ValueMapBuilder {
+	if b == nil {
+		return b
+	}
+	if b.output == nil {
+		b.output = m.data
+		b.copyOnWrite = true
+	} else {
+		for k, v := range m.data {
+			b.Set(k, v)
+		}
+	}
+	return b
+}
+
+// Remove unsets a key if it was set.
+func (b *ValueMapBuilder) Remove(key string) *ValueMapBuilder {
+	if b == nil {
+		return b
+	}
+	if b.output != nil {
+		if b.copyOnWrite {
+			b.output = copyValueMap(b.output)
+			b.copyOnWrite = false
+		}
+		delete(b.output, key)
+	}
+	return b
+}
+
+// HasKey returns true if the specified key has been set in the builder.
+func (b *ValueMapBuilder) HasKey(key string) bool {
+	_, found := b.output[key]
+	return found
+}
+
+// Build creates a ValueMap containing the previously specified key-value pairs. Continuing to
+// modify the same builder by calling Set after that point does not affect the returned ValueMap.
+func (b *ValueMapBuilder) Build() ValueMap {
+	if b == nil {
+		return ValueMap{}
+	}
+	if b.output == nil {
+		return ValueMap{emptyMap}
+	}
+	b.copyOnWrite = true
+	return ValueMap{b.output}
 }
 
 // ValueMapBuild creates a builder for constructing an immutable ValueMap.
 //
 //     valueMap := ldvalue.ValueMapBuild().Set("a", ldvalue.Int(100)).Set("b", ldvalue.Int(200)).Build()
-func ValueMapBuild() ValueMapBuilder {
-	return &valueMapBuilderImpl{}
+func ValueMapBuild() *ValueMapBuilder {
+	return &ValueMapBuilder{}
 }
 
 // ValueMapBuildWithCapacity creates a builder for constructing an immutable ValueMap.
@@ -59,8 +111,8 @@ func ValueMapBuild() ValueMapBuilder {
 // if you know the number of elements; otherwise you can pass zero.
 //
 //     objValue := ldvalue.ObjectBuildWithCapacity(2).Set("a", ldvalue.Int(100)).Set("b", ldvalue.Int(200)).Build()
-func ValueMapBuildWithCapacity(capacity int) ValueMapBuilder {
-	return &valueMapBuilderImpl{output: make(map[string]Value, capacity)}
+func ValueMapBuildWithCapacity(capacity int) *ValueMapBuilder {
+	return &ValueMapBuilder{output: make(map[string]Value, capacity)}
 }
 
 // ValueMapBuildFromMap creates a builder for constructing an immutable ValueMap, initializing it
@@ -68,31 +120,8 @@ func ValueMapBuildWithCapacity(capacity int) ValueMapBuilder {
 //
 // The builder has copy-on-write behavior, so if you make no changes before calling Build(), the
 // original map is used as-is.
-func ValueMapBuildFromMap(m ValueMap) ValueMapBuilder {
-	return &valueMapBuilderImpl{output: m.data, copyOnWrite: true}
-}
-
-func (b *valueMapBuilderImpl) Set(name string, value Value) ValueMapBuilder {
-	if b.copyOnWrite {
-		b.output = copyValueMap(b.output)
-		b.copyOnWrite = false
-	}
-	if b.output == nil {
-		b.output = make(map[string]Value, 1)
-	}
-	b.output[name] = value
-	return b
-}
-
-func (b *valueMapBuilderImpl) Remove(name string) ValueMapBuilder {
-	if b.copyOnWrite {
-		b.output = copyValueMap(b.output)
-		b.copyOnWrite = false
-	}
-	if b.output != nil {
-		delete(b.output, name)
-	}
-	return b
+func ValueMapBuildFromMap(m ValueMap) *ValueMapBuilder {
+	return &ValueMapBuilder{output: m.data, copyOnWrite: true}
 }
 
 func copyValueMap(m map[string]Value) map[string]Value {
@@ -101,21 +130,6 @@ func copyValueMap(m map[string]Value) map[string]Value {
 		ret[k] = v
 	}
 	return ret
-}
-
-func (b *valueMapBuilderImpl) SetAllFromValueMap(m ValueMap) ValueMapBuilder {
-	for k, v := range m.data {
-		b.Set(k, v)
-	}
-	return b
-}
-
-func (b *valueMapBuilderImpl) Build() ValueMap {
-	if b.output == nil {
-		return ValueMap{emptyMap}
-	}
-	b.copyOnWrite = true
-	return ValueMap{b.output}
 }
 
 // CopyValueMap copies an existing ordinary map to a ValueMap.
@@ -128,11 +142,7 @@ func CopyValueMap(data map[string]Value) ValueMap {
 	if len(data) == 0 {
 		return ValueMap{emptyMap}
 	}
-	m := make(map[string]Value, len(data))
-	for k, v := range data {
-		m[k] = v
-	}
-	return ValueMap{data: m}
+	return ValueMap{copyValueMap(data)}
 }
 
 // CopyArbitraryValueMap copies an existing ordinary map of interface{} values to a ValueMap. The
@@ -186,16 +196,17 @@ func (m ValueMap) TryGet(key string) (Value, bool) {
 
 // Keys returns the keys of a the map as a slice.
 //
-// The method copies the keys. For an uninitialized ValueMap{}, it returns nil.
-func (m ValueMap) Keys() []string {
-	if m.data == nil {
-		return nil
+// If a non-nil slice is passed in, it will be reused to hold the return values if it has enough capacity.
+// Otherwise, a new slice is allocated if there are any keys.
+//
+// The ordering of the keys is undefined.
+func (m ValueMap) Keys(sliceIn []string) []string {
+	if len(m.data) == 0 {
+		return sliceIn
 	}
-	ret := make([]string, len(m.data))
-	i := 0
+	ret := sliceIn[0:0]
 	for key := range m.data {
-		ret[i] = key
-		i++
+		ret = append(ret, key)
 	}
 	return ret
 }
@@ -242,18 +253,6 @@ func (m ValueMap) Equal(other ValueMap) bool {
 		}
 	}
 	return true
-}
-
-// Enumerate calls a function for each key-value pair within a ValueMap. The ordering is undefined
-// since map iteration in Go is non-deterministic.
-//
-// The return value of fn is true to continue enumerating, false to stop.
-func (m ValueMap) Enumerate(fn func(key string, value Value) bool) {
-	for k, v := range m.data {
-		if !fn(k, v) {
-			return
-		}
-	}
 }
 
 // Transform applies a transformation function to a ValueMap, returning a new ValueMap.
@@ -349,16 +348,6 @@ func (m ValueMap) WriteToJSONWriter(w *jwriter.Writer) {
 	obj.End()
 }
 
-// WriteToJSONBuffer provides JSON serialization for use with the deprecated jsonstream API.
-//
-// Deprecated: this method is provided for backward compatibility. The LaunchDarkly SDK no longer
-// uses this API; instead it uses the newer https://github.com/launchdarkly/go-jsonstream.
-//
-// Like a Go map, a ValueMap in an uninitialized/nil state produces a JSON null rather than an empty {}.
-func (m ValueMap) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
-	jsonstream.WriteToJSONBufferThroughWriter(m, j)
-}
-
 func (m *ValueMap) readFromJSONObject(r *jreader.Reader, obj *jreader.ObjectState) {
 	if r.Error() != nil {
 		return
@@ -369,19 +358,12 @@ func (m *ValueMap) readFromJSONObject(r *jreader.Reader, obj *jreader.ObjectStat
 	}
 	var mb ValueMapBuilder
 	for obj.Next() {
-		if mb == nil {
-			mb = ValueMapBuild()
-		}
 		name := obj.Name()
 		var vv Value
 		vv.ReadFromJSONReader(r)
 		mb.Set(string(name), vv)
 	}
 	if r.Error() == nil {
-		if mb == nil {
-			*m = ValueMap{data: emptyMap}
-		} else {
-			*m = mb.Build()
-		}
+		*m = mb.Build()
 	}
 }

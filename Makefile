@@ -31,10 +31,12 @@ clean:
 	go clean
 
 test: build
-	go test -race -v ./...
+	go test -run=not-a-real-test ./...  # just ensures that the tests compile
+	go test -race ./...
 
 test-easyjson: build-easyjson
-	go test -tags $(EASYJSON_TAG) -race -v ./...
+	go test -run=not-a-real-test -tags $(EASYJSON_TAG) ./...  # just ensures that the tests compile
+	go test -tags $(EASYJSON_TAG) -race ./...
 
 test-coverage: $(COVERAGE_PROFILE_RAW)
 	go run github.com/launchdarkly-labs/go-coverage-enforcer@latest $(COVERAGE_ENFORCER_FLAGS) -outprofile $(COVERAGE_PROFILE_FILTERED) $(COVERAGE_PROFILE_RAW)
@@ -70,7 +72,7 @@ benchmark-allocs:
 
 $(LINTER_VERSION_FILE):
 	rm -f $(LINTER)
-	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s $(GOLANGCI_LINT_VERSION)
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s $(GOLANGCI_LINT_VERSION)
 	touch $(LINTER_VERSION_FILE)
 
 lint: $(LINTER_VERSION_FILE)

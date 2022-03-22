@@ -3,11 +3,10 @@ package ldreason
 import (
 	"fmt"
 
-	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream" //nolint:staticcheck // using a deprecated API
-	"gopkg.in/launchdarkly/go-sdk-common.v2/ldvalue"
+	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
 
-	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
-	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
+	"github.com/launchdarkly/go-jsonstream/v2/jreader"
+	"github.com/launchdarkly/go-jsonstream/v2/jwriter"
 )
 
 // EvalReasonKind defines the possible values of EvaluationReason.GetKind().
@@ -284,12 +283,4 @@ func (r EvaluationReason) WriteToJSONWriter(w *jwriter.Writer) {
 		obj.Name("bigSegmentsStatus").String(string(r.bigSegmentsStatus))
 	}
 	obj.End()
-}
-
-// WriteToJSONBuffer provides JSON serialization for use with the deprecated jsonstream API.
-//
-// Deprecated: this method is provided for backward compatibility. The LaunchDarkly SDK no longer
-// uses this API; instead it uses the newer https://github.com/launchdarkly/go-jsonstream.
-func (r EvaluationReason) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
-	jsonstream.WriteToJSONBufferThroughWriter(r, j)
 }

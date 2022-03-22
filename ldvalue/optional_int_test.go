@@ -4,8 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
-	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream"
+	"github.com/launchdarkly/go-jsonstream/v2/jwriter"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -89,14 +88,6 @@ func TestOptionalIntJSONMarshalling(t *testing.T) {
 			w := jwriter.NewWriter()
 			o.WriteToJSONWriter(&w)
 			return w.Bytes(), w.Error()
-		})
-	})
-
-	t.Run("with WriteToJSONBuffer", func(t *testing.T) {
-		testWithMarshaler(t, func(o OptionalInt) ([]byte, error) {
-			var b jsonstream.JSONBuffer
-			o.WriteToJSONBuffer(&b)
-			return b.Get()
 		})
 	})
 }

@@ -6,31 +6,32 @@ package ldvalue
 // ArrayBuilder is a builder created by ArrayBuild(), for creating immutable arrays.
 //
 // An ArrayBuilder should not be accessed by multiple goroutines at once.
-type ArrayBuilder interface {
-	// Add appends an element to the array builder.
-	Add(value Value) ArrayBuilder
-	// Build creates a Value containing the previously added array elements. Continuing to modify the
-	// same builder by calling Add after that point does not affect the returned array.
-	Build() Value
-}
-
-type arrayBuilderImpl struct {
-	builder valueArrayBuilderImpl
+type ArrayBuilder struct {
+	builder ValueArrayBuilder
 }
 
 // ObjectBuilder is a builder created by ObjectBuild(), for creating immutable JSON objects.
 //
 // An ObjectBuilder should not be accessed by multiple goroutines at once.
-type ObjectBuilder interface {
-	// Set sets a key-value pair in the object builder.
-	Set(key string, value Value) ObjectBuilder
-	// Build creates a Value containing the previously specified key-value pairs. Continuing to modify
-	// the same builder by calling Set after that point does not affect the returned object.
-	Build() Value
+type ObjectBuilder struct {
+	builder ValueMapBuilder
 }
 
-type objectBuilderImpl struct {
-	builder valueMapBuilderImpl
+// Add appends an element to the array builder.
+func (b *ArrayBuilder) Add(value Value) *ArrayBuilder {
+	if b != nil {
+		b.builder.Add(value)
+	}
+	return b
+}
+
+// Build creates a Value containing the previously added array elements. Continuing to modify the
+// same builder by calling Add after that point does not affect the returned array.
+func (b *ArrayBuilder) Build() Value {
+	if b == nil {
+		return Null()
+	}
+	return Value{valueType: ArrayType, arrayValue: b.builder.Build()}
 }
 
 // ArrayOf creates an array Value from a list of Values.
@@ -45,7 +46,7 @@ func ArrayOf(items ...Value) Value {
 // ArrayBuild creates a builder for constructing an immutable array Value.
 //
 //     arrayValue := ldvalue.ArrayBuild().Add(ldvalue.Int(100)).Add(ldvalue.Int(200)).Build()
-func ArrayBuild() ArrayBuilder {
+func ArrayBuild() *ArrayBuilder {
 	return ArrayBuildWithCapacity(1)
 }
 
@@ -55,17 +56,8 @@ func ArrayBuild() ArrayBuilder {
 // if you know the number of elements; otherwise you can pass zero.
 //
 //     arrayValue := ldvalue.ArrayBuildWithCapacity(2).Add(ldvalue.Int(100)).Add(ldvalue.Int(200)).Build()
-func ArrayBuildWithCapacity(capacity int) ArrayBuilder {
-	return &arrayBuilderImpl{valueArrayBuilderImpl{output: make([]Value, 0, capacity)}}
-}
-
-func (b *arrayBuilderImpl) Add(value Value) ArrayBuilder {
-	b.builder.Add(value)
-	return b
-}
-
-func (b *arrayBuilderImpl) Build() Value {
-	return Value{valueType: ArrayType, arrayValue: b.builder.Build()}
+func ArrayBuildWithCapacity(capacity int) *ArrayBuilder {
+	return &ArrayBuilder{ValueArrayBuilder{output: make([]Value, 0, capacity)}}
 }
 
 // CopyObject creates a Value by copying an existing map[string]Value.
@@ -78,7 +70,7 @@ func CopyObject(m map[string]Value) Value {
 // ObjectBuild creates a builder for constructing an immutable JSON object Value.
 //
 //     objValue := ldvalue.ObjectBuild().Set("a", ldvalue.Int(100)).Set("b", ldvalue.Int(200)).Build()
-func ObjectBuild() ObjectBuilder {
+func ObjectBuild() *ObjectBuilder {
 	return ObjectBuildWithCapacity(1)
 }
 
@@ -88,16 +80,52 @@ func ObjectBuild() ObjectBuilder {
 // if you know the number of elements; otherwise you can pass zero.
 //
 //     objValue := ldvalue.ObjectBuildWithCapacity(2).Set("a", ldvalue.Int(100)).Set("b", ldvalue.Int(200)).Build()
-func ObjectBuildWithCapacity(capacity int) ObjectBuilder {
-	return &objectBuilderImpl{valueMapBuilderImpl{output: make(map[string]Value, capacity)}}
+func ObjectBuildWithCapacity(capacity int) *ObjectBuilder {
+	return &ObjectBuilder{ValueMapBuilder{output: make(map[string]Value, capacity)}}
 }
 
-func (b *objectBuilderImpl) Set(name string, value Value) ObjectBuilder {
-	b.builder.Set(name, value)
+// Set sets a key-value pair in the object builder to a value of any JSON type.
+func (b *ObjectBuilder) Set(key string, value Value) *ObjectBuilder {
+	if b != nil {
+		b.builder.Set(key, value)
+	}
 	return b
 }
 
-func (b *objectBuilderImpl) Build() Value {
+// SetBool sets a key-value pair in the object builder to a boolean value.
+func (b *ObjectBuilder) SetBool(key string, value bool) *ObjectBuilder {
+	return b.Set(key, Bool(value))
+}
+
+// SetInt sets a key-value pair in the object builder to an int value.
+func (b *ObjectBuilder) SetInt(key string, value int) *ObjectBuilder {
+	return b.Set(key, Int(value))
+}
+
+// SetFloat64 sets a key-value pair in the object builder to a float64 value.
+func (b *ObjectBuilder) SetFloat64(key string, value float64) *ObjectBuilder {
+	return b.Set(key, Float64(value))
+}
+
+// SetString sets a key-value pair in the object builder to a string value.
+func (b *ObjectBuilder) SetString(key string, value string) *ObjectBuilder {
+	return b.Set(key, String(value))
+}
+
+// Remove removes a key from the builder if it exists.
+func (b *ObjectBuilder) Remove(key string) *ObjectBuilder {
+	if b != nil {
+		b.builder.Remove(key)
+	}
+	return b
+}
+
+// Build creates a Value containing the previously specified key-value pairs. Continuing to modify
+// the same builder by calling Set after that point does not affect the returned object.
+func (b *ObjectBuilder) Build() Value {
+	if b == nil {
+		return Null()
+	}
 	return Value{valueType: ObjectType, objectValue: b.builder.Build()}
 }
 
@@ -134,10 +162,13 @@ func (v Value) TryGetByIndex(index int) (Value, bool) {
 
 // Keys returns the keys of a JSON object as a slice.
 //
-// The method copies the keys. If the value is not an object, it returns an empty slice.
-func (v Value) Keys() []string {
+// If a non-nil slice is passed in, it will be reused to hold the return values if it has enough capacity.
+// Otherwise, a new slice is allocated if there are any keys.
+//
+// The ordering of the keys is undefined.
+func (v Value) Keys(sliceIn []string) []string {
 	if v.valueType == ObjectType {
-		return v.objectValue.Keys()
+		return v.objectValue.Keys(sliceIn)
 	}
 	return nil
 }
@@ -157,40 +188,6 @@ func (v Value) GetByKey(name string) Value {
 // If the value is not an object, or if the key is not found, it returns (Null(), false).
 func (v Value) TryGetByKey(name string) (Value, bool) {
 	return v.objectValue.TryGet(name)
-}
-
-// Enumerate calls a function for each value within a Value.
-//
-// If the input value is Null(), the function is not called.
-//
-// If the input value is an array, fn is called for each element, with the element's index in the
-// first parameter, "" in the second, and the element value in the third.
-//
-// If the input value is an object, fn is called for each key-value pair, with 0 in the first
-// parameter, the key in the second, and the value in the third.
-//
-// For any other value type, fn is called once for that value.
-//
-// The return value of fn is true to continue enumerating, false to stop.
-func (v Value) Enumerate(fn func(index int, key string, value Value) bool) {
-	switch v.valueType {
-	case NullType:
-		return
-	case ArrayType:
-		for i, v1 := range v.arrayValue.data {
-			if !fn(i, "", v1) {
-				return
-			}
-		}
-	case ObjectType:
-		for k, v1 := range v.objectValue.data {
-			if !fn(0, k, v1) {
-				return
-			}
-		}
-	default:
-		_ = fn(0, "", v)
-	}
 }
 
 // Transform applies a transformation function to a Value, returning a new Value.

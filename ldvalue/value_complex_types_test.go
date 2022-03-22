@@ -51,6 +51,12 @@ func TestArrayBuild(t *testing.T) {
 	assert.Equal(t, ArrayOf(), ArrayBuild().Build())
 }
 
+func TestArrayBuilderNilSafety(t *testing.T) {
+	var b *ArrayBuilder
+	assert.Nil(t, b.Add(Int(1)))
+	assert.Equal(t, Null(), b.Build())
+}
+
 func TestArrayGetByIndex(t *testing.T) {
 	item0 := String("a")
 	item1 := Int(1)
@@ -96,7 +102,7 @@ func TestObjectBuild(t *testing.T) {
 
 	assert.Equal(t, ObjectType, value.Type())
 	assert.Equal(t, 2, value.Count())
-	keys := value.Keys()
+	keys := value.Keys(nil)
 	sort.Strings(keys)
 	assert.Equal(t, []string{"item0", "item1"}, keys)
 
@@ -105,6 +111,9 @@ func TestObjectBuild(t *testing.T) {
 	valueAfterModifyingBuilder := b.Build()
 	assert.Equal(t, item0x, valueAfterModifyingBuilder.GetByKey("item0"))
 	assert.Equal(t, item0, value.GetByKey("item0")) // verifies builder's copy-on-write behavior
+
+	assert.Equal(t, ObjectBuild().Set("b", Int(2)).Build(),
+		ObjectBuild().Set("a", Int(1)).Set("b", Int(2)).Remove("a").Build())
 
 	assert.True(t, value.IsDefined())
 	assert.False(t, value.IsNull())
@@ -116,6 +125,18 @@ func TestObjectBuild(t *testing.T) {
 	assert.Equal(t, float64(0), value.Float64Value())
 	assert.Equal(t, "", value.StringValue())
 	assert.Equal(t, OptionalString{}, value.AsOptionalString())
+
+	assert.Equal(t, ObjectBuild().SetBool("a", true).Build(), ObjectBuild().Set("a", Bool(true)).Build())
+	assert.Equal(t, ObjectBuild().SetInt("a", 1).Build(), ObjectBuild().Set("a", Int(1)).Build())
+	assert.Equal(t, ObjectBuild().SetFloat64("a", 1.5).Build(), ObjectBuild().Set("a", Float64(1.5)).Build())
+	assert.Equal(t, ObjectBuild().SetString("a", "b").Build(), ObjectBuild().Set("a", String("b")).Build())
+}
+
+func TestObjectBuilderNilSafety(t *testing.T) {
+	var b *ObjectBuilder
+	assert.Nil(t, b.Set("a", Int(1)))
+	assert.Nil(t, b.Remove("a"))
+	assert.Equal(t, Null(), b.Build())
 }
 
 func TestObjectGetByKey(t *testing.T) {
@@ -146,7 +167,7 @@ func TestUsingObjectMethodsForNonObjectValue(t *testing.T) {
 	}
 	for _, v := range values {
 		t.Run(v.String(), func(t *testing.T) {
-			assert.Nil(t, v.Keys())
+			assert.Nil(t, v.Keys(nil))
 			assert.Equal(t, Null(), v.GetByKey("x"))
 			_, ok := v.TryGetByKey("x")
 			assert.False(t, ok)
@@ -245,58 +266,6 @@ type enumerateParams struct {
 	index int
 	key   string
 	value Value
-}
-
-func recordEnumerateCalls(value Value, stopFn func(enumerateParams) bool) []enumerateParams {
-	ret := []enumerateParams{}
-	value.Enumerate(func(index int, key string, v Value) bool {
-		params := enumerateParams{index, key, v}
-		ret = append(ret, params)
-		if stopFn != nil && stopFn(params) {
-			return false
-		}
-		return true
-	})
-	return ret
-}
-
-func TestEnumerateSimpleTypes(t *testing.T) {
-	values := []Value{Bool(true), Int(1), String("x")}
-	for _, value := range values {
-		calls := recordEnumerateCalls(value, nil)
-		assert.Equal(t, []enumerateParams{enumerateParams{0, "", value}}, calls)
-	}
-	assert.Equal(t, []enumerateParams{}, recordEnumerateCalls(Null(), nil))
-}
-
-func TestEnumerateArray(t *testing.T) {
-	assert.Equal(t, []enumerateParams{}, recordEnumerateCalls(ArrayOf(), nil))
-
-	assert.Equal(t, []enumerateParams{
-		enumerateParams{0, "", Int(1)},
-		enumerateParams{1, "", String("a")},
-	}, recordEnumerateCalls(ArrayOf(Int(1), String("a")), nil))
-
-	assert.Equal(t, []enumerateParams{
-		enumerateParams{0, "", Int(1)},
-	}, recordEnumerateCalls(ArrayOf(Int(1), String("a")), func(p enumerateParams) bool {
-		return p.index == 0
-	}))
-}
-
-func TestEnumerateObject(t *testing.T) {
-	assert.Equal(t, []enumerateParams{}, recordEnumerateCalls(ObjectBuild().Build(), nil))
-
-	o1 := ObjectBuild().Set("a", Int(1)).Set("b", Int(2)).Build()
-	e1 := recordEnumerateCalls(o1, nil)
-	sort.Slice(e1, func(i, j int) bool { return e1[i].key < e1[j].key })
-	assert.Equal(t, []enumerateParams{
-		enumerateParams{0, "a", Int(1)},
-		enumerateParams{0, "b", Int(2)},
-	}, e1)
-
-	e2 := recordEnumerateCalls(o1, func(p enumerateParams) bool { return true })
-	assert.Len(t, e2, 1)
 }
 
 func TestTransformSimpleTypes(t *testing.T) {

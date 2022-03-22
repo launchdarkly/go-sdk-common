@@ -5,10 +5,8 @@ import (
 	"encoding/json"
 	"reflect"
 
-	"gopkg.in/launchdarkly/go-sdk-common.v2/jsonstream" //nolint:staticcheck // using a deprecated API
-
-	"gopkg.in/launchdarkly/go-jsonstream.v1/jreader"
-	"gopkg.in/launchdarkly/go-jsonstream.v1/jwriter"
+	"github.com/launchdarkly/go-jsonstream/v2/jreader"
+	"github.com/launchdarkly/go-jsonstream/v2/jwriter"
 )
 
 // OptionalBool represents a bool that may or may not have a value. This is similar to using a
@@ -26,9 +24,6 @@ import (
 // For instance, this example causes myIntPointer to point to the bool value true:
 //
 //     var myBoolPointer *int = NewOptionalBool(true).AsPointer()
-//
-// This type is used in the Anonymous property of lduser.User, and for other similar fields in
-// the LaunchDarkly Go SDK where a bool value may or may not be defined.
 type OptionalBool struct {
 	value    bool
 	hasValue bool
@@ -171,18 +166,6 @@ func (o OptionalBool) WriteToJSONWriter(w *jwriter.Writer) {
 		w.Bool(o.value)
 	} else {
 		w.Null()
-	}
-}
-
-// WriteToJSONBuffer provides JSON serialization for use with the deprecated jsonstream API.
-//
-// Deprecated: this method is provided for backward compatibility. The LaunchDarkly SDK no longer
-// uses this API; instead it uses the newer https://github.com/launchdarkly/go-jsonstream.
-func (o OptionalBool) WriteToJSONBuffer(j *jsonstream.JSONBuffer) {
-	if o.hasValue {
-		j.WriteBool(o.value)
-	} else {
-		j.WriteNull()
 	}
 }
 
