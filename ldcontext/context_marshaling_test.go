@@ -79,6 +79,15 @@ func contextMarshalingTests(t *testing.T, marshalFn func(*Context) ([]byte, erro
 		// We compare the error string, rather than checking for equality to errContextKeyEmpty itself, because
 		// the JSON marshaller may decorate the error in its own type with additional text.
 	})
+
+	t.Run("uninitialized context", func(t *testing.T) {
+		var c Context
+		_, err := marshalFn(&c)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), errContextUninitialized.Error())
+		// We compare the error string, rather than checking for equality to errContextKeyEmpty itself, because
+		// the JSON marshaller may decorate the error in its own type with additional text.
+	})
 }
 
 func jsonMarshalTestFn(c *Context) ([]byte, error) {

@@ -30,9 +30,10 @@ func (c *Context) writeToJSONWriterInternalSingle(w *jwriter.Writer, withinKind 
 	if c.name.IsDefined() {
 		obj.Name(ldattr.NameAttr).String(c.name.StringValue())
 	}
-	for k, v := range c.attributes {
+	keys := make([]string, 0, 50) // arbitrary size to preallocate on stack
+	for _, k := range c.attributes.Keys(keys) {
 		obj.Name(k)
-		v.WriteToJSONWriter(w)
+		c.attributes.Get(k).WriteToJSONWriter(w)
 	}
 	if c.transient {
 		obj.Name(ldattr.TransientAttr).Bool(true)

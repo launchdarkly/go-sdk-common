@@ -47,8 +47,8 @@ const initialAttrListAllocSize = 10
 //
 // This method is only available when compiling with the build tag "launchdarkly_easyjson".
 func (c Context) MarshalEasyJSON(writer *ej_jwriter.Writer) {
-	if c.err != nil {
-		writer.Error = c.err
+	if err := c.Err(); err != nil {
+		writer.Error = err
 		return
 	}
 	wrappedWriter := jwriter.NewWriterFromEasyJSONWriter(writer)
@@ -106,6 +106,7 @@ func unmarshalSingleKindEasyJSON(c *Context, in *jlexer.Lexer, knownKind Kind) {
 		c.kind = Kind(knownKind)
 	}
 	hasKey := false
+	var attributes ldvalue.ValueMapBuilder
 	in.Delim('{')
 	for !in.IsDelim('}') {
 		// Because the field name will often be a literal that we won't be retaining, we don't want the overhead
@@ -161,10 +162,7 @@ func unmarshalSingleKindEasyJSON(c *Context, in *jlexer.Lexer, knownKind Kind) {
 			} else {
 				var v ldvalue.Value
 				v.UnmarshalEasyJSON(in)
-				if c.attributes == nil {
-					c.attributes = make(map[string]ldvalue.Value)
-				}
-				c.attributes[internAttributeNameIfPossible(key)] = v
+				attributes.Set(internAttributeNameIfPossible(key), v)
 			}
 		}
 		in.WantComma()
@@ -187,6 +185,7 @@ func unmarshalSingleKindEasyJSON(c *Context, in *jlexer.Lexer, knownKind Kind) {
 		in.AddError(c.err)
 	} else {
 		c.fullyQualifiedKey = makeFullyQualifiedKeySingleKind(c.kind, c.key, true)
+		c.attributes = attributes.Build()
 	}
 }
 
@@ -218,6 +217,7 @@ func unmarshalOldUserSchemaEasyJSON(c *Context, in *jlexer.Lexer) {
 	c.defined = true
 	c.kind = DefaultKind
 	hasKey := false
+	var attributes ldvalue.ValueMapBuilder
 	in.Delim('{')
 	for !in.IsDelim('}') {
 		// See comment about UnsafeBytes in unmarshalSingleKindEasyJSON.
@@ -248,10 +248,7 @@ func unmarshalOldUserSchemaEasyJSON(c *Context, in *jlexer.Lexer) {
 				} else {
 					var value ldvalue.Value
 					value.UnmarshalEasyJSON(in)
-					if c.attributes == nil {
-						c.attributes = make(map[string]ldvalue.Value)
-					}
-					c.attributes[name] = value
+					attributes.Set(name, value)
 				}
 				in.WantComma()
 			}
@@ -274,11 +271,8 @@ func unmarshalOldUserSchemaEasyJSON(c *Context, in *jlexer.Lexer) {
 			if in.IsNull() {
 				in.Skip()
 			} else {
-				name := internAttributeNameIfPossible(key)
-				if c.attributes == nil {
-					c.attributes = make(map[string]ldvalue.Value)
-				}
-				c.attributes[name] = ldvalue.String(in.String())
+				value := ldvalue.String(in.String())
+				attributes.Set(internAttributeNameIfPossible(key), value)
 			}
 		default:
 			// In the old user schema, unrecognized top-level property names are ignored. Calling SkipRecursive
@@ -295,6 +289,7 @@ func unmarshalOldUserSchemaEasyJSON(c *Context, in *jlexer.Lexer) {
 		return
 	}
 	c.fullyQualifiedKey = c.key
+	c.attributes = attributes.Build()
 }
 
 func parseKindOnlyEasyJSON(originalLexer *jlexer.Lexer) (Kind, bool, error) {
@@ -308,6 +303,9 @@ func parseKindOnlyEasyJSON(originalLexer *jlexer.Lexer) (Kind, bool, error) {
 		in.WantColon()
 		if key == ldattr.KindAttr {
 			kind := in.String()
+			if in.Error() == nil && kind == "" {
+				return "", false, errContextKindEmpty
+			}
 			return Kind(kind), true, in.Error()
 		}
 		in.SkipRecursive()

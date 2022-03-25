@@ -79,7 +79,7 @@ func TestUnmarshalErrorConditions(t *testing.T) {
 	var v Value
 	for _, data := range [][]byte{
 		nil,
-		[]byte{},
+		{},
 		[]byte("what"),
 		[]byte("["),
 		[]byte("[what"),

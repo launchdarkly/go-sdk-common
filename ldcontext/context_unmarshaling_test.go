@@ -234,6 +234,7 @@ func contextUnmarshalingTests(t *testing.T, unmarshalFn func(*Context, []byte) e
 
 			`{"kind": "org"}`,             // missing key
 			`{"kind": "user", "key": ""}`, // empty key not allowed in new-style context
+			`{"kind": "", "key": "x"}`,    // empty kind not allowed in new-style context
 			`{"kind": "ørg", "key": "x"}`, // illegal kind
 
 			// wrong type within _meta
@@ -346,6 +347,7 @@ func TestContextReadKindAndKeyOnly(t *testing.T) {
 
 			`{"kind": "org"}`,             // missing key
 			`{"kind": "user", "key": ""}`, // empty key not allowed in new-style context
+			`{"kind": "", "key": "x"}`,    // empty kind not allowed in new-style context
 			`{"kind": "ørg", "key": "x"}`, // illegal kind
 
 			`{"kind": "multi"}`,                                           // multi kind with no kinds
