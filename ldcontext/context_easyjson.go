@@ -303,6 +303,9 @@ func parseKindOnlyEasyJSON(originalLexer *jlexer.Lexer) (Kind, bool, error) {
 		in.WantColon()
 		if key == ldattr.KindAttr {
 			kind := in.String()
+			if in.Error() == nil && kind == "" {
+				return "", false, errContextKindEmpty
+			}
 			return Kind(kind), true, in.Error()
 		}
 		in.SkipRecursive()

@@ -72,7 +72,11 @@ func parseKindOnly(originalReader *jreader.Reader) (Kind, bool, error) {
 	r := *originalReader
 	for obj := r.Object(); obj.Next(); {
 		if string(obj.Name()) == ldattr.KindAttr {
-			return Kind(r.String()), true, r.Error()
+			kind := r.String()
+			if r.Error() == nil && kind == "" {
+				return "", false, errContextKindEmpty
+			}
+			return Kind(kind), true, r.Error()
 			// We can immediately return here and not bother parsing the rest of the JSON object; we'll be
 			// creating another Reader that'll start over with the same byte slice for the second pass.
 		}
