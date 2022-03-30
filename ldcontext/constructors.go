@@ -30,6 +30,9 @@ func NewWithKind(kind Kind, key string) Context {
 // For the returned Context to be valid, the contexts list must not be empty, and all of its
 // elements must be single-kind Contexts. Otherwise, the returned Context will be invalid as
 // reported by Context.Err().
+//
+// If only one context parameter is given, NewMulti returns a single-kind context (that is,
+// just that same context) rather than a multi-kind context.
 func NewMulti(contexts ...Context) Context {
 	// Same rationale as for New/NewWithKey of using the builder instead of constructing directly.
 	var m MultiBuilder
