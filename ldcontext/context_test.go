@@ -48,7 +48,7 @@ func TestGetOptionalAttributeNames(t *testing.T) {
 	})
 
 	t.Run("none for multi-kind context", func(t *testing.T) {
-		c := NewMulti(NewWithKind("kind1", "key1"))
+		c := NewMulti(NewWithKind("kind1", "key1"), NewWithKind("otherkind", "otherkey"))
 		an := c.GetOptionalAttributeNames(nil)
 		assert.Len(t, an, 0)
 	})
@@ -71,7 +71,7 @@ func TestGetValue(t *testing.T) {
 		expectAttributeNotFoundForName(t, c, "")
 		expectAttributeNotFoundForName(t, c, "/")
 
-		mc := NewMulti(c)
+		mc := NewMulti(c, NewWithKind("otherkind", "otherkey"))
 		expectAttributeFoundForName(t, ldvalue.String("multi"), mc, "kind")
 		expectAttributeNotFoundForName(t, mc, "/kind")
 		expectAttributeNotFoundForName(t, mc, "key")
@@ -95,7 +95,7 @@ func TestGetValueForRefSpecialTopLevelAttributes(t *testing.T) {
 		})
 
 		t.Run("multi-kind", func(t *testing.T) {
-			c := NewMultiBuilder().Add(New("my-key")).Build()
+			c := NewMulti(New("my-key"), NewWithKind("otherkind", "otherkey"))
 			expectAttributeFoundForRef(t, ldvalue.String("multi"), c, "kind")
 		})
 	})
@@ -107,7 +107,7 @@ func TestGetValueForRefSpecialTopLevelAttributes(t *testing.T) {
 		})
 
 		t.Run("multi-kind", func(t *testing.T) {
-			c := NewMultiBuilder().Add(New("my-key")).Build()
+			c := NewMulti(New("my-key"), NewWithKind("otherkind", "otherkey"))
 			expectAttributeNotFoundForRef(t, c, "key")
 		})
 	})
@@ -124,7 +124,7 @@ func TestGetValueForRefSpecialTopLevelAttributes(t *testing.T) {
 		})
 
 		t.Run("multi-kind", func(t *testing.T) {
-			c := NewMultiBuilder().Add(makeBasicBuilder().Name("my-name").Build()).Build()
+			c := NewMulti(makeBasicBuilder().Name("my-name").Build(), NewWithKind("otherkind", "otherkey"))
 			expectAttributeNotFoundForRef(t, c, "name")
 		})
 	})
@@ -146,7 +146,7 @@ func TestGetValueForRefSpecialTopLevelAttributes(t *testing.T) {
 		})
 
 		t.Run("multi-kind", func(t *testing.T) {
-			c := NewMultiBuilder().Add(makeBasicBuilder().Transient(true).Build()).Build()
+			c := NewMulti(makeBasicBuilder().Transient(true).Build(), NewWithKind("otherkind", "otherkey"))
 			expectAttributeNotFoundForRef(t, c, "transient")
 		})
 	})
@@ -299,11 +299,13 @@ func TestContextEqual(t *testing.T) {
 		{func() Context { return NewBuilder("a").Name("b").SetBool("c", true).Private("name", "c").Build() },
 			func() Context { return NewBuilder("a").Name("b").SetBool("c", true).Private("c", "name").Build() }},
 		{func() Context { return NewBuilder("a").Name("b").SetBool("c", true).Private("name", "d").Build() }},
-		{func() Context { return NewMulti(NewWithKind("k1", "a")) }},
 		{func() Context { return NewMulti(NewWithKind("k1", "a"), NewWithKind("k2", "b")) },
 			func() Context { return NewMulti(NewWithKind("k2", "b"), NewWithKind("k1", "a")) }},
 		{func() Context { return NewMulti(NewWithKind("k1", "a"), NewWithKind("k2", "c")) }},
 		{func() Context { return NewMulti(NewWithKind("k1", "a"), NewWithKind("k3", "b")) }},
+		{func() Context {
+			return NewMulti(NewWithKind("k1", "a"), NewWithKind("k2", "b"), NewWithKind("k3", "c"))
+		}},
 	}
 	for i, equalGroup := range makeInstances {
 		for _, factory1 := range equalGroup {

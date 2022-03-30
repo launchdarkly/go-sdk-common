@@ -9,30 +9,8 @@ import (
 func TestMultiBuilder(t *testing.T) {
 	t.Run("single kind", func(t *testing.T) {
 		sub1 := NewWithKind("org", "my-org-key")
-		c0 := NewMultiBuilder().Add(sub1).Build()
-
-		assert.NoError(t, c0.Err())
-		assert.Equal(t, Kind("multi"), c0.Kind())
-		assert.Equal(t, "", c0.Key())
-
-		assert.Equal(t, 1, c0.MultiKindCount())
-
-		c1a, ok := c0.MultiKindByIndex(0)
-		assert.True(t, ok)
-		assert.Equal(t, sub1, c1a)
-
-		c1b, ok := c0.MultiKindByName("org")
-		assert.True(t, ok)
-		assert.Equal(t, sub1, c1b)
-
-		_, ok = c0.MultiKindByIndex(-1)
-		assert.False(t, ok)
-
-		_, ok = c0.MultiKindByIndex(1)
-		assert.False(t, ok)
-
-		_, ok = c0.MultiKindByName("notfound")
-		assert.False(t, ok)
+		c := NewMultiBuilder().Add(sub1).Build()
+		assert.Equal(t, sub1, c)
 	})
 
 	t.Run("multiple kinds", func(t *testing.T) {
@@ -74,16 +52,6 @@ func TestMultiBuilder(t *testing.T) {
 }
 
 func TestMultiBuilderFullyQualifiedKey(t *testing.T) {
-	t.Run("single kind, not user", func(t *testing.T) {
-		c := NewMultiBuilder().Add(NewWithKind("org", "my-org-key")).Build()
-		assert.Equal(t, "org:my-org-key", c.FullyQualifiedKey())
-	})
-
-	t.Run("single kind user", func(t *testing.T) {
-		c := NewMultiBuilder().Add(NewWithKind("user", "my-user-key")).Build()
-		assert.Equal(t, "user:my-user-key", c.FullyQualifiedKey())
-	})
-
 	t.Run("multiple kinds", func(t *testing.T) {
 		c := NewMultiBuilder().
 			// The following ordering is deliberate because we want to verify that these items are
@@ -113,9 +81,12 @@ func TestMultiBuilderErrors(t *testing.T) {
 
 	t.Run("nested multi", func(t *testing.T) {
 		sub1 := NewWithKind("org", "my-key")
-		sub2 := NewMulti(New("user-key"))
-		b := NewMultiBuilder().Add(sub1).Add(sub2)
-		verifyError(t, b, errContextKindMultiWithinMulti)
+		sub2 := NewMulti(New("user-key"), NewWithKind("org", "other"))
+		b0 := NewMultiBuilder().Add(sub1).Add(sub2)
+		verifyError(t, b0, errContextKindMultiWithinMulti)
+
+		b1 := NewMultiBuilder().Add(sub2)
+		verifyError(t, b1, errContextKindMultiWithinMulti)
 	})
 
 	t.Run("duplicate kind", func(t *testing.T) {
