@@ -148,7 +148,7 @@ func (c Context) GetOptionalAttributeNames(sliceIn []string) []string {
 // If there is no such attribute, the return value is ldvalue.Null(). An attribute that actually
 // exists cannot have a null value.
 func (c Context) GetValue(attrName string) ldvalue.Value {
-	return c.GetValueForRef(ldattr.NewNameRef(attrName))
+	return c.GetValueForRef(ldattr.NewLiteralRef(attrName))
 }
 
 // GetValueForRef looks up the value of any attribute of the Context, or a value contained within an

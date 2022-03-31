@@ -262,7 +262,7 @@ func unmarshalOldUserSchemaEasyJSON(c *Context, in *jlexer.Lexer) {
 					if c.privateAttrs == nil {
 						c.privateAttrs = make([]ldattr.Ref, 0, initialAttrListAllocSize)
 					}
-					c.privateAttrs = append(c.privateAttrs, ldattr.NewNameRef(in.String()))
+					c.privateAttrs = append(c.privateAttrs, ldattr.NewLiteralRef(in.String()))
 					in.WantComma()
 				}
 				in.Delim(']')
