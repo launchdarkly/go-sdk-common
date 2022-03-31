@@ -20,6 +20,10 @@ func TestRefInvalid(t *testing.T) {
 		{"//", errAttributeExtraSlash},
 		{"/a//b", errAttributeExtraSlash},
 		{"/a/b/", errAttributeExtraSlash},
+		{"/a~x", errAttributeInvalidEscape},
+		{"/a~", errAttributeInvalidEscape},
+		{"/a/b~x", errAttributeInvalidEscape},
+		{"/a/b~", errAttributeInvalidEscape},
 	} {
 		t.Run(fmt.Sprintf("input string %q", p.input), func(t *testing.T) {
 			a := NewRef(p.input)
@@ -69,7 +73,7 @@ func TestRefSimpleWithLeadingSlash(t *testing.T) {
 		{"/name", "name"},
 		{"/custom", "custom"},
 		{"/0", "0"},
-		{"/name~1with~1slashes~0and~0tildes~2~x~~", "name/with/slashes~and~tildes~2~x~~"},
+		{"/name~1with~1slashes~0and~0tildes", "name/with/slashes~and~tildes"},
 	} {
 		t.Run(fmt.Sprintf("input string %q", params.input), func(t *testing.T) {
 			a := NewRef(params.input)
@@ -117,6 +121,7 @@ func TestRefComponents(t *testing.T) {
 		{"/a/b", 2, 0, "a", undefined},
 		{"/a/b", 2, 1, "b", undefined},
 		{"/a~1b/c", 2, 0, "a/b", undefined},
+		{"/a~0b/c", 2, 0, "a~b", undefined},
 		{"/a/10/20/30x", 4, 1, "10", 10},
 		{"/a/10/20/30x", 4, 2, "20", 20},
 		{"/a/10/20/30x", 4, 3, "30x", undefined},

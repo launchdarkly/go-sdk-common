@@ -91,7 +91,10 @@ func NewRef(referenceString string) Ref {
 	if !strings.Contains(path, "/") {
 		// There's only one segment, so this is still a simple attribute reference. However, we still may
 		// need to unescape special characters.
-		return Ref{singlePathComponent: unescapePath(path), rawPath: referenceString}
+		if unescaped, ok := unescapePath(path); ok {
+			return Ref{singlePathComponent: unescaped, rawPath: referenceString}
+		}
+		return Ref{err: errAttributeInvalidEscape, rawPath: referenceString}
 	}
 	parts := strings.Split(path, "/")
 	ret := Ref{rawPath: referenceString, components: make([]attrRefComponent, 0, len(parts))}
@@ -100,7 +103,11 @@ func NewRef(referenceString string) Ref {
 			ret.err = errAttributeExtraSlash
 			return ret
 		}
-		component := attrRefComponent{name: unescapePath(p)}
+		unescaped, ok := unescapePath(p)
+		if !ok {
+			return Ref{err: errAttributeInvalidEscape, rawPath: referenceString}
+		}
+		component := attrRefComponent{name: unescaped}
 		if p[0] >= '0' && p[0] <= '9' {
 			if n, err := strconv.Atoi(p); err == nil {
 				component.intValue = ldvalue.NewOptionalInt(n)
@@ -157,13 +164,17 @@ func (a Ref) Equal(other Ref) bool {
 //
 // A Ref can only be invalid for the following reasons:
 //
-// - The input string was empty, or consisted only of "/".
+// 1. The input string was empty, or consisted only of "/".
 //
-// - A slash-delimited string had a double slash causing one component to be empty, such as "/a//b".
+// 2. A slash-delimited string had a double slash causing one component to be empty, such as "/a//b".
+//
+// 3. A slash-delimited string contained a "~" character that was not followed by "0" or "1".
 //
 // Otherwise, the Ref is valid, but that does not guarantee that such an attribute exists in any
 // given Context. For instance, NewRef("name") is a valid Ref, but a specific Context might or might
 // not have a name.
+//
+// See comments on the Ref type for more details of the attribute reference syntax.
 func (a Ref) Err() error {
 	if a.err == nil && a.rawPath == "" {
 		return errAttributeEmpty
@@ -254,10 +265,39 @@ func (a *Ref) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func unescapePath(path string) string {
+// Performs unescaping of attribute reference path components:
+//
+// "~1" becomes "/"
+// "~0" becomes "~"
+// "~" followed by any character other than "0" or "1" is invalid
+//
+// The second return value is true if successful, or false if there was an invalid escape sequence.
+func unescapePath(path string) (string, bool) {
 	// If there are no tildes then there's definitely nothing to do
 	if !strings.Contains(path, "~") {
-		return path
+		return path, true
 	}
-	return strings.ReplaceAll(strings.ReplaceAll(path, "~1", "/"), "~0", "~")
+	out := make([]byte, 0, 100) // arbitrary preallocated size - path components will almost always be shorter than this
+	for i := 0; i < len(path); i++ {
+		ch := path[i]
+		if ch != '~' {
+			out = append(out, ch)
+			continue
+		}
+		i++
+		if i >= len(path) {
+			return "", false
+		}
+		var unescaped byte
+		switch path[i] {
+		case '0':
+			unescaped = '~'
+		case '1':
+			unescaped = '/'
+		default:
+			return "", false
+		}
+		out = append(out, unescaped)
+	}
+	return string(out), true
 }
