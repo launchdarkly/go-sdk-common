@@ -83,22 +83,22 @@ func TestRefSimpleWithLeadingSlash(t *testing.T) {
 	}
 }
 
-func TestNewNameRef(t *testing.T) {
-	a0 := NewNameRef("name")
+func TestNewLiteralRef(t *testing.T) {
+	a0 := NewLiteralRef("name")
 	assert.Equal(t, NewRef("name"), a0)
 
-	a1 := NewNameRef("a/b")
+	a1 := NewLiteralRef("a/b")
 	assert.Equal(t, NewRef("a/b"), a1)
 
-	a2 := NewNameRef("/a/b~c")
+	a2 := NewLiteralRef("/a/b~c")
 	assert.Equal(t, NewRef("/~1a~1b~0c"), a2)
 	assert.Equal(t, 1, a2.Depth())
 
-	a3 := NewNameRef("/")
+	a3 := NewLiteralRef("/")
 	assert.Equal(t, NewRef("/~1"), a3)
 	assert.Equal(t, 1, a3.Depth())
 
-	a4 := NewNameRef("")
+	a4 := NewLiteralRef("")
 	assert.Equal(t, errAttributeEmpty, a4.Err())
 }
 

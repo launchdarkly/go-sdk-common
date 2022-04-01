@@ -12,17 +12,55 @@ import (
 
 // Ref is an attribute name or path expression identifying a value within a Context.
 //
-// This can be used to retrieve a value with Context.GetValueForRef(), or to identify an attribute or
+// This type is mainly intended to be used internally by LaunchDarkly SDK and service code, where
+// efficiency is a major concern so it's desirable to do any parsing or preprocessing just once.
+// Applications are unlikely to need to use the Ref type directly.
+//
+// It can be used to retrieve a value with Context.GetValueForRef(), or to identify an attribute or
 // nested value that should be considered private with Builder.Private() (the SDK configuration can also
 // have a list of private attribute references).
 //
-// This is represented as a separate type, rather than just a string, so that validation and parsing can
-// be done ahead of time if an attribute reference will be used repeatedly later (such as in flag
-// evaluations).
+// Parsing and validation are done at the time that the NewRef or NewLiteralRef constructor is called.
+// If a Ref instance was created from an invalid string, or if it is an uninitialized Ref{}, it is
+// considered invalid and its Err() method will return a non-nil error.
 //
-// Call NewRef() to create an Ref.  An uninitialized ldattr.Ref{} struct is not valid for use in any
-// SDK operations. Also, an Ref can be in an error state if it was built from an invalid string. See
-// Ref.Err().
+// Syntax
+//
+// The string representation of an attribute reference in LaunchDarkly JSON data uses the following
+// syntax:
+//
+// If the first character is not a slash, the string is interpreted literally as an attribute name.
+// An attribute name can contain any characters, but must not be empty.
+//
+// If the first character is a slash, the string is interpreted as a slash-delimited path where the
+// first path component is an attribute name, and each subsequent path component is either the name of
+// a property in a JSON object, or a decimal numeric string that is the index of an element in a JSON
+// array. Any instances of the characters "/" or "~" in a path component are escaped as "~1" or "~0"
+// respectively. This syntax deliberately resembles JSON Pointer, but no JSON Pointer behaviors other
+// than those mentioned here are supported.
+//
+// Examples
+//
+// Suppose there is a context whose JSON implementation looks like this:
+//
+//     {
+//       "kind": "user",
+//       "key": "value1",
+//       "address": {
+//         "street": "value2",
+//         "city": "value3"
+//       },
+//       "groups": [ "value4", "value5" ],
+//       "good/bad": "value6"
+//     }
+//
+// The attribute references "key" and "/key" would both point to "value1".
+//
+// The attribute reference "/address/street" would point to "value2".
+//
+// The attribute reference "/groups/0" would point to "value4".
+//
+// The attribute references "good/bad" and "/good~1bad" would both point to "value6".
 type Ref struct {
 	err                 error
 	rawPath             string
@@ -35,38 +73,12 @@ type attrRefComponent struct {
 	intValue ldvalue.OptionalInt
 }
 
-// NewRef creates a Ref from a string.
-//
-// If the string starts with '/', then this is treated as a slash-delimited path reference where the
-// first component is the name of an attribute, and subsequent components are the names of nested JSON
-// object properties (or, if they are numeric, the indices of JSON array elements). In this syntax, the
-// escape sequences "~0" and "~1" represent '~' and '/' respectively within a path component.
-//
-// If the string does not start with '/', then it is treated as the literal name of an attribute (the
-// same as NewNameRef).
-//
-// For instance, if the JSON representation of a context is as follows--
-//
-//     {
-//       "kind": "user",
-//       "key": "123",
-//       "name": "xyz",
-//       "address": {
-//         "street": "99 Main St.",
-//         "city": "Westview"
-//       },
-//       "groups": [ "p", "q" ],
-//       "a/b": "ok"
-//     }
-//
-// --then NewRef("name") or NewRef("/name") would refer to the value "xyz"; NewRef("/address/street")
-// would refer to the value "99 Main St."; NewRef("/groups/0") would refer to the value "p"; and
-// NewRef("a/b") or NewRef("/a~1b") would refer to the value "ok".
+// NewRef creates a Ref from a string. For the supported syntax and examples, see comments on the Ref type.
 //
 // This constructor always returns a Ref that preserves the original string, even if validation fails,
 // so that calling String() (or serializing the Ref to JSON) will produce the original string. If
-// validation fails, Err() will return nil and any SDK method that takes this Ref as a parameter will
-// consider it invalid.
+// validation fails, Err() will return a non-nil error and any SDK method that takes this Ref as a
+// parameter will consider it invalid.
 func NewRef(referenceString string) Ref {
 	if referenceString == "" || referenceString == "/" {
 		return Ref{err: errAttributeEmpty, rawPath: referenceString}
@@ -99,11 +111,16 @@ func NewRef(referenceString string) Ref {
 	return ret
 }
 
-// NewNameRef is similar to NewRef except that it always interprets the string as a single
+// NewLiteralRef is similar to NewRef except that it always interprets the string as a literal
 // attribute name, never as a slash-delimited path expression. There is no escaping or unescaping,
-// even if the name contains literal '/' or '~' characters. This method always returns a valid Ref
-// unless the name is empty.
-func NewNameRef(attrName string) Ref {
+// even if the name contains literal '/' or '~' characters. Since an attribute name can contain
+// any characters, this method always returns a valid Ref unless the name is empty.
+//
+// For example: ldattr.NewLiteralRef("name") is exactly equivalent to ldattr.NewRef("name").
+// ldattr.NewLiteralRef("a/b") is exactly equivalent to ldattr.NewRef("a/b") (since the syntax
+// used by NewRef treats the whole string as a literal as long as it does not start with a slash),
+// or to ldattr.NewRef("/a~1b").
+func NewLiteralRef(attrName string) Ref {
 	if attrName == "" {
 		return Ref{err: errAttributeEmpty, rawPath: attrName}
 	}

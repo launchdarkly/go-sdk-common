@@ -310,14 +310,14 @@ func (b *userBuilderImpl) Build() ldcontext.Context {
 
 func (b *userBuilderImpl) AsPrivateAttribute() UserBuilder {
 	if b.lastAttributeCanMakePrivate != "" {
-		b.builder.PrivateRef(ldattr.NewNameRef(b.lastAttributeCanMakePrivate))
+		b.builder.PrivateRef(ldattr.NewLiteralRef(b.lastAttributeCanMakePrivate))
 	}
 	return b
 }
 
 func (b *userBuilderImpl) AsNonPrivateAttribute() UserBuilder {
 	if b.lastAttributeCanMakePrivate != "" {
-		b.builder.RemovePrivateRef(ldattr.NewNameRef(b.lastAttributeCanMakePrivate))
+		b.builder.RemovePrivateRef(ldattr.NewLiteralRef(b.lastAttributeCanMakePrivate))
 	}
 	return b
 }
