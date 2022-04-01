@@ -20,6 +20,10 @@ func TestRefInvalid(t *testing.T) {
 		{"//", errAttributeExtraSlash},
 		{"/a//b", errAttributeExtraSlash},
 		{"/a/b/", errAttributeExtraSlash},
+		{"/a~x", errAttributeInvalidEscape},
+		{"/a~", errAttributeInvalidEscape},
+		{"/a/b~x", errAttributeInvalidEscape},
+		{"/a/b~", errAttributeInvalidEscape},
 	} {
 		t.Run(fmt.Sprintf("input string %q", p.input), func(t *testing.T) {
 			a := NewRef(p.input)
@@ -69,7 +73,7 @@ func TestRefSimpleWithLeadingSlash(t *testing.T) {
 		{"/name", "name"},
 		{"/custom", "custom"},
 		{"/0", "0"},
-		{"/name~1with~1slashes~0and~0tildes~2~x~~", "name/with/slashes~and~tildes~2~x~~"},
+		{"/name~1with~1slashes~0and~0tildes", "name/with/slashes~and~tildes"},
 	} {
 		t.Run(fmt.Sprintf("input string %q", params.input), func(t *testing.T) {
 			a := NewRef(params.input)
@@ -83,22 +87,22 @@ func TestRefSimpleWithLeadingSlash(t *testing.T) {
 	}
 }
 
-func TestNewNameRef(t *testing.T) {
-	a0 := NewNameRef("name")
+func TestNewLiteralRef(t *testing.T) {
+	a0 := NewLiteralRef("name")
 	assert.Equal(t, NewRef("name"), a0)
 
-	a1 := NewNameRef("a/b")
+	a1 := NewLiteralRef("a/b")
 	assert.Equal(t, NewRef("a/b"), a1)
 
-	a2 := NewNameRef("/a/b~c")
+	a2 := NewLiteralRef("/a/b~c")
 	assert.Equal(t, NewRef("/~1a~1b~0c"), a2)
 	assert.Equal(t, 1, a2.Depth())
 
-	a3 := NewNameRef("/")
+	a3 := NewLiteralRef("/")
 	assert.Equal(t, NewRef("/~1"), a3)
 	assert.Equal(t, 1, a3.Depth())
 
-	a4 := NewNameRef("")
+	a4 := NewLiteralRef("")
 	assert.Equal(t, errAttributeEmpty, a4.Err())
 }
 
@@ -117,6 +121,7 @@ func TestRefComponents(t *testing.T) {
 		{"/a/b", 2, 0, "a", undefined},
 		{"/a/b", 2, 1, "b", undefined},
 		{"/a~1b/c", 2, 0, "a/b", undefined},
+		{"/a~0b/c", 2, 0, "a~b", undefined},
 		{"/a/10/20/30x", 4, 1, "10", 10},
 		{"/a/10/20/30x", 4, 2, "20", 20},
 		{"/a/10/20/30x", 4, 3, "30x", undefined},

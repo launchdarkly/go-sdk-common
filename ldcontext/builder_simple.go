@@ -402,18 +402,22 @@ func (b *Builder) Transient(value bool) *Builder {
 	return b
 }
 
-// Private designates any number of Context attributes as private: that is, their values will not be sent
-// to LaunchDarkly.
+// Private designates any number of Context attributes, or properties within them, as private: that is,
+// their values will not be sent to LaunchDarkly.
 //
 // (TKTK: possibly move some of this conceptual information to a non-platform-specific docs page and/or
 // have docs team copyedit it here)
 //
-// Each parameter can be a simple attribute name, such as "email". Or, it can be a slash-delimited path in
-// the JSON-Pointer-like syntax that LaunchDarkly uses to reference properties within a JSON object. For
-// instance, if it is "/address/street", and if the value of the attribute "address" is a JSON object, then
-// the "street" property within that object would be treated as private but other properties within "address"
-// would not. However, numeric array index references such as "/addresses/0/street" do not work for this
-// purpose and will be ignored.
+// Each parameter can be a simple attribute name, such as "email". Or, if the first character is a slash,
+// the parameter is interpreted as a slash-delimited path to a property within a JSON object, where the
+// first path component is a Context attribute name and each following component is a nested property name:
+// for example, suppose the attribute "address" had the following JSON object value:
+//
+//     {"street": {"line1": "abc", "line2": "def"}}
+//
+// Calling Builder.Private("/address/street/line1") in this case would cause the "line1" property to be
+// marked as private. This syntax deliberately resembles JSON Pointer, but other JSON Pointer features
+// such as array indexing are not supported for Private.
 //
 // This action only affects analytics events that involve this particular Context. To mark some (or all)
 // Context attributes as private for all users, use the overall event configuration for the SDK.
@@ -436,25 +440,15 @@ func (b *Builder) Private(attrRefStrings ...string) *Builder {
 	return b.PrivateRef(refs...)
 }
 
-// PrivateRef is equivalent to Private but uses the ldattr.Ref type. It designates any number of
-// Context attributes, or values within them, as private: that is, their values will not be sent to
-// LaunchDarkly.
+// PrivateRef is equivalent to Private, but uses the ldattr.Ref type. It designates any number of
+// Context attributes, or properties within them, as private: that is, their values will not be
+// sent to LaunchDarkly.
 //
-// The difference between PrivateRef and Private is simply a minor optimization: Private parses
-// each attribute reference when it is called (in case the reference uses a slash-delimited format),
-// but PrivateRef uses existing Ref values. The overhead of parsing is fairly minor, but if you
-// are using any slash-delimited attribute references and you would like to keep the overhead of
-// constructing a user to the absolute minimum, you may wish to use PrivateRef instead of Private.
-// and precompute these references.
-//
-// In this example, firstName is marked as private, but lastName is not:
-//
-//     privateStreetAttr := ldattr.NewRef("/address/street")
-//     c := ldcontext.NewBuilder("org", "my-key").
-//         SetString("firstName", "Pierre").
-//         SetString("lastName", "Menard").
-//	       PrivateRef(privateStreetAttr).
-//         Build()
+// Application code is unlikely to need to use the ldattr.Ref type directly; however, in cases where
+// you are constructing Contexts constructed repeatedly with the same set of private attributes, if
+// you are also using complex private attribute path references such as "/address/street", converting
+// this to an ldattr.Ref once and reusing it in many PrivateRef calls is slightly more efficient than
+// calling Private (since it does not need to parse the path repeatedly).
 func (b *Builder) PrivateRef(attrRefs ...ldattr.Ref) *Builder {
 	if b == nil {
 		return b
@@ -471,7 +465,7 @@ func (b *Builder) PrivateRef(attrRefs ...ldattr.Ref) *Builder {
 }
 
 // RemovePrivate removes any private attribute references previously added with AddPrivate or AddPrivateRef
-// that exactly match that of any of the specified attribute references.
+// that exactly match any of the specified attribute references.
 func (b *Builder) RemovePrivate(attrRefStrings ...string) *Builder {
 	refs := make([]ldattr.Ref, 0, 20) // arbitrary capacity that's likely greater than needed, to preallocate on stack
 	for _, s := range attrRefStrings {
@@ -482,6 +476,10 @@ func (b *Builder) RemovePrivate(attrRefStrings ...string) *Builder {
 
 // RemovePrivateRef removes any private attribute references previously added with AddPrivate or
 // AddPrivateRef that exactly match that of any of the specified attribute references.
+//
+// Application code is unlikely to need to use the ldattr.Ref type directly, and can use
+// RemovePrivate with a string parameter to accomplish the same thing. This method is mainly for
+// use by internal LaunchDarkly SDK and service code which uses ldattr.Ref.
 func (b *Builder) RemovePrivateRef(attrRefs ...ldattr.Ref) *Builder {
 	if b == nil {
 		return b

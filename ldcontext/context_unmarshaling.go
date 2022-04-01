@@ -44,7 +44,7 @@ func (c *Context) UnmarshalJSON(data []byte) error {
 	return ContextSerialization.UnmarshalFromJSONReader(&r, c)
 }
 
-func unmarshalFromJSONReader(r *jreader.Reader, c *Context) {
+func unmarshalFromJSONReader(r *jreader.Reader, c *Context, usingEventFormat bool) {
 	// Do a first pass where we just check for the "kind" property, because that determines what
 	// schema we use to parse everything else.
 	kind, hasKind, err := parseKindOnly(r)
@@ -54,11 +54,11 @@ func unmarshalFromJSONReader(r *jreader.Reader, c *Context) {
 	}
 	switch {
 	case !hasKind:
-		err = unmarshalOldUserSchema(c, r)
+		err = unmarshalOldUserSchema(c, r, usingEventFormat)
 	case kind == MultiKind:
-		err = unmarshalMultiKind(c, r)
+		err = unmarshalMultiKind(c, r, usingEventFormat)
 	default:
-		err = unmarshalSingleKind(c, r, "")
+		err = unmarshalSingleKind(c, r, "", usingEventFormat)
 	}
 	if err != nil {
 		r.AddError(err)
@@ -96,7 +96,7 @@ func readOptString(r *jreader.Reader) ldvalue.OptionalString {
 	return ldvalue.OptionalString{}
 }
 
-func unmarshalSingleKind(c *Context, r *jreader.Reader, knownKind Kind) error {
+func unmarshalSingleKind(c *Context, r *jreader.Reader, knownKind Kind, usingEventFormat bool) error {
 	var b Builder
 	if knownKind != "" {
 		b.Kind(knownKind)
@@ -119,9 +119,17 @@ func unmarshalSingleKind(c *Context, r *jreader.Reader, knownKind Kind) error {
 				case jsonPropSecondary:
 					b.OptSecondary(readOptString(r))
 				case jsonPropPrivate:
-					for privateArr := r.ArrayOrNull(); privateArr.Next(); {
-						b.PrivateRef(ldattr.NewRef(r.String()))
+					if usingEventFormat {
+						_ = r.SkipValue()
+						continue
 					}
+					readPrivateAttributes(r, &b, false)
+				case jsonPropRedacted:
+					if !usingEventFormat {
+						_ = r.SkipValue()
+						continue
+					}
+					readPrivateAttributes(r, &b, false)
 				default:
 					// Unrecognized property names within _meta are ignored. Calling SkipValue makes the Reader
 					// consume and discard the property value so we can advance to the next object property.
@@ -144,7 +152,7 @@ func unmarshalSingleKind(c *Context, r *jreader.Reader, knownKind Kind) error {
 	return c.Err()
 }
 
-func unmarshalMultiKind(c *Context, r *jreader.Reader) error {
+func unmarshalMultiKind(c *Context, r *jreader.Reader, usingEventFormat bool) error {
 	var b MultiBuilder
 	for obj := r.Object(); obj.Next(); {
 		name := string(obj.Name())
@@ -153,7 +161,7 @@ func unmarshalMultiKind(c *Context, r *jreader.Reader) error {
 			continue
 		}
 		var subContext Context
-		if err := unmarshalSingleKind(&subContext, r, Kind(name)); err != nil {
+		if err := unmarshalSingleKind(&subContext, r, Kind(name), usingEventFormat); err != nil {
 			return err
 		}
 		b.Add(subContext)
@@ -162,7 +170,7 @@ func unmarshalMultiKind(c *Context, r *jreader.Reader) error {
 	return c.Err()
 }
 
-func unmarshalOldUserSchema(c *Context, r *jreader.Reader) error {
+func unmarshalOldUserSchema(c *Context, r *jreader.Reader, usingEventFormat bool) error {
 	var b Builder
 	b.setAllowEmptyKey(true)
 	hasKey := false
@@ -186,11 +194,19 @@ func unmarshalOldUserSchema(c *Context, r *jreader.Reader) error {
 				b.SetValue(name, value)
 			}
 		case jsonPropOldUserPrivate:
-			for privateArr := r.ArrayOrNull(); privateArr.Next(); {
-				b.Private(r.String())
-				// Note, we use Private here rather than PrivateRef, because the Ref syntax is not used
-				// in the old user schema; each string here is by definition a literal attribute name.
+			if usingEventFormat {
+				_ = r.SkipValue()
+				continue
 			}
+			readPrivateAttributes(r, &b, true)
+			// The "true" here means to interpret the strings as literal attribute names, since the
+			// attribute reference path syntax was not used in the old user schema.
+		case jsonPropOldUserRedacted:
+			if !usingEventFormat {
+				_ = r.SkipValue()
+				continue
+			}
+			readPrivateAttributes(r, &b, true)
 		case "firstName", "lastName", "email", "country", "avatar", "ip":
 			if s := readOptString(r); s.IsDefined() {
 				b.SetString(internAttributeNameIfPossible(obj.Name()), s.StringValue())
@@ -302,4 +318,17 @@ func unmarshalWithKindAndKeyOnlyOldUser(r *jreader.Reader, c *Context) error {
 	}
 	r.AddError(errJSONKeyMissing)
 	return errJSONKeyMissing
+}
+
+func readPrivateAttributes(r *jreader.Reader, b *Builder, asLiterals bool) {
+	for privateArr := r.ArrayOrNull(); privateArr.Next(); {
+		b.PrivateRef(refOrLiteralRef(r.String(), asLiterals))
+	}
+}
+
+func refOrLiteralRef(s string, asLiteral bool) ldattr.Ref {
+	if asLiteral {
+		return ldattr.NewLiteralRef(s)
+	}
+	return ldattr.NewRef(s)
 }

@@ -62,6 +62,16 @@ func makeContextMarshalingAndUnmarshalingParams() []contextSerializationParams {
 	}
 }
 
+func makeContextMarshalingEventOutputFormatParams() []contextSerializationParams {
+	var ret []contextSerializationParams
+	for _, p := range makeContextMarshalingAndUnmarshalingParams() {
+		transformed := p
+		transformed.json = translateRegularContextJSONToEventOutputJSONAndViceVersa(transformed.json)
+		ret = append(ret, transformed)
+	}
+	return ret
+}
+
 func contextMarshalingTests(t *testing.T, marshalFn func(*Context) ([]byte, error)) {
 	for _, params := range makeContextMarshalingAndUnmarshalingParams() {
 		t.Run(params.json, func(t *testing.T) {
@@ -85,8 +95,6 @@ func contextMarshalingTests(t *testing.T, marshalFn func(*Context) ([]byte, erro
 		_, err := marshalFn(&c)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), errContextUninitialized.Error())
-		// We compare the error string, rather than checking for equality to errContextKeyEmpty itself, because
-		// the JSON marshaller may decorate the error in its own type with additional text.
 	})
 }
 
@@ -106,4 +114,34 @@ func TestContextJSONMarshal(t *testing.T) {
 
 func TestContextWriteToJSONWriter(t *testing.T) {
 	contextMarshalingTests(t, jsonStreamMarshalTestFn)
+}
+
+func TestContextMarshalEventOutputFormat(t *testing.T) {
+	for _, p := range makeContextMarshalingEventOutputFormatParams() {
+		t.Run(p.json, func(t *testing.T) {
+			w := jwriter.NewWriter()
+			ec := EventOutputContext{Context: p.context}
+			ContextSerialization.MarshalToJSONWriterEventOutput(&w, &ec)
+			assert.NoError(t, w.Error())
+			m.In(t).Assert(w.Bytes(), m.JSONStrEqual(p.json))
+		})
+	}
+
+	t.Run("invalid context", func(t *testing.T) {
+		c := New("")
+		ec := EventOutputContext{Context: c}
+		w := jwriter.NewWriter()
+		ContextSerialization.MarshalToJSONWriterEventOutput(&w, &ec)
+		require.Error(t, w.Error())
+		assert.Contains(t, w.Error().Error(), errContextKeyEmpty.Error())
+	})
+
+	t.Run("uninitialized context", func(t *testing.T) {
+		var c Context
+		ec := EventOutputContext{Context: c}
+		w := jwriter.NewWriter()
+		ContextSerialization.MarshalToJSONWriterEventOutput(&w, &ec)
+		require.Error(t, w.Error())
+		assert.Contains(t, w.Error().Error(), errContextUninitialized.Error())
+	})
 }

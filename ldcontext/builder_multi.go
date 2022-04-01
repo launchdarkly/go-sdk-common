@@ -48,9 +48,21 @@ func NewMultiBuilder() *MultiBuilder {
 // to see if it has an error. See Context.Err() for more information about invalid Context
 // conditions. Using a single-return-value syntax is more convenient for application code, since
 // in normal usage an application will never build an invalid Context.
+//
+// If only one context kind was added to the builder, Build returns a single-kind context rather
+// than a multi-kind context.
 func (m *MultiBuilder) Build() Context {
 	if len(m.contexts) == 0 {
 		return Context{err: errContextKindMultiWithNoKinds}
+	}
+
+	if len(m.contexts) == 1 {
+		// Never return a multi-kind context with just one kind; instead return the individual one
+		c := m.contexts[0]
+		if c.Multiple() {
+			return Context{err: errContextKindMultiWithinMulti}
+		}
+		return c
 	}
 
 	m.contextsCopyOnWrite = true // see note on ___CopyOnWrite in Builder.Build()
@@ -97,18 +109,14 @@ func (m *MultiBuilder) Build() Context {
 		multiContexts: m.contexts,
 	}
 
-	if len(m.contexts) == 1 && m.contexts[0].kind != DefaultKind {
-		ret.fullyQualifiedKey = m.contexts[0].fullyQualifiedKey
-	} else {
-		// Fully-qualified key for multi-kind is defined as "kind1:key1:kind2:key2" etc., where kinds are in
-		// alphabetical order (we have already sorted them above) and keys are URL-encoded. In this case we
-		// do _not_ omit a default kind of "user".
-		for _, c := range m.contexts {
-			if ret.fullyQualifiedKey != "" {
-				ret.fullyQualifiedKey += ":"
-			}
-			ret.fullyQualifiedKey += makeFullyQualifiedKeySingleKind(c.kind, c.key, false)
+	// Fully-qualified key for multi-kind is defined as "kind1:key1:kind2:key2" etc., where kinds are in
+	// alphabetical order (we have already sorted them above) and keys are URL-encoded. In this case we
+	// do _not_ omit a default kind of "user".
+	for _, c := range m.contexts {
+		if ret.fullyQualifiedKey != "" {
+			ret.fullyQualifiedKey += ":"
 		}
+		ret.fullyQualifiedKey += makeFullyQualifiedKeySingleKind(c.kind, c.key, false)
 	}
 
 	return ret
