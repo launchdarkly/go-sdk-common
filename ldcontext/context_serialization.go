@@ -21,8 +21,16 @@ var ContextSerialization ContextSerializationMethods //nolint:gochecknoglobals
 // In case of failure, the error is both returned from the method and stored as a failure state in
 // the Reader.
 func (s ContextSerializationMethods) UnmarshalFromJSONReader(r *jreader.Reader, c *Context) error {
-	unmarshalFromJSONReader(r, c)
+	unmarshalFromJSONReader(r, c, false)
 	return r.Error()
+}
+
+// UnmarshalFromJSONReaderEventOutput unmarshals an EventContext with the jsonstream Reader API.
+//
+// In case of failure, the error is both returned from the method and stored as a failure state in
+// the Reader.
+func (s ContextSerializationMethods) UnmarshalFromJSONReaderEventOutput(r *jreader.Reader, c *EventOutputContext) {
+	unmarshalFromJSONReader(r, &c.Context, true)
 }
 
 // UnmarshalWithKindAndKeyOnly is a special unmarshaling mode where all properties except kind and
@@ -40,13 +48,22 @@ func (s ContextSerializationMethods) UnmarshalWithKindAndKeyOnly(r *jreader.Read
 
 // MarshalToJSONWriter marshals a Context with the jsonstream Writer API.
 func (s ContextSerializationMethods) MarshalToJSONWriter(w *jwriter.Writer, c *Context) {
+	writeToJSONWriterInternal(w, c, false)
+}
+
+// MarshalToJSONWriterEventOutput marshals an EventOutputContext with the jsonstream Writer API.
+func (s ContextSerializationMethods) MarshalToJSONWriterEventOutput(w *jwriter.Writer, c *EventOutputContext) {
+	writeToJSONWriterInternal(w, &c.Context, true)
+}
+
+func writeToJSONWriterInternal(w *jwriter.Writer, c *Context, usingEventFormat bool) {
 	if err := c.Err(); err != nil {
 		w.AddError(err)
 		return
 	}
 	if c.multiContexts == nil {
-		c.writeToJSONWriterInternalSingle(w, "")
+		c.writeToJSONWriterInternalSingle(w, "", usingEventFormat)
 	} else {
-		c.writeToJSONWriterInternalMulti(w)
+		c.writeToJSONWriterInternalMulti(w, usingEventFormat)
 	}
 }
