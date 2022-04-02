@@ -240,12 +240,16 @@ func translateRegularContextJSONToEventOutputJSONAndViceVersa(s string) string {
 	return s
 }
 
-func contextUnmarshalingTests(t *testing.T, unmarshalFn func(*Context, []byte) error) {
+func contextUnmarshalingTests(
+	t *testing.T,
+	unmarshalSingleContextFn func(*Context, []byte) error,
+	unmarshalArrayFn func(*[]Context, []byte) error,
+) {
 	t.Run("valid data", func(t *testing.T) {
 		for _, p := range makeAllContextUnmarshalingParams() {
 			t.Run(p.json, func(t *testing.T) {
 				var c Context
-				err := unmarshalFn(&c, []byte(p.json))
+				err := unmarshalSingleContextFn(&c, []byte(p.json))
 				assert.NoError(t, err)
 				assert.Equal(t, p.context, c)
 			})
@@ -256,11 +260,33 @@ func contextUnmarshalingTests(t *testing.T, unmarshalFn func(*Context, []byte) e
 		for _, badJSON := range makeContextUnmarshalingErrorInputs() {
 			t.Run(badJSON, func(t *testing.T) {
 				var c Context
-				err := unmarshalFn(&c, []byte(badJSON))
+				err := unmarshalSingleContextFn(&c, []byte(badJSON))
 				assert.Error(t, err)
 			})
 		}
 	})
+
+	if unmarshalArrayFn != nil {
+		t.Run("within an array", func(t *testing.T) {
+			// This test shows that in our streaming implementations, the unmarshaler leaves the input
+			// stream in the proper state at the end of the object, so it will correctly parse a
+			// subsequent value.
+			invariantSecondContext := New("simple")
+			invariantSecondContextJSON := `{"kind": "user", "key": "simple"}`
+			for _, p := range makeAllContextUnmarshalingParams() {
+				t.Run(p.json, func(t *testing.T) {
+					input := `[ ` + p.json + `, ` + invariantSecondContextJSON + ` ]`
+					var cs []Context
+					err := unmarshalArrayFn(&cs, []byte(input))
+					assert.NoError(t, err)
+					if assert.Len(t, cs, 2) {
+						assert.Equal(t, p.context, cs[0])
+						assert.Equal(t, invariantSecondContext, cs[1])
+					}
+				})
+			}
+		})
+	}
 }
 
 func jsonUnmarshalTestFn(c *Context, data []byte) error {
@@ -273,12 +299,22 @@ func jsonStreamUnmarshalTestFn(c *Context, data []byte) error {
 	return r.Error()
 }
 
+func jsonStreamUnmarshalArrayTestFn(cs *[]Context, data []byte) error {
+	r := jreader.NewReader(data)
+	for arr := r.Array(); arr.Next(); {
+		var c Context
+		ContextSerialization.UnmarshalFromJSONReader(&r, &c)
+		*cs = append(*cs, c)
+	}
+	return r.Error()
+}
+
 func TestContextJSONUnmarshal(t *testing.T) {
-	contextUnmarshalingTests(t, jsonUnmarshalTestFn)
+	contextUnmarshalingTests(t, jsonUnmarshalTestFn, nil)
 }
 
 func TestContextReadFromJSONReader(t *testing.T) {
-	contextUnmarshalingTests(t, jsonStreamUnmarshalTestFn)
+	contextUnmarshalingTests(t, jsonStreamUnmarshalTestFn, jsonStreamUnmarshalArrayTestFn)
 }
 
 func TestContextUnmarshalEventOutputFormat(t *testing.T) {

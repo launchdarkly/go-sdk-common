@@ -313,6 +313,7 @@ func unmarshalOldUserSchemaEasyJSON(c *Context, in *jlexer.Lexer, usingEventForm
 		}
 		in.WantComma()
 	}
+	in.Delim('}')
 	if in.Error() != nil {
 		return
 	}
