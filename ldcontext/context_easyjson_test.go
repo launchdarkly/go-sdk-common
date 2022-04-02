@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	m "github.com/launchdarkly/go-test-helpers/v2/matchers"
+
 	"github.com/mailru/easyjson"
 	"github.com/mailru/easyjson/jlexer"
 	"github.com/stretchr/testify/assert"
@@ -21,12 +22,25 @@ func easyJSONUnmarshalTestFn(c *Context, data []byte) error {
 	return easyjson.Unmarshal(data, c)
 }
 
+func easyJSONUnmarshalArrayTestFn(cs *[]Context, data []byte) error {
+	in := jlexer.Lexer{Data: data}
+	in.Delim('[')
+	for !in.IsDelim(']') {
+		var c Context
+		c.UnmarshalEasyJSON(&in)
+		*cs = append(*cs, c)
+		in.WantComma()
+	}
+	in.Delim(']')
+	return in.Error()
+}
+
 func TestContextEasyJSONMarshal(t *testing.T) {
 	contextMarshalingTests(t, easyJSONMarshalTestFn)
 }
 
 func TestContextEasyJSONUnmarshal(t *testing.T) {
-	contextUnmarshalingTests(t, easyJSONUnmarshalTestFn)
+	contextUnmarshalingTests(t, easyJSONUnmarshalTestFn, easyJSONUnmarshalArrayTestFn)
 }
 
 func TestContextEasyJSONMarshalEventOutputFormat(t *testing.T) {
