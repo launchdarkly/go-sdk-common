@@ -358,6 +358,7 @@ func readOptStringEasyJSON(in *jlexer.Lexer) ldvalue.OptionalString {
 }
 
 func readPrivateAttributesEasyJSON(in *jlexer.Lexer, c *Context, asLiterals bool) {
+	c.privateAttrs = nil
 	if in.IsNull() {
 		in.SkipRecursive()
 		return

@@ -287,6 +287,27 @@ func contextUnmarshalingTests(
 			}
 		})
 	}
+
+	t.Run("unmarshaling twice", func(t *testing.T) {
+		// This test verifies that if you take an uninitialized Context{}, and unmarshal it from JSON, and
+		// then unmarshal the same instance again, you get the same result (i.e. fields are overwritten
+		// rather than being appended).
+		for _, p := range makeAllContextUnmarshalingParams() {
+			t.Run(p.json, func(t *testing.T) {
+				var c Context
+				err := unmarshalSingleContextFn(&c, []byte(p.json))
+				// Here we're using an if, rather than an assert, because we already asserted these conditions
+				// in the "valid data" test. If something is really wrong such that it's returning an error or
+				// the Equal test fails, we want that to show up more specifically in that test, rather than
+				// producing confounding results in this one.
+				if err == nil && c.Equal(p.context) {
+					c1 := c
+					require.NoError(t, unmarshalSingleContextFn(&c, []byte(p.json)))
+					assert.Equal(t, c1, c)
+				}
+			})
+		}
+	})
 }
 
 func jsonUnmarshalTestFn(c *Context, data []byte) error {
