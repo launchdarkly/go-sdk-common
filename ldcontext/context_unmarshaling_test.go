@@ -3,6 +3,7 @@ package ldcontext
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
@@ -148,6 +149,16 @@ func makeAllContextUnmarshalingParams() []contextSerializationParams {
 	return params
 }
 
+func makeAllContextUnmarshalingEventOutputFormatParams() []contextSerializationParams {
+	var ret []contextSerializationParams
+	for _, p := range makeAllContextUnmarshalingParams() {
+		transformed := p
+		transformed.json = translateRegularContextJSONToEventOutputJSONAndViceVersa(transformed.json)
+		ret = append(ret, transformed)
+	}
+	return ret
+}
+
 func makeContextUnmarshalingErrorInputs() []string {
 	return []string{
 		`null`,
@@ -167,10 +178,10 @@ func makeContextUnmarshalingErrorInputs() []string {
 		`{"kind": "org", "key": "my-key", "name": true}`,
 		`{"kind": "org", "key": "my-key", "transient": "yes"}}`,
 		`{"kind": "org", "key": "my-key", "transient": null}}`,
-		`{"kind": "org", "key": "my-key", "_meta": true}}`,
 
 		`{"kind": "org"}`,             // missing key
 		`{"kind": "user", "key": ""}`, // empty key not allowed in new-style context
+		`{"kind": "", "key": "x"}`,    // empty kind not allowed in new-style context
 		`{"kind": "ørg", "key": "x"}`, // illegal kind
 
 		// wrong type within _meta
@@ -197,15 +208,48 @@ func makeContextUnmarshalingErrorInputs() []string {
 		`{"key": "my-key", "ip": true}`,
 		`{"key": "my-key", "custom": true}`,
 		`{"key": "my-key", "privateAttributeNames": true}`,
+
+		// missing key in old user schema
+		`{"name": "x"}`,
 	}
 }
 
-func contextUnmarshalingTests(t *testing.T, unmarshalFn func(*Context, []byte) error) {
+func makeContextUnmarshalingEventOutputFormatErrorInputs() []string {
+	var ret []string
+	for _, s := range makeContextUnmarshalingErrorInputs() {
+		ret = append(ret, translateRegularContextJSONToEventOutputJSONAndViceVersa(s))
+	}
+	return ret
+}
+
+func translateRegularContextJSONToEventOutputJSONAndViceVersa(s string) string {
+	// In the regular test inputs, redactedAttributes and privateAttrs are property names we do *not*
+	// expect to see because they are for the event output format, so the test inputs that reference
+	// them have a "this should be ignored" expectation.
+	s = strings.ReplaceAll(s, `"redactedAttributes"`, `<temp1>`)
+	s = strings.ReplaceAll(s, `"privateAttrs"`, `<temp2>`) // old schema
+
+	s = strings.ReplaceAll(s, `"privateAttributes"`, `"redactedAttributes"`)
+	s = strings.ReplaceAll(s, `"privateAttributeNames"`, `"privateAttrs"`) // old schema
+
+	// ...so, in the event output format, we use privateAttributes and privateAttributeNames for the
+	// "this should be ignored" cases.
+	s = strings.ReplaceAll(s, `<temp1>`, `"privateAttributes"`)
+	s = strings.ReplaceAll(s, `<temp2>`, `"privateAttributeNames"`)
+
+	return s
+}
+
+func contextUnmarshalingTests(
+	t *testing.T,
+	unmarshalSingleContextFn func(*Context, []byte) error,
+	unmarshalArrayFn func(*[]Context, []byte) error,
+) {
 	t.Run("valid data", func(t *testing.T) {
 		for _, p := range makeAllContextUnmarshalingParams() {
 			t.Run(p.json, func(t *testing.T) {
 				var c Context
-				err := unmarshalFn(&c, []byte(p.json))
+				err := unmarshalSingleContextFn(&c, []byte(p.json))
 				assert.NoError(t, err)
 				assert.Equal(t, p.context, c)
 			})
@@ -213,62 +257,54 @@ func contextUnmarshalingTests(t *testing.T, unmarshalFn func(*Context, []byte) e
 	})
 
 	t.Run("error cases", func(t *testing.T) {
-		for _, badJSON := range []string{
-			`null`,
-			`false`,
-			`1`,
-			`"x"`,
-			`[]`,
-			`{}`,
-
-			// wrong type for top-level property
-			`{"kind": null}`,
-			`{"kind": true}`,
-			`{"kind": "org", "key": null}`,
-			`{"kind": "org", "key": true}`,
-			`{"kind": "multi", "org": null}`,
-			`{"kind": "multi", "org": true}`,
-			`{"kind": "org", "key": "my-key", "name": true}`,
-			`{"kind": "org", "key": "my-key", "transient": "yes"}}`,
-			`{"kind": "org", "key": "my-key", "transient": null}}`,
-
-			`{"kind": "org"}`,             // missing key
-			`{"kind": "user", "key": ""}`, // empty key not allowed in new-style context
-			`{"kind": "", "key": "x"}`,    // empty kind not allowed in new-style context
-			`{"kind": "ørg", "key": "x"}`, // illegal kind
-
-			// wrong type within _meta
-			`{"kind": "org", "key": "my-key", "_meta": true}}`,
-			`{"kind": "org", "key": "my-key", "_meta": {"secondary": true}}}`,
-			`{"kind": "org", "key": "my-key", "_meta": {"privateAttributes": true}}}`,
-
-			`{"kind": "multi"}`,                                           // multi kind with no kinds
-			`{"kind": "multi", "user": {"key": ""}}`,                      // multi kind where subcontext fails validation
-			`{"kind": "multi", "user": {"key": true}}`,                    // multi kind where subcontext is malformed
-			`{"kind": "multi", "org": {"key": "x"}, "org": {"key": "y"}}`, // multi kind with repeated kind
-
-			// wrong types in old user schema
-			`{"key": null}`,
-			`{"key": true}`,
-			`{"key": "my-key", "secondary": true}`,
-			`{"key": "my-key", "anonymous": "x"}`,
-			`{"key": "my-key", "name": true}`,
-			`{"key": "my-key", "firstName": true}`,
-			`{"key": "my-key", "lastName": true}`,
-			`{"key": "my-key", "email": true}`,
-			`{"key": "my-key", "country": true}`,
-			`{"key": "my-key", "avatar": true}`,
-			`{"key": "my-key", "ip": true}`,
-			`{"key": "my-key", "custom": true}`,
-			`{"key": "my-key", "privateAttributeNames": true}`,
-
-			// missing key in old user schema
-			`{"name": "x"}`,
-		} {
+		for _, badJSON := range makeContextUnmarshalingErrorInputs() {
 			t.Run(badJSON, func(t *testing.T) {
 				var c Context
-				err := unmarshalFn(&c, []byte(badJSON))
+				err := unmarshalSingleContextFn(&c, []byte(badJSON))
 				assert.Error(t, err)
+			})
+		}
+	})
+
+	if unmarshalArrayFn != nil {
+		t.Run("within an array", func(t *testing.T) {
+			// This test shows that in our streaming implementations, the unmarshaler leaves the input
+			// stream in the proper state at the end of the object, so it will correctly parse a
+			// subsequent value.
+			invariantSecondContext := New("simple")
+			invariantSecondContextJSON := `{"kind": "user", "key": "simple"}`
+			for _, p := range makeAllContextUnmarshalingParams() {
+				t.Run(p.json, func(t *testing.T) {
+					input := `[ ` + p.json + `, ` + invariantSecondContextJSON + ` ]`
+					var cs []Context
+					err := unmarshalArrayFn(&cs, []byte(input))
+					assert.NoError(t, err)
+					if assert.Len(t, cs, 2) {
+						assert.Equal(t, p.context, cs[0])
+						assert.Equal(t, invariantSecondContext, cs[1])
+					}
+				})
+			}
+		})
+	}
+
+	t.Run("unmarshaling twice", func(t *testing.T) {
+		// This test verifies that if you take an uninitialized Context{}, and unmarshal it from JSON, and
+		// then unmarshal the same instance again, you get the same result (i.e. fields are overwritten
+		// rather than being appended).
+		for _, p := range makeAllContextUnmarshalingParams() {
+			t.Run(p.json, func(t *testing.T) {
+				var c Context
+				err := unmarshalSingleContextFn(&c, []byte(p.json))
+				// Here we're using an if, rather than an assert, because we already asserted these conditions
+				// in the "valid data" test. If something is really wrong such that it's returning an error or
+				// the Equal test fails, we want that to show up more specifically in that test, rather than
+				// producing confounding results in this one.
+				if err == nil && c.Equal(p.context) {
+					c1 := c
+					require.NoError(t, unmarshalSingleContextFn(&c, []byte(p.json)))
+					assert.Equal(t, c1, c)
+				}
 			})
 		}
 	})
@@ -284,12 +320,47 @@ func jsonStreamUnmarshalTestFn(c *Context, data []byte) error {
 	return r.Error()
 }
 
+func jsonStreamUnmarshalArrayTestFn(cs *[]Context, data []byte) error {
+	r := jreader.NewReader(data)
+	for arr := r.Array(); arr.Next(); {
+		var c Context
+		ContextSerialization.UnmarshalFromJSONReader(&r, &c)
+		*cs = append(*cs, c)
+	}
+	return r.Error()
+}
+
 func TestContextJSONUnmarshal(t *testing.T) {
-	contextUnmarshalingTests(t, jsonUnmarshalTestFn)
+	contextUnmarshalingTests(t, jsonUnmarshalTestFn, nil)
 }
 
 func TestContextReadFromJSONReader(t *testing.T) {
-	contextUnmarshalingTests(t, jsonStreamUnmarshalTestFn)
+	contextUnmarshalingTests(t, jsonStreamUnmarshalTestFn, jsonStreamUnmarshalArrayTestFn)
+}
+
+func TestContextUnmarshalEventOutputFormat(t *testing.T) {
+	t.Run("valid data", func(t *testing.T) {
+		for _, p := range makeAllContextUnmarshalingEventOutputFormatParams() {
+			t.Run(p.json, func(t *testing.T) {
+				r := jreader.NewReader([]byte(p.json))
+				var c EventOutputContext
+				ContextSerialization.UnmarshalFromJSONReaderEventOutput(&r, &c)
+				assert.NoError(t, r.Error())
+				assert.Equal(t, p.context, c.Context)
+			})
+		}
+	})
+
+	t.Run("error cases", func(t *testing.T) {
+		for _, badJSON := range makeContextUnmarshalingEventOutputFormatErrorInputs() {
+			t.Run(badJSON, func(t *testing.T) {
+				r := jreader.NewReader([]byte(badJSON))
+				var c EventOutputContext
+				ContextSerialization.UnmarshalFromJSONReaderEventOutput(&r, &c)
+				assert.Error(t, r.Error())
+			})
+		}
+	})
 }
 
 func TestContextReadKindAndKeyOnly(t *testing.T) {

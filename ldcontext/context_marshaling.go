@@ -20,7 +20,7 @@ func (c Context) MarshalJSON() ([]byte, error) {
 	return w.Bytes(), w.Error()
 }
 
-func (c *Context) writeToJSONWriterInternalSingle(w *jwriter.Writer, withinKind Kind) {
+func (c *Context) writeToJSONWriterInternalSingle(w *jwriter.Writer, withinKind Kind, usingEventFormat bool) {
 	obj := w.Object()
 	if withinKind == "" {
 		obj.Name(ldattr.KindAttr).String(string(c.kind))
@@ -45,7 +45,11 @@ func (c *Context) writeToJSONWriterInternalSingle(w *jwriter.Writer, withinKind 
 			metaJSON.Name(jsonPropSecondary).String(c.secondary.StringValue())
 		}
 		if len(c.privateAttrs) != 0 {
-			privateAttrsJSON := metaJSON.Name(jsonPropPrivate).Array()
+			name := jsonPropPrivate
+			if usingEventFormat {
+				name = jsonPropRedacted
+			}
+			privateAttrsJSON := metaJSON.Name(name).Array()
 			for _, a := range c.privateAttrs {
 				privateAttrsJSON.String(a.String())
 			}
@@ -57,13 +61,13 @@ func (c *Context) writeToJSONWriterInternalSingle(w *jwriter.Writer, withinKind 
 	obj.End()
 }
 
-func (c Context) writeToJSONWriterInternalMulti(w *jwriter.Writer) {
+func (c Context) writeToJSONWriterInternalMulti(w *jwriter.Writer, usingEventFormat bool) {
 	obj := w.Object()
 	obj.Name(ldattr.KindAttr).String(string(MultiKind))
 
 	for _, mc := range c.multiContexts {
 		obj.Name(string(mc.Kind()))
-		mc.writeToJSONWriterInternalSingle(w, mc.Kind())
+		mc.writeToJSONWriterInternalSingle(w, mc.Kind(), usingEventFormat)
 	}
 
 	obj.End()
