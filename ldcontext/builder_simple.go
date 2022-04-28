@@ -96,10 +96,10 @@ func (b *Builder) Build() Context {
 	}
 	actualKind, err := validateSingleKind(b.kind)
 	if err != nil {
-		return Context{err: err, kind: b.kind}
+		return Context{defined: true, err: err, kind: b.kind}
 	}
 	if b.key == "" && !b.allowEmptyKey {
-		return Context{err: errContextKeyEmpty, kind: b.kind}
+		return Context{defined: true, err: errContextKeyEmpty, kind: b.kind}
 	}
 	// We set the kind in the error cases above because that improves error reporting if this
 	// context is used within a multi-kind context.

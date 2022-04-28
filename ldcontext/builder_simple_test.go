@@ -35,6 +35,7 @@ func makeBasicBuilder() *Builder {
 
 func TestBuilderDefaultProperties(t *testing.T) {
 	c := NewBuilder("my-key").Build()
+	assert.True(t, c.IsDefined())
 	assert.NoError(t, c.Err())
 	assert.Equal(t, DefaultKind, c.Kind())
 	assert.Equal(t, "my-key", c.Key())
@@ -51,9 +52,11 @@ func TestBuilderKindValidation(t *testing.T) {
 			b := NewBuilder("my-key").Kind(Kind(p.kind))
 
 			c0 := b.Build()
+			assert.True(t, c0.IsDefined())
 			assert.Equal(t, p.err, c0.Err())
 
 			c1, err := b.TryBuild()
+			assert.True(t, c1.IsDefined())
 			assert.Equal(t, p.err, c1.Err())
 			assert.Equal(t, p.err, err)
 		})
@@ -64,9 +67,11 @@ func TestBuilderKeyValidation(t *testing.T) {
 	b := NewBuilder("")
 
 	c0 := b.Build()
+	assert.True(t, c0.IsDefined())
 	assert.Equal(t, errContextKeyEmpty, c0.Err())
 
 	c1, err := b.TryBuild()
+	assert.True(t, c1.IsDefined())
 	assert.Equal(t, errContextKeyEmpty, c1.Err())
 	assert.Equal(t, errContextKeyEmpty, err)
 }

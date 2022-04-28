@@ -16,12 +16,26 @@ import (
 // Note, matchers.JSONEqual is preferred in these tests when checking ldvalue.Value values, rather
 // than assert.Equal or assert.JSONEq, because its failure output is easier to read.
 
-func TestUninitializedContextIsInvalid(t *testing.T) {
+func TestUninitializedContext(t *testing.T) {
 	var c Context
+	assert.False(t, c.IsDefined())
 	assert.Equal(t, errContextUninitialized, c.Err())
 }
 
+func TestMultiple(t *testing.T) {
+	sc := New("my-key")
+	mc := NewMulti(New("my-key"), NewWithKind("org", "my-key"))
+	assert.False(t, sc.Multiple())
+	assert.True(t, mc.Multiple())
+}
+
 func TestGetOptionalAttributeNames(t *testing.T) {
+	sorted := func(values []string) []string {
+		ret := append([]string(nil), values...)
+		sort.Strings(ret)
+		return ret
+	}
+
 	t.Run("none", func(t *testing.T) {
 		c := New("my-key")
 		an := c.GetOptionalAttributeNames(nil)
@@ -51,6 +65,35 @@ func TestGetOptionalAttributeNames(t *testing.T) {
 		c := NewMulti(NewWithKind("kind1", "key1"), NewWithKind("otherkind", "otherkey"))
 		an := c.GetOptionalAttributeNames(nil)
 		assert.Len(t, an, 0)
+	})
+
+	t.Run("capacity of preallocated slice can be reused", func(t *testing.T) {
+		c := NewBuilder("my-key").SetString("email", "x").SetBool("happy", true).Build()
+		preallocSlice := make([]string, 2, 2)
+		emptySlice := preallocSlice[0:0]
+		an := c.GetOptionalAttributeNames(emptySlice)
+		assert.Equal(t, []string{"email", "happy"}, sorted(an))
+		preallocSlice[0] = "x"
+		assert.Equal(t, "x", an[0])
+	})
+
+	t.Run("preallocated slice is overwritten rather than appended to", func(t *testing.T) {
+		c := NewBuilder("my-key").SetString("email", "x").SetBool("happy", true).Build()
+		preallocSlice := make([]string, 2, 2)
+		an := c.GetOptionalAttributeNames(preallocSlice)
+		assert.Equal(t, []string{"email", "happy"}, sorted(an))
+		preallocSlice[0] = "x"
+		assert.Equal(t, "x", an[0])
+	})
+
+	t.Run("preallocated slice without enough capacity is not reused", func(t *testing.T) {
+		c := NewBuilder("my-key").SetString("email", "x").SetBool("happy", true).Build()
+		preallocSlice := make([]string, 1, 1)
+		emptySlice := preallocSlice[0:0]
+		an := c.GetOptionalAttributeNames(emptySlice)
+		assert.Equal(t, []string{"email", "happy"}, sorted(an))
+		preallocSlice[0] = "x"
+		assert.NotEqual(t, "x", an[0])
 	})
 }
 
@@ -273,10 +316,180 @@ func TestGetValueForInvalidRef(t *testing.T) {
 	expectAttributeNotFoundForRef(t, c, "/")
 }
 
+func TestIndividualContextCount(t *testing.T) {
+	t.Run("single", func(t *testing.T) {
+		c := New("my-key")
+		assert.Equal(t, 1, c.IndividualContextCount())
+	})
+
+	t.Run("multi", func(t *testing.T) {
+		sub1, sub2 := NewWithKind("kind1", "key1"), NewWithKind("kind2", "key2")
+		c := NewMulti(sub1, sub2)
+		assert.Equal(t, 2, c.IndividualContextCount())
+	})
+}
+
+func TestIndividualContextByIndex(t *testing.T) {
+	t.Run("single", func(t *testing.T) {
+		c := New("my-key")
+
+		c0, ok := c.IndividualContextByIndex(0)
+		assert.True(t, ok)
+		assert.Equal(t, c, c0)
+
+		c1, ok := c.IndividualContextByIndex(1)
+		assert.False(t, ok)
+		assert.Equal(t, Context{}, c1)
+
+		c2, ok := c.IndividualContextByIndex(-1)
+		assert.False(t, ok)
+		assert.Equal(t, Context{}, c2)
+	})
+
+	t.Run("multi", func(t *testing.T) {
+		sub1, sub2 := NewWithKind("kind1", "key1"), NewWithKind("kind2", "key2")
+		c := NewMulti(sub1, sub2)
+		// We know that these are internally sorted by kind
+
+		c0, ok := c.IndividualContextByIndex(0)
+		assert.True(t, ok)
+		assert.Equal(t, sub1, c0)
+
+		c1, ok := c.IndividualContextByIndex(1)
+		assert.True(t, ok)
+		assert.Equal(t, sub2, c1)
+
+		c2, ok := c.IndividualContextByIndex(2)
+		assert.False(t, ok)
+		assert.Equal(t, Context{}, c2)
+
+		c3, ok := c.IndividualContextByIndex(-1)
+		assert.False(t, ok)
+		assert.Equal(t, Context{}, c3)
+	})
+}
+
+func TestIndividualContextByKind(t *testing.T) {
+	t.Run("single", func(t *testing.T) {
+		c := NewWithKind("kind1", "my-key")
+
+		c0, ok := c.IndividualContextByKind("kind1")
+		assert.True(t, ok)
+		assert.Equal(t, c, c0)
+
+		c1, ok := c.IndividualContextByKind("other")
+		assert.False(t, ok)
+		assert.Equal(t, Context{}, c1)
+	})
+
+	t.Run("multi", func(t *testing.T) {
+		sub1, sub2 := NewWithKind("kind1", "key1"), NewWithKind("kind2", "key2")
+		c := NewMulti(sub1, sub2)
+
+		c0, ok := c.IndividualContextByKind("kind1")
+		assert.True(t, ok)
+		assert.Equal(t, sub1, c0)
+
+		c1, ok := c.IndividualContextByKind("kind2")
+		assert.True(t, ok)
+		assert.Equal(t, sub2, c1)
+
+		c2, ok := c.IndividualContextByKind("other")
+		assert.False(t, ok)
+		assert.Equal(t, Context{}, c2)
+	})
+
+	t.Run("default", func(t *testing.T) {
+		sub1, sub2 := New("userkey"), NewWithKind("kind2", "key2")
+		c := NewMulti(sub1, sub2)
+
+		c0, ok := c.IndividualContextByKind("")
+		assert.True(t, ok)
+		assert.Equal(t, sub1, c0)
+	})
+}
+
+func TestIndividualContextKeyByKind(t *testing.T) {
+	t.Run("single", func(t *testing.T) {
+		c := NewWithKind("kind1", "my-key")
+
+		assert.Equal(t, "my-key", c.IndividualContextKeyByKind("kind1"))
+		assert.Equal(t, "", c.IndividualContextKeyByKind("other"))
+	})
+
+	t.Run("multi", func(t *testing.T) {
+		sub1, sub2 := NewWithKind("kind1", "key1"), NewWithKind("kind2", "key2")
+		c := NewMulti(sub1, sub2)
+
+		assert.Equal(t, "key1", c.IndividualContextKeyByKind("kind1"))
+		assert.Equal(t, "key2", c.IndividualContextKeyByKind("kind2"))
+		assert.Equal(t, "", c.IndividualContextKeyByKind("other"))
+	})
+
+	t.Run("default", func(t *testing.T) {
+		sub1, sub2 := New("userkey"), NewWithKind("kind2", "key2")
+		c := NewMulti(sub1, sub2)
+
+		assert.Equal(t, "userkey", c.IndividualContextKeyByKind(""))
+	})
+}
+
+func TestGetAllIndividualContexts(t *testing.T) {
+	t.Run("single", func(t *testing.T) {
+		c := NewWithKind("kind1", "my-key")
+
+		assert.Equal(t, []Context{c}, c.GetAllIndividualContexts(nil))
+	})
+
+	t.Run("multi", func(t *testing.T) {
+		sub1, sub2 := NewWithKind("kind1", "key1"), NewWithKind("kind2", "key2")
+		c := NewMulti(sub1, sub2)
+		// We know that these are internally sorted by kind
+
+		assert.Equal(t, []Context{sub1, sub2}, c.GetAllIndividualContexts(nil))
+	})
+
+	t.Run("capacity of preallocated slice can be reused", func(t *testing.T) {
+		sub1, sub2 := NewWithKind("kind1", "key1"), NewWithKind("kind2", "key2")
+		c := NewMulti(sub1, sub2)
+
+		preallocSlice := make([]Context, 2, 2)
+		emptySlice := preallocSlice[0:0]
+		all := c.GetAllIndividualContexts(emptySlice)
+		assert.Equal(t, []Context{sub1, sub2}, all)
+		preallocSlice[0] = New("different")
+		assert.Equal(t, preallocSlice[0], all[0])
+	})
+
+	t.Run("preallocated slice is overwritten rather than appended to", func(t *testing.T) {
+		sub1, sub2 := NewWithKind("kind1", "key1"), NewWithKind("kind2", "key2")
+		c := NewMulti(sub1, sub2)
+
+		preallocSlice := make([]Context, 2, 2)
+		all := c.GetAllIndividualContexts(preallocSlice)
+		assert.Equal(t, []Context{sub1, sub2}, all)
+		preallocSlice[0] = New("different")
+		assert.Equal(t, preallocSlice[0], all[0])
+	})
+
+	t.Run("preallocated slice without enough capacity is not reused", func(t *testing.T) {
+		sub1, sub2 := NewWithKind("kind1", "key1"), NewWithKind("kind2", "key2")
+		c := NewMulti(sub1, sub2)
+
+		preallocSlice := make([]Context, 1, 1)
+		emptySlice := preallocSlice[0:0]
+		all := c.GetAllIndividualContexts(emptySlice)
+		assert.Equal(t, []Context{sub1, sub2}, all)
+		preallocSlice[0] = New("different")
+		assert.NotEqual(t, preallocSlice[0], all[0])
+	})
+}
+
 func TestContextEqual(t *testing.T) {
 	// Each top-level element in makeInstances is a slice of factories that should produce contexts equal to
 	// each other, and unequal to the contexts produced by the factories in any other slice.
 	makeInstances := [][]func() Context{
+		{func() Context { return Context{} }},
 		{func() Context { return New("a") }},
 		{func() Context { return New("b") }},
 		{func() Context { return NewWithKind("k1", "a") }},

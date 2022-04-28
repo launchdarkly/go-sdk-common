@@ -18,36 +18,15 @@ func TestMultiBuilder(t *testing.T) {
 		sub2 := NewWithKind("user", "my-user-key")
 		c0 := NewMultiBuilder().Add(sub1).Add(sub2).Build()
 
+		assert.True(t, c0.IsDefined())
 		assert.NoError(t, c0.Err())
 		assert.Equal(t, Kind("multi"), c0.Kind())
 		assert.Equal(t, "", c0.Key())
 
-		assert.Equal(t, 2, c0.MultiKindCount())
+		assert.Equal(t, 2, c0.IndividualContextCount())
 
-		c1a, ok := c0.MultiKindByIndex(0)
-		assert.True(t, ok)
-		assert.Equal(t, sub1, c1a)
-
-		c1b, ok := c0.MultiKindByName("org")
-		assert.True(t, ok)
-		assert.Equal(t, sub1, c1b)
-
-		c2a, ok := c0.MultiKindByIndex(1)
-		assert.True(t, ok)
-		assert.Equal(t, sub2, c2a)
-
-		c2b, ok := c0.MultiKindByName("user")
-		assert.True(t, ok)
-		assert.Equal(t, sub2, c2b)
-
-		_, ok = c0.MultiKindByIndex(-1)
-		assert.False(t, ok)
-
-		_, ok = c0.MultiKindByIndex(2)
-		assert.False(t, ok)
-
-		_, ok = c0.MultiKindByName("notfound")
-		assert.False(t, ok)
+		assert.Equal(t, []Context{sub1, sub2}, c0.GetAllIndividualContexts(nil))
+		// other accessors are tested in context_test.go
 	})
 }
 
@@ -68,9 +47,11 @@ func TestMultiBuilderFullyQualifiedKey(t *testing.T) {
 func TestMultiBuilderErrors(t *testing.T) {
 	verifyError := func(t *testing.T, builder *MultiBuilder, expectedErr error) {
 		c0 := builder.Build()
+		assert.True(t, c0.IsDefined())
 		assert.Equal(t, expectedErr, c0.Err())
 
 		c1, err := builder.TryBuild()
+		assert.True(t, c1.IsDefined())
 		assert.Equal(t, expectedErr, c1.Err())
 		assert.Equal(t, expectedErr, err)
 	}
@@ -119,12 +100,12 @@ func TestMultiBuilderCopyOnWrite(t *testing.T) {
 	b.Add(c1).Add(c2)
 
 	multi1 := b.Build()
-	assert.Equal(t, 2, multi1.MultiKindCount())
+	assert.Equal(t, 2, multi1.IndividualContextCount())
 
 	c3 := NewWithKind("thing", "stuff")
 	b.Add(c3)
 
 	multi2 := b.Build()
-	assert.Equal(t, 3, multi2.MultiKindCount())
-	assert.Equal(t, 2, multi1.MultiKindCount()) // unchanged
+	assert.Equal(t, 3, multi2.IndividualContextCount())
+	assert.Equal(t, 2, multi1.IndividualContextCount()) // unchanged
 }
