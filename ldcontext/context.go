@@ -276,22 +276,22 @@ func (c Context) IndividualContextCount() int {
 // on a multi-kind context, then index must be >= zero and < the number of kinds, and the return
 // value on success is one of the individual contexts within.
 //
-// The second return value is true for success. If index is less than zero or greater than the
-// maximum index, then the first return value is an empty Context{} and the second is false.
+// If the index is out of range, then the return value is an uninitialized Context{}. You can
+// detect this condition because its IsDefined() method will return false.
 //
 // In a multi-kind context, the ordering of the individual contexts is not guaranteed to be the
 // same order that was passed into the builder or constructor.
-func (c Context) IndividualContextByIndex(index int) (Context, bool) {
+func (c Context) IndividualContextByIndex(index int) Context {
 	if n := len(c.multiContexts); n != 0 {
 		if index < 0 || index >= n {
-			return Context{}, false
+			return Context{}
 		}
-		return c.multiContexts[index], true
+		return c.multiContexts[index]
 	}
 	if index != 0 {
-		return Context{}, false
+		return Context{}
 	}
-	return c, true
+	return c
 }
 
 // IndividualContextByKind returns the single-kind context, if any, whose Kind matches the
@@ -301,24 +301,24 @@ func (c Context) IndividualContextByIndex(index int) (Context, bool) {
 //
 // If the kind parameter is an empty string, ldcontext.DefaultKind is used instead.
 //
-// The second return value is true for success. If no matching Kind is found, then the first return
-// value is an empty Context{} and the second is false.
-func (c Context) IndividualContextByKind(kind Kind) (Context, bool) {
+// If no matching Kind is found, then the return value is an uninitialized Context{}. You can
+// detect this condition because its IsDefined() method will return false.
+func (c Context) IndividualContextByKind(kind Kind) Context {
 	if kind == "" {
 		kind = DefaultKind
 	}
 	if len(c.multiContexts) == 0 {
 		if c.kind == kind {
-			return c, true
+			return c
 		}
 	} else {
 		for _, mc := range c.multiContexts {
 			if mc.kind == kind {
-				return mc, true
+				return mc
 			}
 		}
 	}
-	return Context{}, false
+	return Context{}
 }
 
 // IndividualContextKeyByKind returns the Key of the single-kind context, if any, whose Kind
@@ -418,7 +418,7 @@ func (c Context) Equal(other Context) bool {
 			return false
 		}
 		for _, mc1 := range c.multiContexts {
-			if mc2, ok := other.IndividualContextByKind(mc1.kind); !ok || !mc1.Equal(mc2) {
+			if mc2 := other.IndividualContextByKind(mc1.kind); !mc1.Equal(mc2) {
 				return false
 			}
 		}

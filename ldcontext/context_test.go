@@ -333,17 +333,9 @@ func TestIndividualContextByIndex(t *testing.T) {
 	t.Run("single", func(t *testing.T) {
 		c := New("my-key")
 
-		c0, ok := c.IndividualContextByIndex(0)
-		assert.True(t, ok)
-		assert.Equal(t, c, c0)
-
-		c1, ok := c.IndividualContextByIndex(1)
-		assert.False(t, ok)
-		assert.Equal(t, Context{}, c1)
-
-		c2, ok := c.IndividualContextByIndex(-1)
-		assert.False(t, ok)
-		assert.Equal(t, Context{}, c2)
+		assert.Equal(t, c, c.IndividualContextByIndex(0))
+		assert.Equal(t, Context{}, c.IndividualContextByIndex(1))
+		assert.Equal(t, Context{}, c.IndividualContextByIndex(-1))
 	})
 
 	t.Run("multi", func(t *testing.T) {
@@ -351,21 +343,10 @@ func TestIndividualContextByIndex(t *testing.T) {
 		c := NewMulti(sub1, sub2)
 		// We know that these are internally sorted by kind
 
-		c0, ok := c.IndividualContextByIndex(0)
-		assert.True(t, ok)
-		assert.Equal(t, sub1, c0)
-
-		c1, ok := c.IndividualContextByIndex(1)
-		assert.True(t, ok)
-		assert.Equal(t, sub2, c1)
-
-		c2, ok := c.IndividualContextByIndex(2)
-		assert.False(t, ok)
-		assert.Equal(t, Context{}, c2)
-
-		c3, ok := c.IndividualContextByIndex(-1)
-		assert.False(t, ok)
-		assert.Equal(t, Context{}, c3)
+		assert.Equal(t, sub1, c.IndividualContextByIndex(0))
+		assert.Equal(t, sub2, c.IndividualContextByIndex(1))
+		assert.Equal(t, Context{}, c.IndividualContextByIndex(2))
+		assert.Equal(t, Context{}, c.IndividualContextByIndex(-1))
 	})
 }
 
@@ -373,39 +354,24 @@ func TestIndividualContextByKind(t *testing.T) {
 	t.Run("single", func(t *testing.T) {
 		c := NewWithKind("kind1", "my-key")
 
-		c0, ok := c.IndividualContextByKind("kind1")
-		assert.True(t, ok)
-		assert.Equal(t, c, c0)
-
-		c1, ok := c.IndividualContextByKind("other")
-		assert.False(t, ok)
-		assert.Equal(t, Context{}, c1)
+		assert.Equal(t, c, c.IndividualContextByKind("kind1"))
+		assert.Equal(t, Context{}, c.IndividualContextByKind("other"))
 	})
 
 	t.Run("multi", func(t *testing.T) {
 		sub1, sub2 := NewWithKind("kind1", "key1"), NewWithKind("kind2", "key2")
 		c := NewMulti(sub1, sub2)
 
-		c0, ok := c.IndividualContextByKind("kind1")
-		assert.True(t, ok)
-		assert.Equal(t, sub1, c0)
-
-		c1, ok := c.IndividualContextByKind("kind2")
-		assert.True(t, ok)
-		assert.Equal(t, sub2, c1)
-
-		c2, ok := c.IndividualContextByKind("other")
-		assert.False(t, ok)
-		assert.Equal(t, Context{}, c2)
+		assert.Equal(t, sub1, c.IndividualContextByKind("kind1"))
+		assert.Equal(t, sub2, c.IndividualContextByKind("kind2"))
+		assert.Equal(t, Context{}, c.IndividualContextByKind("other"))
 	})
 
 	t.Run("default", func(t *testing.T) {
 		sub1, sub2 := New("userkey"), NewWithKind("kind2", "key2")
 		c := NewMulti(sub1, sub2)
 
-		c0, ok := c.IndividualContextByKind("")
-		assert.True(t, ok)
-		assert.Equal(t, sub1, c0)
+		assert.Equal(t, sub1, c.IndividualContextByKind(""))
 	})
 }
 
