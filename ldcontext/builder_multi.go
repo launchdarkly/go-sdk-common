@@ -53,14 +53,14 @@ func NewMultiBuilder() *MultiBuilder {
 // than a multi-kind context.
 func (m *MultiBuilder) Build() Context {
 	if len(m.contexts) == 0 {
-		return Context{err: errContextKindMultiWithNoKinds}
+		return Context{defined: true, err: errContextKindMultiWithNoKinds}
 	}
 
 	if len(m.contexts) == 1 {
 		// Never return a multi-kind context with just one kind; instead return the individual one
 		c := m.contexts[0]
 		if c.Multiple() {
-			return Context{err: errContextKindMultiWithinMulti}
+			return Context{defined: true, err: errContextKindMultiWithinMulti}
 		}
 		return c
 	}
@@ -99,7 +99,8 @@ func (m *MultiBuilder) Build() Context {
 	}
 	if len(errs) != 0 {
 		return Context{
-			err: errors.New(strings.Join(errs, ", ")),
+			defined: true,
+			err:     errors.New(strings.Join(errs, ", ")),
 		}
 	}
 
