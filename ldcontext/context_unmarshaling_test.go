@@ -378,19 +378,13 @@ func TestContextReadKindAndKeyOnly(t *testing.T) {
 				require.NoError(t, err)
 				require.NoError(t, r2.Error())
 
-				if fullContext.Multiple() {
-					assert.True(t, minimalContext.Multiple())
-					assert.Equal(t, fullContext.MultiKindCount(), minimalContext.MultiKindCount())
-					for i := 0; i < fullContext.MultiKindCount(); i++ {
-						fc, _ := fullContext.MultiKindByIndex(i)
-						mc, _ := minimalContext.MultiKindByIndex(i)
+				allFull, allMini := fullContext.GetAllIndividualContexts(nil), minimalContext.GetAllIndividualContexts(nil)
+				if assert.Len(t, allMini, len(allFull)) {
+					for i, fc := range allFull {
+						mc := allMini[i]
 						assert.Equal(t, fc.Kind(), mc.Kind())
 						assert.Equal(t, fc.Key(), mc.Key())
 					}
-				} else {
-					assert.False(t, minimalContext.Multiple())
-					assert.Equal(t, fullContext.Kind(), minimalContext.Kind())
-					assert.Equal(t, fullContext.Key(), minimalContext.Key())
 				}
 				assert.Equal(t, fullContext.FullyQualifiedKey(), minimalContext.FullyQualifiedKey())
 			})
