@@ -11,7 +11,7 @@ import (
 
 func TestConstructors(t *testing.T) {
 	assert.Equal(t, ldcontext.New("some-key"), NewUser("some-key"))
-	assert.Equal(t, ldcontext.NewBuilder("some-key").Transient(true).Build(), NewAnonymousUser("some-key"))
+	assert.Equal(t, ldcontext.NewBuilder("some-key").Anonymous(true).Build(), NewAnonymousUser("some-key"))
 }
 
 func TestUserBuilderSetsOnlyKeyByDefault(t *testing.T) {
@@ -20,7 +20,7 @@ func TestUserBuilderSetsOnlyKeyByDefault(t *testing.T) {
 	assert.Equal(t, ldcontext.Kind("user"), c.Kind())
 	assert.Equal(t, "some-key", c.Key())
 	assert.False(t, c.Secondary().IsDefined())
-	assert.False(t, c.Transient())
+	assert.False(t, c.Anonymous())
 	assert.Len(t, c.GetOptionalAttributeNames(nil), 0)
 	assert.Equal(t, 0, c.PrivateAttributeCount())
 }
@@ -48,13 +48,13 @@ func TestUserBuilderCanSetStringAttributes(t *testing.T) {
 
 func TestUserBuilderCanSetAnonymous(t *testing.T) {
 	user0 := NewUserBuilder("some-key").Build()
-	assert.False(t, user0.Transient())
+	assert.False(t, user0.Anonymous())
 
 	user1 := NewUserBuilder("some-key").Anonymous(true).Build()
-	assert.True(t, user1.Transient())
+	assert.True(t, user1.Anonymous())
 
 	user2 := NewUserBuilder("some-key").Anonymous(false).Build()
-	assert.False(t, user2.Transient())
+	assert.False(t, user2.Anonymous())
 }
 
 func TestUserBuilderCanSetPrivateAttributes(t *testing.T) {
@@ -229,17 +229,17 @@ func TestUserBuilderGenericSetAttribute(t *testing.T) {
 		builder := NewUserBuilder("some-key")
 
 		builder.SetAttribute(AnonymousAttribute, ldvalue.Bool(false))
-		assert.False(t, builder.Build().Transient())
+		assert.False(t, builder.Build().Anonymous())
 
 		builder.SetAttribute(AnonymousAttribute, ldvalue.Bool(true))
-		assert.True(t, builder.Build().Transient())
+		assert.True(t, builder.Build().Anonymous())
 
 		// setting anonymous to wrong type is a no-op
 		builder.SetAttribute(AnonymousAttribute, ldvalue.String("x"))
-		assert.True(t, builder.Build().Transient())
+		assert.True(t, builder.Build().Anonymous())
 
 		builder.SetAttribute(AnonymousAttribute, ldvalue.Null())
-		assert.False(t, builder.Build().Transient())
+		assert.False(t, builder.Build().Anonymous())
 	})
 
 	t.Run("custom", func(t *testing.T) {

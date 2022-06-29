@@ -14,12 +14,12 @@ func NewUser(key string) ldcontext.Context {
 	return ldcontext.New(key)
 }
 
-// NewAnonymousUser creates a new transient user context identified by the given key.
+// NewAnonymousUser creates a new anonymous user context identified by the given key.
 //
-// This is exactly equivalent to ldcontext.NewBuilder(key).Transient(true).Build(). It is provided
+// This is exactly equivalent to ldcontext.NewBuilder(key).Anonymous(true).Build(). It is provided
 // to ease migration of code that previously used lduser instead of ldcontext.
 func NewAnonymousUser(key string) ldcontext.Context {
-	return ldcontext.NewBuilder(key).Transient(true).Build()
+	return ldcontext.NewBuilder(key).Anonymous(true).Build()
 }
 
 // UserBuilder is a mutable object that uses the Builder pattern to specify properties for a user
@@ -77,11 +77,11 @@ type UserBuilder interface {
 	// Name sets the full name attribute for the user being built.
 	Name(value string) UserBuilderCanMakeAttributePrivate
 
-	// Anonymous sets the Transient attribute for the user context being built.
+	// Anonymous sets the Anonymous attribute for the user context being built.
 	//
-	// Transient means that the context will not be stored in the database that appears on your LaunchDarkly
-	// dashboard. LaunchDarkly previously called this property "anonymous", but it does not imply that the
-	// context has no name; you can still set Name or any other properties you want.
+	// Anonymous means that the context will not be stored in the database that appears on your
+	// LaunchDarkly dashboard. It does not imply that the context has no name; you can still set
+	// Name or any other properties you want.
 	Anonymous(value bool) UserBuilder
 
 	// Custom sets a custom attribute for the user being built.
@@ -242,7 +242,7 @@ func (b *userBuilderImpl) Name(value string) UserBuilderCanMakeAttributePrivate 
 }
 
 func (b *userBuilderImpl) Anonymous(value bool) UserBuilder {
-	b.builder.Transient(value)
+	b.builder.Anonymous(value)
 	return b
 }
 
@@ -288,7 +288,7 @@ func (b *userBuilderImpl) SetAttribute(
 		}
 	case AnonymousAttribute:
 		if value.IsBool() || value.IsNull() {
-			b.builder.Transient(value.BoolValue())
+			b.builder.Anonymous(value.BoolValue())
 		}
 	case FirstNameAttribute, LastNameAttribute, EmailAttribute, CountryAttribute, AvatarAttribute, IPAttribute:
 		if value.IsString() || value.IsNull() {
