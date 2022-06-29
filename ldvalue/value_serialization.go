@@ -78,10 +78,10 @@ func (v Value) MarshalJSON() ([]byte, error) {
 		return v.objectValue.MarshalJSON()
 	case RawType:
 		if len(v.stringValue) == 0 {
-			return nullAsJSONBytes, nil // we don't check for other kinds of malformed JSON here, but if it was nil/"" we can assume they meant null
-		} else {
-			return []byte(v.stringValue), nil
+			return nullAsJSONBytes, nil
+			// we don't check for other kinds of malformed JSON here, but if it was nil/"" we can assume they meant null
 		}
+		return []byte(v.stringValue), nil
 	}
 	return nil, errors.New("unknown data type") // should not be possible
 }
