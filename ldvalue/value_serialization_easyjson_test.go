@@ -1,3 +1,4 @@
+//go:build launchdarkly_easyjson
 // +build launchdarkly_easyjson
 
 package ldvalue
@@ -60,6 +61,27 @@ func TestEasyJsonUnmarshalErrorConditions(t *testing.T) {
 	} {
 		t.Run(string(data), func(t *testing.T) {
 			assert.Error(t, easyjson.Unmarshal(data, &v))
+		})
+	}
+}
+
+func TestEasyJsonMarshalRaw(t *testing.T) {
+	// This is separate from the MarshalUnmarshal test because you never get a Raw when you unmarshal.
+	for _, params := range []struct {
+		desc   string
+		input  json.RawMessage
+		output string
+	}{
+		{"valid JSON", json.RawMessage(`{"a":1}`), `{"a":1}`},
+		{"zero-length", json.RawMessage{}, `null`},
+		{"nil", json.RawMessage(nil), `null`},
+	} {
+		t.Run(params.desc, func(t *testing.T) {
+			value := Raw(params.input)
+
+			j, err := easyjson.Marshal(value)
+			assert.NoError(t, err)
+			assert.Equal(t, params.output, string(j))
 		})
 	}
 }

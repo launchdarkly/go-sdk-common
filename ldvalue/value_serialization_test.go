@@ -70,18 +70,29 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 
 func TestMarshalRaw(t *testing.T) {
 	// This is separate from the MarshalUnmarshal test because you never get a Raw when you unmarshal.
-	s := `{"a":1}`
-	value := Raw(json.RawMessage(s))
+	for _, params := range []struct {
+		desc   string
+		input  json.RawMessage
+		output string
+	}{
+		{"valid JSON", json.RawMessage(`{"a":1}`), `{"a":1}`},
+		{"zero-length", json.RawMessage{}, `null`},
+		{"nil", json.RawMessage(nil), `null`},
+	} {
+		t.Run(params.desc, func(t *testing.T) {
+			value := Raw(params.input)
 
-	bytes, err := json.Marshal(value)
-	assert.NoError(t, err)
-	assert.Equal(t, s, string(bytes))
+			bytes, err := json.Marshal(value)
+			assert.NoError(t, err)
+			assert.Equal(t, params.output, string(bytes))
 
-	var buf jsonstream.JSONBuffer
-	value.WriteToJSONBuffer(&buf)
-	bytes, err = buf.Get()
-	assert.NoError(t, err)
-	assert.Equal(t, s, string(bytes))
+			var buf jsonstream.JSONBuffer
+			value.WriteToJSONBuffer(&buf)
+			bytes, err = buf.Get()
+			assert.NoError(t, err)
+			assert.Equal(t, params.output, string(bytes))
+		})
+	}
 }
 
 func TestUnmarshalErrorConditions(t *testing.T) {

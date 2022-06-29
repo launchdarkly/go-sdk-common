@@ -1,3 +1,4 @@
+//go:build launchdarkly_easyjson
 // +build launchdarkly_easyjson
 
 package ldvalue
@@ -34,6 +35,12 @@ func (v Value) MarshalEasyJSON(writer *ej_jwriter.Writer) {
 		v.arrayValue.MarshalEasyJSON(writer)
 	case ObjectType:
 		v.objectValue.MarshalEasyJSON(writer)
+	case RawType:
+		if len(v.stringValue) == 0 {
+			writer.Raw(nullAsJSONBytes, nil) // see Value.MarshalJSON
+		} else {
+			writer.RawString(v.stringValue)
+		}
 	}
 }
 
