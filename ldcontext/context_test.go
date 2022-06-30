@@ -43,7 +43,7 @@ func TestGetOptionalAttributeNames(t *testing.T) {
 	})
 
 	t.Run("meta not included", func(t *testing.T) {
-		c := NewBuilder("my-key").Secondary("x").Transient(true).Build()
+		c := NewBuilder("my-key").Secondary("x").Anonymous(true).Build()
 		an := c.GetOptionalAttributeNames(nil)
 		assert.Len(t, an, 0)
 	})
@@ -172,25 +172,25 @@ func TestGetValueForRefSpecialTopLevelAttributes(t *testing.T) {
 		})
 	})
 
-	t.Run("transient", func(t *testing.T) {
+	t.Run("anonymous", func(t *testing.T) {
 		t.Run("single-kind, defined, true", func(t *testing.T) {
-			c := makeBasicBuilder().Transient(true).Build()
-			expectAttributeFoundForRef(t, ldvalue.Bool(true), c, "transient")
+			c := makeBasicBuilder().Anonymous(true).Build()
+			expectAttributeFoundForRef(t, ldvalue.Bool(true), c, "anonymous")
 		})
 
 		t.Run("single-kind, defined, false", func(t *testing.T) {
-			c := makeBasicBuilder().Transient(false).Build()
-			expectAttributeFoundForRef(t, ldvalue.Bool(false), c, "transient")
+			c := makeBasicBuilder().Anonymous(false).Build()
+			expectAttributeFoundForRef(t, ldvalue.Bool(false), c, "anonymous")
 		})
 
 		t.Run("single-kind, undefined", func(t *testing.T) {
 			c := makeBasicBuilder().Build()
-			expectAttributeFoundForRef(t, ldvalue.Bool(false), c, "transient")
+			expectAttributeFoundForRef(t, ldvalue.Bool(false), c, "anonymous")
 		})
 
 		t.Run("multi-kind", func(t *testing.T) {
-			c := NewMulti(makeBasicBuilder().Transient(true).Build(), NewWithKind("otherkind", "otherkey"))
-			expectAttributeNotFoundForRef(t, c, "transient")
+			c := NewMulti(makeBasicBuilder().Anonymous(true).Build(), NewWithKind("otherkind", "otherkey"))
+			expectAttributeNotFoundForRef(t, c, "anonymous")
 		})
 	})
 }
@@ -305,7 +305,7 @@ func TestGetValueForRefCustomAttributeSingleKind(t *testing.T) {
 }
 
 func TestContextString(t *testing.T) {
-	c := makeBasicBuilder().Name("x").Transient(true).SetString("attr", "value").Build()
+	c := makeBasicBuilder().Name("x").Anonymous(true).SetString("attr", "value").Build()
 	j, _ := json.Marshal(c)
 	s := c.String()
 	m.In(t).Assert(json.RawMessage(s), m.JSONEqual(json.RawMessage(j)))
@@ -464,7 +464,7 @@ func TestContextEqual(t *testing.T) {
 		{func() Context { return NewBuilder("a").Name("c").Build() }},
 		{func() Context { return NewBuilder("a").Secondary("b").Build() }},
 		{func() Context { return NewBuilder("a").Secondary("").Build() }}, // "" is not the same as undefined
-		{func() Context { return NewBuilder("a").Transient(true).Build() }},
+		{func() Context { return NewBuilder("a").Anonymous(true).Build() }},
 		{func() Context { return NewBuilder("a").SetBool("b", true).Build() }},
 		{func() Context { return NewBuilder("a").SetBool("b", false).Build() }},
 		{func() Context { return NewBuilder("a").SetInt("b", 0).Build() }},

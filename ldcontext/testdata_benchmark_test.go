@@ -74,7 +74,7 @@ func makeBenchmarkContextWithAllAttributes() Context {
 		SetString("firstName", "First").
 		SetString("lastName", "Last").
 		SetString("avatar", "avatar-value").
-		Transient(true).
+		Anonymous(true).
 		SetString("attr", "value").
 		Build()
 }

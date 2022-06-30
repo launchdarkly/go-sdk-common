@@ -34,9 +34,9 @@ func makeContextMarshalingAndUnmarshalingParams() []contextSerializationParams {
 		{NewBuilder("key3").Secondary("value").Build(),
 			`{"kind": "user", "key": "key3", "_meta": {"secondary": "value"}}`},
 
-		{NewBuilder("key4").Transient(true).Build(),
-			`{"kind": "user", "key": "key4", "transient": true}`},
-		{NewBuilder("key5").Transient(false).Build(),
+		{NewBuilder("key4").Anonymous(true).Build(),
+			`{"kind": "user", "key": "key4", "anonymous": true}`},
+		{NewBuilder("key5").Anonymous(false).Build(),
 			`{"kind": "user", "key": "key5"}`},
 
 		{NewBuilder("key6").SetBool("attr1", true).Build(),

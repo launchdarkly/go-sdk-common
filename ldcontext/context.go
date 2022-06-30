@@ -29,7 +29,7 @@ type Context struct {
 	name              ldvalue.OptionalString
 	attributes        ldvalue.ValueMap
 	secondary         ldvalue.OptionalString
-	transient         bool
+	anonymous         bool
 	privateAttrs      []ldattr.Ref
 }
 
@@ -126,7 +126,7 @@ func (c Context) Name() ldvalue.OptionalString {
 
 // GetOptionalAttributeNames returns a slice containing the names of all regular optional attributes defined
 // on this Context. These do not include the mandatory Kind and Key, or the metadata attributes Secondary,
-// Transient, and Private.
+// Anonymous, and Private.
 //
 // If a non-nil slice is passed in, it will be reused to hold the return values if it has enough capacity.
 // For instance, in the following example, no heap allocations will happen unless there are more than 10
@@ -221,16 +221,16 @@ func (c Context) GetValueForRef(ref ldattr.Ref) ldvalue.Value {
 	return value
 }
 
-// Transient returns true if this Context is only intended for flag evaluations and will not be indexed by
+// Anonymous returns true if this Context is only intended for flag evaluations and will not be indexed by
 // LaunchDarkly.
 //
-// For a single-kind context, this value can be set by Builder.Transient(), and is false if not specified.
+// For a single-kind context, this value can be set by Builder.Anonymous(), and is false if not specified.
 //
-// For a multi-kind context, there is no single value, so Transient() always returns false; use
+// For a multi-kind context, there is no single value, so Anonymous() always returns false; use
 // IndividualContextByIndex(), IndividualContextByName(), or GetAllIndividualContexts() to inspect
-// a Context for a particular kind and then call Transient() on it.
-func (c Context) Transient() bool {
-	return c.transient
+// a Context for a particular kind and then call Anonymous() on it.
+func (c Context) Anonymous() bool {
+	return c.anonymous
 }
 
 // Secondary returns the secondary key attribute for the Context, if any.
@@ -392,8 +392,8 @@ func (c Context) getTopLevelAddressableAttributeSingleKind(name string) (ldvalue
 		return ldvalue.String(c.key), true
 	case ldattr.NameAttr:
 		return c.name.AsValue(), c.name.IsDefined()
-	case ldattr.TransientAttr:
-		return ldvalue.Bool(c.transient), true
+	case ldattr.AnonymousAttr:
+		return ldvalue.Bool(c.anonymous), true
 	default:
 		return c.attributes.TryGet(name)
 	}
@@ -427,7 +427,7 @@ func (c Context) Equal(other Context) bool {
 
 	if c.key != other.key ||
 		c.name != other.name ||
-		c.transient != other.transient ||
+		c.anonymous != other.anonymous ||
 		c.secondary != other.secondary {
 		return false
 	}

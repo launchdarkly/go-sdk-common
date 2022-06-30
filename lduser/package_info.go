@@ -9,9 +9,9 @@
 //
 // - Unlike Context where only a few attributes such as Key and Name have special behavior, the
 // user model defined many other built-in attributes such as Email which, like Name, were constrained
-// to only allow string values. These had specific setter methods in UserBuilder.
-//
-// - The property that is now called Transient was called Anonymous.
+// to only allow string values. These had specific setter methods in UserBuilder. Non-built-in
+// attributes were considered "custom" attributes, and were enclosed in a "custom" object in JSON
+// representations.
 //
 // Updating code while still using UserBuilder
 //
@@ -28,8 +28,8 @@
 // Context will be invalid (as indicated by its Err() method returning an error) and the SDK will
 // refuse to use it for evaluations or events.
 //
-// 3. Previously, the Anonymous property (now called Transient) had three states: true, false, or
-// undefined/null. Undefined/null and false were functionally the same in terms of the LaunchDarkly
+// 3. Previously, the Anonymous property had three states: true, false, or undefined/null.
+// Undefined/null and false were functionally the same in terms of the LaunchDarkly
 // dashboard/indexing behavior, but they were represented differently in JSON and could behave
 // differently if referenced in a flag rule (an undefined/null value would not match "anonymous is
 // false"). Now, the property is a simple boolean defaulting to false, and the undefined state is
@@ -50,7 +50,7 @@
 //
 // - Code that previously created a User with an empty string key ("") must be changed to use a
 // non-empty key instead. If you do not care about the value of the key, use an arbitrary value.
-// If you do not want the key to appear on your LaunchDarkly dashboard, use Transient.
+// If you do not want the key to appear on your LaunchDarkly dashboard, use Anonymous.
 //
 // - Code that previously used UserBuilder should now use ldcontext.NewBuilder().
 //
@@ -86,14 +86,6 @@
 //         SetString("my-string-attr", "value").
 //         SetValue("my-array-attr", ldvalue.ArrayOf(ldvalue.String("a"), ldvalue.String("b"))).
 //         Build()
-//
-// - Anonymous has been renamed to Transient.
-//
-//     // old
-//     user := lduser.NewUserBuilder("my-user-key").Anonymous(true).Build()
-//
-//     // new
-//     user := ldcontext.NewBuilder("my-user-key").Transient(true).Build()
 //
 // - Private attributes are now designated by attribute name, instead of by chaining a call to
 // AsPrivateAttribute() after calling the setter.

@@ -33,7 +33,7 @@ type Builder struct {
 	name               ldvalue.OptionalString
 	attributes         ldvalue.ValueMapBuilder
 	secondary          ldvalue.OptionalString
-	transient          bool
+	anonymous          bool
 	privateAttrs       []ldattr.Ref
 	privateCopyOnWrite bool
 }
@@ -44,7 +44,7 @@ type Builder struct {
 // You may use Builder methods to set additional attributes and/or change the Kind before
 // calling Build(). If you do not change any values, the defaults for the Context are that
 // its Kind is DefaultKind ("user"), its Key is set to whatever value you passed to NewBuilder,
-// its Transient attribute is false, and it has no values for any other attributes.
+// its Anonymous attribute is false, and it has no values for any other attributes.
 //
 // This method is for building a Context that has only a single Kind. To define a multi-kind
 // Context, use NewMultiBuilder() instead.
@@ -109,7 +109,7 @@ func (b *Builder) Build() Context {
 		kind:      actualKind,
 		key:       b.key,
 		name:      b.name,
-		transient: b.transient,
+		anonymous: b.anonymous,
 		secondary: b.secondary,
 	}
 
@@ -294,7 +294,7 @@ func (b *Builder) SetString(attributeName string, value string) *Builder {
 //
 // - "name": Must be a string or null. See Builder.Name() and Builder.OptName().
 //
-// - "transient": Must be a boolean. See Builder.Transient().
+// - "anonymous": Must be a boolean. See Builder.Anonymous().
 //
 // Values that are JSON arrays or objects have special behavior when referenced in flag/segment
 // rules.
@@ -335,11 +335,11 @@ func (b *Builder) TrySetValue(attributeName string, value ldvalue.Value) bool {
 			return false
 		}
 		b.OptName(value.AsOptionalString())
-	case ldattr.TransientAttr:
+	case ldattr.AnonymousAttr:
 		if !value.IsBool() {
 			return false
 		}
-		b.Transient(value.BoolValue())
+		b.Anonymous(value.BoolValue())
 	case jsonPropPrivate, jsonPropSecondary:
 		return false
 	default:
@@ -383,21 +383,22 @@ func (b *Builder) OptSecondary(value ldvalue.OptionalString) *Builder {
 	return b
 }
 
-// Transient sets whether the Context is only intended for flag evaluations and should not be indexed by
+// Anonymous sets whether the Context is only intended for flag evaluations and should not be indexed by
 // LaunchDarkly.
 //
 // The default value is false. False means that this Context represents an entity such as a user that you
 // want to be able to see on the LaunchDarkly dashboard.
 //
-// Setting Transient to true excludes this Context from the database that is used by the dashboard. It does
+// Setting Anonymous to true excludes this Context from the database that is used by the dashboard. It does
 // not exclude it from analytics event data, so it is not the same as making attributes private; all
-// non-private attributes will still be included in events and data export.
+// non-private attributes will still be included in events and data export. There is no limitation on what
+// other attributes may be included (so, for instance, Anonymous does not mean there is no Name).
 //
-// This value is also addressable in evaluations as the attribute name "transient". It is always treated as
+// This value is also addressable in evaluations as the attribute name "anonymous". It is always treated as
 // a boolean true or false in evaluations.
-func (b *Builder) Transient(value bool) *Builder {
+func (b *Builder) Anonymous(value bool) *Builder {
 	if b != nil {
-		b.transient = value
+		b.anonymous = value
 	}
 	return b
 }
@@ -422,7 +423,7 @@ func (b *Builder) Transient(value bool) *Builder {
 // This action only affects analytics events that involve this particular Context. To mark some (or all)
 // Context attributes as private for all users, use the overall event configuration for the SDK.
 //
-// The attributes "kind" and "key", and the metadata properties set by Secondary() and Transient(),
+// The attributes "kind" and "key", and the metadata properties set by Secondary() and Anonymous(),
 // cannot be made private.
 //
 // In this example, firstName is marked as private, but lastName is not:
@@ -508,7 +509,7 @@ func (b *Builder) copyFrom(fromContext Context) {
 	b.key = fromContext.key
 	b.name = fromContext.name
 	b.secondary = fromContext.secondary
-	b.transient = fromContext.transient
+	b.anonymous = fromContext.anonymous
 	b.attributes = ldvalue.ValueMapBuilder{}
 	b.attributes.SetAllFromValueMap(fromContext.attributes)
 	b.privateAttrs = fromContext.privateAttrs
