@@ -1,3 +1,4 @@
+//go:build launchdarkly_easyjson
 // +build launchdarkly_easyjson
 
 package lduser
@@ -5,20 +6,21 @@ package lduser
 import (
 	"testing"
 
-	"github.com/mailru/easyjson/jlexer"
-	"github.com/mailru/easyjson/jwriter"
+	easyjson "github.com/mailru/easyjson"
 )
 
-func BenchmarkUserSerializationWithAllAttributesEasyJSON(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		writer := jwriter.Writer{}
-		benchmarkSimpleUser.MarshalEasyJSON(&writer)
-	}
+func easyJSONMarshalTestFn(u *User) ([]byte, error) {
+	return easyjson.Marshal(u)
 }
 
-func BenchmarkUserDeserializationWithAllAttributesEasyJSON(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		lexer := jlexer.Lexer{Data: benchmarkUserWithAllAttributesJSON}
-		benchmarkUserResult.UnmarshalEasyJSON(&lexer)
-	}
+func easyJSONUnmarshalTestFn(u *User, data []byte) error {
+	return easyjson.Unmarshal(data, u)
+}
+
+func BenchmarkEasyJSONMarshal(b *testing.B) {
+	doMarshalBenchmark(b, easyJSONMarshalTestFn)
+}
+
+func BenchmarkEasyJSONUnmarshal(b *testing.B) {
+	doUnmarshalBenchmark(b, easyJSONUnmarshalTestFn)
 }
