@@ -41,7 +41,7 @@ func TestBuilderDefaultProperties(t *testing.T) {
 	assert.Equal(t, "my-key", c.Key())
 
 	assert.Equal(t, ldvalue.OptionalString{}, c.Name())
-	assert.False(t, c.Transient())
+	assert.False(t, c.Anonymous())
 	assert.Equal(t, ldvalue.OptionalString{}, c.Secondary())
 	assert.Len(t, c.GetOptionalAttributeNames(nil), 0)
 }
@@ -127,15 +127,15 @@ func TestBuilderBasicSetters(t *testing.T) {
 		assert.Equal(t, ldvalue.NewOptionalString("value"), c3.Secondary())
 	})
 
-	t.Run("Transient", func(t *testing.T) {
+	t.Run("Anonymous", func(t *testing.T) {
 		c0 := makeBasicBuilder().Build()
-		assert.False(t, c0.Transient())
+		assert.False(t, c0.Anonymous())
 
-		c1 := makeBasicBuilder().Transient(false).Build()
-		assert.False(t, c1.Transient())
+		c1 := makeBasicBuilder().Anonymous(false).Build()
+		assert.False(t, c1.Anonymous())
 
-		c2 := makeBasicBuilder().Transient(true).Build()
-		assert.True(t, c2.Transient())
+		c2 := makeBasicBuilder().Anonymous(true).Build()
+		assert.True(t, c2.Anonymous())
 	})
 }
 
@@ -226,8 +226,8 @@ func TestBuilderSetBuiltInAttributesByName(t *testing.T) {
 			bad:              []ldvalue.Value{boolFalse, intValue, floatValue, arrayValue, objectValue},
 		},
 		{
-			name:             "transient",
-			equivalentSetter: func(b *Builder, v ldvalue.Value) { b.Transient(v.BoolValue()) },
+			name:             "anonymous",
+			equivalentSetter: func(b *Builder, v ldvalue.Value) { b.Anonymous(v.BoolValue()) },
 			good:             []ldvalue.Value{boolTrue, boolFalse},
 			bad:              []ldvalue.Value{nullValue, intValue, floatValue, stringEmpty, stringNonEmpty, arrayValue, objectValue},
 		},
@@ -395,7 +395,7 @@ func TestBuilderPrivate(t *testing.T) {
 func TestNewBuilderFromContext(t *testing.T) {
 	value1, value2 := ldvalue.String("value1"), ldvalue.String("value2")
 
-	b1 := NewBuilder("key1").Kind("kind1").Name("name1").Secondary("sec1").Transient(true).SetValue("attr", value1)
+	b1 := NewBuilder("key1").Kind("kind1").Name("name1").Secondary("sec1").Anonymous(true).SetValue("attr", value1)
 	b1.Private("private1")
 	c1 := b1.Build()
 	m.In(t).Assert(c1.attributes.Get("attr"), m.JSONEqual(value1))
@@ -406,7 +406,7 @@ func TestNewBuilderFromContext(t *testing.T) {
 	assert.Equal(t, Kind("kind1"), c2.Kind())
 	assert.Equal(t, "key1", c2.Key())
 	assert.Equal(t, ldvalue.NewOptionalString("sec1"), c2.Secondary())
-	assert.True(t, c2.Transient())
+	assert.True(t, c2.Anonymous())
 	m.In(t).Assert(c2.attributes.Get("attr"), m.JSONEqual(value1))
 	assert.Equal(t, c1.privateAttrs, c2.privateAttrs)
 
@@ -436,7 +436,7 @@ func TestBuilderSafety(t *testing.T) {
 	assert.Nil(t, nilPtr.Key("a"))
 	assert.Nil(t, nilPtr.Name("a"))
 	assert.Nil(t, nilPtr.Secondary("a"))
-	assert.Nil(t, nilPtr.Transient(true))
+	assert.Nil(t, nilPtr.Anonymous(true))
 	assert.Nil(t, nilPtr.SetValue("a", ldvalue.Bool(true)))
 	assert.Nil(t, nilPtr.Private("a"))
 	assert.Nil(t, nilPtr.RemovePrivate("a"))

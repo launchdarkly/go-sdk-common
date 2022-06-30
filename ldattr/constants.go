@@ -19,9 +19,9 @@ const (
 	// representations and flag rules.
 	NameAttr = "name"
 
-	// TransientAttr is a constant for the attribute name that corresponds to the Transient() method
+	// AnonymousAttr is a constant for the attribute name that corresponds to the Anonymous() method
 	// in ldcontext.Context and ldcontext.Builder. This name is used in JSON representations and flag
 	// rules, and can be passed to ldcontext.Context.GetValue() or ldcontext.Context.SetValue().
 	// representations and flag rules.
-	TransientAttr = "transient"
+	AnonymousAttr = "anonymous"
 )

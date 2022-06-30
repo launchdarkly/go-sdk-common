@@ -25,9 +25,9 @@ func makeContextUnmarshalUnimportantVariantsParams() []contextSerializationParam
 		{NewBuilder("my-key").Build(),
 			`{"kind": "user", "key": "my-key", "customAttr": null}`},
 
-		// explicit false is same as unset for transient
+		// explicit false is same as unset for anonymous
 		{NewBuilder("my-key").Build(),
-			`{"kind": "user", "key": "my-key", "transient": false}`},
+			`{"kind": "user", "key": "my-key", "anonymous": false}`},
 
 		// _meta: {} is same as no _meta
 		{NewBuilder("my-key").Build(),
@@ -71,7 +71,7 @@ func makeContextUnmarshalFromOldUserSchemaParams() []contextSerializationParams 
 		{NewBuilder("key3").Build(),
 			`{"key": "key3", "secondary": null}`},
 
-		{NewBuilder("key4").Transient(true).Build(),
+		{NewBuilder("key4").Anonymous(true).Build(),
 			`{"key": "key4", "anonymous": true}`},
 		{NewBuilder("key4").Build(),
 			`{"key": "key4", "anonymous": false}`},
@@ -176,8 +176,8 @@ func makeContextUnmarshalingErrorInputs() []string {
 		`{"kind": "multi", "org": null}`,
 		`{"kind": "multi", "org": true}`,
 		`{"kind": "org", "key": "my-key", "name": true}`,
-		`{"kind": "org", "key": "my-key", "transient": "yes"}}`,
-		`{"kind": "org", "key": "my-key", "transient": null}}`,
+		`{"kind": "org", "key": "my-key", "anonymous": "yes"}}`,
+		`{"kind": "org", "key": "my-key", "anonymous": null}}`,
 
 		`{"kind": "org"}`,             // missing key
 		`{"kind": "user", "key": ""}`, // empty key not allowed in new-style context

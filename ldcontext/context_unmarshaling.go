@@ -111,8 +111,8 @@ func unmarshalSingleKind(c *Context, r *jreader.Reader, knownKind Kind, usingEve
 			hasKey = true
 		case ldattr.NameAttr:
 			b.OptName(readOptString(r))
-		case ldattr.TransientAttr:
-			b.Transient(r.Bool())
+		case ldattr.AnonymousAttr:
+			b.Anonymous(r.Bool())
 		case jsonPropMeta:
 			for metaObj := r.Object(); metaObj.Next(); {
 				switch string(metaObj.Name()) {
@@ -183,9 +183,9 @@ func unmarshalOldUserSchema(c *Context, r *jreader.Reader, usingEventFormat bool
 			b.OptName(readOptString(r))
 		case jsonPropSecondary:
 			b.OptSecondary(readOptString(r))
-		case jsonPropOldUserAnonymous:
+		case ldattr.AnonymousAttr:
 			value, _ := r.BoolOrNull()
-			b.Transient(value)
+			b.Anonymous(value)
 		case jsonPropOldUserCustom:
 			for customObj := r.Object(); customObj.Next(); {
 				name := string(customObj.Name())

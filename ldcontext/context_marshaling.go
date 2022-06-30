@@ -35,8 +35,8 @@ func (c *Context) writeToJSONWriterInternalSingle(w *jwriter.Writer, withinKind 
 		obj.Name(k)
 		c.attributes.Get(k).WriteToJSONWriter(w)
 	}
-	if c.transient {
-		obj.Name(ldattr.TransientAttr).Bool(true)
+	if c.anonymous {
+		obj.Name(ldattr.AnonymousAttr).Bool(true)
 	}
 
 	if c.secondary.IsDefined() || len(c.privateAttrs) != 0 {
