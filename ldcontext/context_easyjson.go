@@ -161,6 +161,10 @@ func unmarshalSingleKindEasyJSON(c *Context, in *jlexer.Lexer, knownKind Kind, u
 		case ldattr.AnonymousAttr:
 			c.anonymous = in.Bool()
 		case jsonPropMeta:
+			if in.IsNull() {
+				in.Skip()
+				break
+			}
 			in.Delim('{')
 			for !in.IsDelim('}') {
 				key := in.UnsafeBytes() // see comment above
@@ -271,6 +275,11 @@ func unmarshalOldUserSchemaEasyJSON(c *Context, in *jlexer.Lexer, usingEventForm
 				c.anonymous = in.Bool()
 			}
 		case jsonPropOldUserCustom:
+			if in.IsNull() {
+				in.Skip()
+				attributes = ldvalue.ValueMapBuilder{}
+				break
+			}
 			in.Delim('{')
 			for !in.IsDelim('}') {
 				name := in.String()
@@ -288,7 +297,7 @@ func unmarshalOldUserSchemaEasyJSON(c *Context, in *jlexer.Lexer, usingEventForm
 		case jsonPropOldUserPrivate:
 			if usingEventFormat {
 				in.SkipRecursive()
-				continue
+				break
 			}
 			readPrivateAttributesEasyJSON(in, c, true)
 			// The "true" here means to interpret the strings as literal attribute names, since the
@@ -296,7 +305,7 @@ func unmarshalOldUserSchemaEasyJSON(c *Context, in *jlexer.Lexer, usingEventForm
 		case jsonPropOldUserRedacted:
 			if !usingEventFormat {
 				in.SkipRecursive()
-				continue
+				break
 			}
 			readPrivateAttributesEasyJSON(in, c, true)
 		case "firstName", "lastName", "email", "country", "avatar", "ip":
