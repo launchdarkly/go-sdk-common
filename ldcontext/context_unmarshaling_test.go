@@ -33,6 +33,10 @@ func makeContextUnmarshalUnimportantVariantsParams() []contextSerializationParam
 		{NewBuilder("my-key").Build(),
 			`{"kind": "user", "key": "my-key", "_meta": {}}`},
 
+		// _meta: null is same as no _meta
+		{NewBuilder("my-key").Build(),
+			`{"kind": "user", "key": "my-key", "_meta": null}`},
+
 		// privateAttributes: [] is same as no privateAttributes
 		{NewBuilder("my-key").Build(),
 			`{"kind": "user", "key": "my-key", "_meta": {"privateAttributes": null}}`},
@@ -78,6 +82,10 @@ func makeContextUnmarshalFromOldUserSchemaParams() []contextSerializationParams 
 		{NewBuilder("key4").Build(),
 			`{"key": "key4", "anonymous": null}`},
 
+		{NewBuilder("key6").Build(),
+			`{"key": "key6", "custom": {}}`},
+		{NewBuilder("key6").Build(),
+			`{"key": "key6", "custom": null}`},
 		{NewBuilder("key6").Build(),
 			`{"key": "key6", "custom": {"attr1": null}}`},
 		{NewBuilder("key6").SetBool("attr1", true).Build(),
