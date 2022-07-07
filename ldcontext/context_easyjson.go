@@ -5,6 +5,7 @@ package ldcontext
 
 import (
 	"github.com/launchdarkly/go-sdk-common/v3/ldattr"
+	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
 	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
 
 	"github.com/launchdarkly/go-jsonstream/v2/jwriter"
@@ -208,7 +209,7 @@ func unmarshalSingleKindEasyJSON(c *Context, in *jlexer.Lexer, knownKind Kind, u
 		return
 	}
 	if !hasKey {
-		in.AddError(errJSONKeyMissing)
+		in.AddError(lderrors.ErrContextKeyMissing{})
 		return
 	}
 	c.kind, c.err = validateSingleKind(c.kind)
@@ -217,7 +218,7 @@ func unmarshalSingleKindEasyJSON(c *Context, in *jlexer.Lexer, knownKind Kind, u
 		return
 	}
 	if c.key == "" {
-		c.err = errContextKeyEmpty
+		c.err = lderrors.ErrContextKeyEmpty{}
 		in.AddError(c.err)
 	} else {
 		c.fullyQualifiedKey = makeFullyQualifiedKeySingleKind(c.kind, c.key, true)
@@ -327,7 +328,7 @@ func unmarshalOldUserSchemaEasyJSON(c *Context, in *jlexer.Lexer, usingEventForm
 		return
 	}
 	if !hasKey {
-		in.AddError(errJSONKeyMissing)
+		in.AddError(lderrors.ErrContextKeyMissing{})
 		return
 	}
 	c.fullyQualifiedKey = c.key
@@ -346,7 +347,7 @@ func parseKindOnlyEasyJSON(originalLexer *jlexer.Lexer) (Kind, bool, error) {
 		if key == ldattr.KindAttr {
 			kind := in.String()
 			if in.Error() == nil && kind == "" {
-				return "", false, errContextKindEmpty
+				return "", false, lderrors.ErrContextKindEmpty{}
 			}
 			return Kind(kind), true, in.Error()
 		}

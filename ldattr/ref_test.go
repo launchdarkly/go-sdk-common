@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
 	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
 
 	"github.com/stretchr/testify/assert"
@@ -15,15 +16,15 @@ func TestRefInvalid(t *testing.T) {
 		input         string
 		expectedError error
 	}{
-		{"", errAttributeEmpty},
-		{"/", errAttributeEmpty},
-		{"//", errAttributeExtraSlash},
-		{"/a//b", errAttributeExtraSlash},
-		{"/a/b/", errAttributeExtraSlash},
-		{"/a~x", errAttributeInvalidEscape},
-		{"/a~", errAttributeInvalidEscape},
-		{"/a/b~x", errAttributeInvalidEscape},
-		{"/a/b~", errAttributeInvalidEscape},
+		{"", lderrors.ErrAttributeEmpty{}},
+		{"/", lderrors.ErrAttributeEmpty{}},
+		{"//", lderrors.ErrAttributeExtraSlash{}},
+		{"/a//b", lderrors.ErrAttributeExtraSlash{}},
+		{"/a/b/", lderrors.ErrAttributeExtraSlash{}},
+		{"/a~x", lderrors.ErrAttributeInvalidEscape{}},
+		{"/a~", lderrors.ErrAttributeInvalidEscape{}},
+		{"/a/b~x", lderrors.ErrAttributeInvalidEscape{}},
+		{"/a/b~", lderrors.ErrAttributeInvalidEscape{}},
 	} {
 		t.Run(fmt.Sprintf("input string %q", p.input), func(t *testing.T) {
 			a := NewRef(p.input)
@@ -37,7 +38,7 @@ func TestRefInvalid(t *testing.T) {
 	t.Run("uninitialized", func(t *testing.T) {
 		var a Ref
 		assert.False(t, a.IsDefined())
-		assert.Equal(t, errAttributeEmpty, a.Err())
+		assert.Equal(t, lderrors.ErrAttributeEmpty{}, a.Err())
 		assert.Equal(t, "", a.String())
 		assert.Equal(t, 0, a.Depth())
 	})
@@ -103,7 +104,7 @@ func TestNewLiteralRef(t *testing.T) {
 	assert.Equal(t, 1, a3.Depth())
 
 	a4 := NewLiteralRef("")
-	assert.Equal(t, errAttributeEmpty, a4.Err())
+	assert.Equal(t, lderrors.ErrAttributeEmpty{}, a4.Err())
 }
 
 func TestRefComponents(t *testing.T) {

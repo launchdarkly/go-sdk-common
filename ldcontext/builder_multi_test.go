@@ -3,6 +3,7 @@ package ldcontext
 import (
 	"testing"
 
+	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -57,17 +58,17 @@ func TestMultiBuilderErrors(t *testing.T) {
 	}
 
 	t.Run("empty", func(t *testing.T) {
-		verifyError(t, NewMultiBuilder(), errContextKindMultiWithNoKinds)
+		verifyError(t, NewMultiBuilder(), lderrors.ErrContextKindMultiWithNoKinds{})
 	})
 
 	t.Run("nested multi", func(t *testing.T) {
 		sub1 := NewWithKind("org", "my-key")
 		sub2 := NewMulti(New("user-key"), NewWithKind("org", "other"))
 		b0 := NewMultiBuilder().Add(sub1).Add(sub2)
-		verifyError(t, b0, errContextKindMultiWithinMulti)
+		verifyError(t, b0, lderrors.ErrContextKindMultiWithinMulti{})
 
 		b1 := NewMultiBuilder().Add(sub2)
-		verifyError(t, b1, errContextKindMultiWithinMulti)
+		verifyError(t, b1, lderrors.ErrContextKindMultiWithinMulti{})
 	})
 
 	t.Run("duplicate kind", func(t *testing.T) {
@@ -75,7 +76,7 @@ func TestMultiBuilderErrors(t *testing.T) {
 		sub2 := NewWithKind("user", "my-user-key")
 		sub3 := NewWithKind("org", "other-org-key")
 		b := NewMultiBuilder().Add(sub1).Add(sub2).Add(sub3)
-		verifyError(t, b, errContextKindMultiDuplicates)
+		verifyError(t, b, lderrors.ErrContextKindMultiDuplicates{})
 	})
 
 	t.Run("error in individual contexts", func(t *testing.T) {
@@ -85,7 +86,12 @@ func TestMultiBuilderErrors(t *testing.T) {
 		b := NewMultiBuilder().Add(sub1).Add(sub2).Add(sub3)
 		c0 := b.Build()
 		assert.Error(t, c0.Err())
-		assert.Regexp(t, "\\(kind1\\).*must not be empty, \\(kind3!\\).*disallowed characters", c0.Err().Error())
+		if assert.IsType(t, lderrors.ErrContextPerKindErrors{}, c0.Err()) {
+			e := c0.Err().(lderrors.ErrContextPerKindErrors)
+			assert.Len(t, e.Errors, 2)
+			assert.Equal(t, lderrors.ErrContextKeyEmpty{}, e.Errors["kind1"])
+			assert.Equal(t, lderrors.ErrContextKindInvalidChars{}, e.Errors["kind3!"])
+		}
 		c1, err := b.TryBuild()
 		assert.Equal(t, c0.Err(), c1.Err())
 		assert.Equal(t, c0.Err(), err)

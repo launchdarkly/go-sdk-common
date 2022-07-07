@@ -1,6 +1,9 @@
 package ldcontext
 
-import "github.com/launchdarkly/go-sdk-common/v3/ldattr"
+import (
+	"github.com/launchdarkly/go-sdk-common/v3/ldattr"
+	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
+)
 
 // Kind is a string type set by the application to describe what kind of entity a Context
 // represents. The meaning of this is completely up to the application. When no Kind is
@@ -27,16 +30,16 @@ func validateSingleKind(kind Kind) (Kind, error) {
 		return DefaultKind, nil
 
 	case MultiKind:
-		return "", errContextKindMultiWithSimpleBuilder
+		return "", lderrors.ErrContextKindMultiForSingleKind{}
 
 	case Kind(ldattr.KindAttr):
-		return "", errContextKindCannotBeKind
+		return "", lderrors.ErrContextKindCannotBeKind{}
 
 	default:
 		for _, ch := range kind {
 			if (ch < 'a' || ch > 'z') && (ch < 'A' || ch > 'Z') && (ch < '0' || ch > '9') &&
 				ch != '.' && ch != '_' && ch != '-' {
-				return "", errContextKindInvalidChars
+				return "", lderrors.ErrContextKindInvalidChars{}
 			}
 		}
 		return kind, nil

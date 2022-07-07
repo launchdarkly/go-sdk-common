@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/launchdarkly/go-sdk-common/v3/ldattr"
+	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
 	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
 
 	"github.com/launchdarkly/go-jsonstream/v2/jwriter"
@@ -85,7 +86,7 @@ func contextMarshalingTests(t *testing.T, marshalFn func(*Context) ([]byte, erro
 		c := New("")
 		_, err := marshalFn(&c)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), errContextKeyEmpty.Error())
+		assert.Contains(t, err.Error(), lderrors.ErrContextKeyEmpty{}.Error())
 		// We compare the error string, rather than checking for equality to errContextKeyEmpty itself, because
 		// the JSON marshaller may decorate the error in its own type with additional text.
 	})
@@ -94,7 +95,7 @@ func contextMarshalingTests(t *testing.T, marshalFn func(*Context) ([]byte, erro
 		var c Context
 		_, err := marshalFn(&c)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), errContextUninitialized.Error())
+		assert.Contains(t, err.Error(), lderrors.ErrContextUninitialized{}.Error())
 	})
 }
 
@@ -133,7 +134,7 @@ func TestContextMarshalEventOutputFormat(t *testing.T) {
 		w := jwriter.NewWriter()
 		ContextSerialization.MarshalToJSONWriterEventOutput(&w, &ec)
 		require.Error(t, w.Error())
-		assert.Contains(t, w.Error().Error(), errContextKeyEmpty.Error())
+		assert.Contains(t, w.Error().Error(), lderrors.ErrContextKeyEmpty{}.Error())
 	})
 
 	t.Run("uninitialized context", func(t *testing.T) {
@@ -142,6 +143,6 @@ func TestContextMarshalEventOutputFormat(t *testing.T) {
 		w := jwriter.NewWriter()
 		ContextSerialization.MarshalToJSONWriterEventOutput(&w, &ec)
 		require.Error(t, w.Error())
-		assert.Contains(t, w.Error().Error(), errContextUninitialized.Error())
+		assert.Contains(t, w.Error().Error(), lderrors.ErrContextUninitialized{}.Error())
 	})
 }
