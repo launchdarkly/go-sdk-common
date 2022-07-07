@@ -5,6 +5,7 @@ import (
 	"net/url"
 
 	"github.com/launchdarkly/go-sdk-common/v3/ldattr"
+	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
 	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
 )
 
@@ -99,7 +100,7 @@ func (b *Builder) Build() Context {
 		return Context{defined: true, err: err, kind: b.kind}
 	}
 	if b.key == "" && !b.allowEmptyKey {
-		return Context{defined: true, err: errContextKeyEmpty, kind: b.kind}
+		return Context{defined: true, err: lderrors.ErrContextKeyEmpty{}, kind: b.kind}
 	}
 	// We set the kind in the error cases above because that improves error reporting if this
 	// context is used within a multi-kind context.

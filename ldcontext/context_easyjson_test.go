@@ -6,6 +6,7 @@ package ldcontext
 import (
 	"testing"
 
+	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
 	m "github.com/launchdarkly/go-test-helpers/v2/matchers"
 
 	"github.com/mailru/easyjson"
@@ -58,7 +59,7 @@ func TestContextEasyJSONMarshalEventOutputFormat(t *testing.T) {
 		ec := EventOutputContext{Context: c}
 		_, err := easyjson.Marshal(ec)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), errContextKeyEmpty.Error())
+		assert.Contains(t, err.Error(), lderrors.ErrContextKeyEmpty{}.Error())
 	})
 
 	t.Run("uninitialized context", func(t *testing.T) {
@@ -66,7 +67,7 @@ func TestContextEasyJSONMarshalEventOutputFormat(t *testing.T) {
 		ec := EventOutputContext{Context: c}
 		_, err := easyjson.Marshal(ec)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), errContextUninitialized.Error())
+		assert.Contains(t, err.Error(), lderrors.ErrContextUninitialized{}.Error())
 	})
 }
 

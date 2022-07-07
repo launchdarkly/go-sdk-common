@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/launchdarkly/go-sdk-common/v3/ldattr"
+	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
 	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
 
 	m "github.com/launchdarkly/go-test-helpers/v2/matchers"
@@ -19,7 +20,7 @@ import (
 func TestUninitializedContext(t *testing.T) {
 	var c Context
 	assert.False(t, c.IsDefined())
-	assert.Equal(t, errContextUninitialized, c.Err())
+	assert.Equal(t, lderrors.ErrContextUninitialized{}, c.Err())
 }
 
 func TestMultiple(t *testing.T) {

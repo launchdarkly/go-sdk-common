@@ -1,10 +1,9 @@
 package ldcontext
 
 import (
-	"errors"
-	"fmt"
 	"sort"
-	"strings"
+
+	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
 )
 
 const defaultMultiBuilderCapacity = 3 // arbitrary value based on presumed likely use cases
@@ -53,14 +52,14 @@ func NewMultiBuilder() *MultiBuilder {
 // than a multi-kind context.
 func (m *MultiBuilder) Build() Context {
 	if len(m.contexts) == 0 {
-		return Context{defined: true, err: errContextKindMultiWithNoKinds}
+		return Context{defined: true, err: lderrors.ErrContextKindMultiWithNoKinds{}}
 	}
 
 	if len(m.contexts) == 1 {
 		// Never return a multi-kind context with just one kind; instead return the individual one
 		c := m.contexts[0]
 		if c.Multiple() {
-			return Context{defined: true, err: errContextKindMultiWithinMulti}
+			return Context{defined: true, err: lderrors.ErrContextKindMultiWithinMulti{}}
 		}
 		return c
 	}
@@ -72,14 +71,17 @@ func (m *MultiBuilder) Build() Context {
 	sort.Slice(m.contexts, func(i, j int) bool { return m.contexts[i].Kind() < m.contexts[j].Kind() })
 
 	// Check for conditions that could make a multi-kind context invalid
-	var errs []string
+	var individualErrors map[string]error
 	nestedMulti := false
 	duplicates := false
 	for i, c := range m.contexts {
 		err := c.Err()
 		switch {
 		case err != nil: // one of the individual contexts already had an error
-			errs = append(errs, fmt.Sprintf("(%s) %s", c.Kind(), err.Error()))
+			if individualErrors == nil {
+				individualErrors = make(map[string]error)
+			}
+			individualErrors[string(c.Kind())] = err
 		case c.Multiple(): // multi-kind inside multi-kind is not allowed
 			nestedMulti = true
 		default:
@@ -91,16 +93,19 @@ func (m *MultiBuilder) Build() Context {
 			}
 		}
 	}
-	if nestedMulti {
-		errs = append(errs, errContextKindMultiWithinMulti.Error())
+	var err error
+	switch {
+	case nestedMulti:
+		err = lderrors.ErrContextKindMultiWithinMulti{}
+	case duplicates:
+		err = lderrors.ErrContextKindMultiDuplicates{}
+	case len(individualErrors) != 0:
+		err = lderrors.ErrContextPerKindErrors{Errors: individualErrors}
 	}
-	if duplicates {
-		errs = append(errs, errContextKindMultiDuplicates.Error())
-	}
-	if len(errs) != 0 {
+	if err != nil {
 		return Context{
 			defined: true,
-			err:     errors.New(strings.Join(errs, ", ")),
+			err:     err,
 		}
 	}
 

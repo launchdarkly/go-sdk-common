@@ -2,6 +2,7 @@ package ldcontext
 
 import (
 	"github.com/launchdarkly/go-sdk-common/v3/ldattr"
+	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
 	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
 
 	"github.com/launchdarkly/go-jsonstream/v2/jreader"
@@ -74,7 +75,7 @@ func parseKindOnly(originalReader *jreader.Reader) (Kind, bool, error) {
 		if string(obj.Name()) == ldattr.KindAttr {
 			kind := r.String()
 			if r.Error() == nil && kind == "" {
-				return "", false, errContextKindEmpty
+				return "", false, lderrors.ErrContextKindEmpty{}
 			}
 			return Kind(kind), true, r.Error()
 			// We can immediately return here and not bother parsing the rest of the JSON object; we'll be
@@ -107,8 +108,16 @@ func unmarshalSingleKind(c *Context, r *jreader.Reader, knownKind Kind, usingEve
 		case ldattr.KindAttr:
 			b.Kind(Kind(r.String()))
 		case ldattr.KeyAttr:
-			b.Key(r.String())
-			hasKey = true
+			// Null isn't allowed for the key, but rather than just calling r.String() so that the parser would
+			// signal an error if it saw anything other than a string, we're calling r.StringOrNull() here so
+			// we can detect the null case and report it as a more specific error. This is used by LaunchDarkly
+			// service code for better reporting on any invalid data we may receive.
+			if s, nonNull := r.StringOrNull(); nonNull {
+				b.Key(s)
+				hasKey = true
+			} else {
+				return lderrors.ErrContextKeyNull{}
+			}
 		case ldattr.NameAttr:
 			b.OptName(readOptString(r))
 		case ldattr.AnonymousAttr:
@@ -146,7 +155,7 @@ func unmarshalSingleKind(c *Context, r *jreader.Reader, knownKind Kind, usingEve
 		return r.Error()
 	}
 	if !hasKey {
-		return errJSONKeyMissing
+		return lderrors.ErrContextKeyMissing{}
 	}
 	*c = b.Build()
 	return c.Err()
@@ -221,7 +230,7 @@ func unmarshalOldUserSchema(c *Context, r *jreader.Reader, usingEventFormat bool
 		return r.Error()
 	}
 	if !hasKey {
-		return errJSONKeyMissing
+		return lderrors.ErrContextKeyMissing{}
 	}
 	*c = b.Build()
 	return c.Err()
@@ -297,8 +306,8 @@ func unmarshalWithKindAndKeyOnlySingleKind(r *jreader.Reader, c *Context, kind K
 		}
 	}
 	if !hasKey {
-		r.AddError(errJSONKeyMissing)
-		return errJSONKeyMissing
+		r.AddError(lderrors.ErrContextKeyMissing{})
+		return lderrors.ErrContextKeyMissing{}
 	}
 	*c = NewWithKind(kind, key)
 	return c.Err()
@@ -316,8 +325,8 @@ func unmarshalWithKindAndKeyOnlyOldUser(r *jreader.Reader, c *Context) error {
 			_ = r.SkipValue()
 		}
 	}
-	r.AddError(errJSONKeyMissing)
-	return errJSONKeyMissing
+	r.AddError(lderrors.ErrContextKeyMissing{})
+	return lderrors.ErrContextKeyMissing{}
 }
 
 func readPrivateAttributes(r *jreader.Reader, b *Builder, asLiterals bool) {

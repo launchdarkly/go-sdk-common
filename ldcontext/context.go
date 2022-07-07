@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/launchdarkly/go-sdk-common/v3/ldattr"
+	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
 	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
 )
 
@@ -44,14 +45,8 @@ func (c Context) IsDefined() bool {
 //
 // A valid Context is one that can be used in SDK operations. An invalid Context is one that is
 // missing necessary attributes or has invalid attributes, indicating an incorrect usage of the
-// SDK API. The only ways for a Context to be invalid are:
-//
-// - It has a disallowed value for the Kind property. See Builder.Kind().
-// - It is a single-kind Context whose Key is empty.
-// - It is a multi-kind Context that does not have any kinds. See MultiBuilder.
-// - It is a multi-kind Context where the same kind appears more than once.
-// - It is a multi-kind Context where at least one of the nested Contexts had an error.
-// - It is an uninitialized empty Context{} value.
+// SDK API. For a complete list of the ways a Context can be invalid, see the ErrContext___
+// types in the lderrors package.
 //
 // Since in normal usage it is easy for applications to be sure they are using context kinds
 // correctly (so that having to constantly check error return values would be needlessly
@@ -63,7 +58,7 @@ func (c Context) IsDefined() bool {
 // are not sure if you have a valid Context, you can call Err() to check.
 func (c Context) Err() error {
 	if !c.defined && c.err == nil {
-		return errContextUninitialized
+		return lderrors.ErrContextUninitialized{}
 	}
 	return c.err
 }
