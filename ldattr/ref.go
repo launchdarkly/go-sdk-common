@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
 	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
 
 	"github.com/launchdarkly/go-jsonstream/v2/jreader"
@@ -81,7 +82,7 @@ type attrRefComponent struct {
 // parameter will consider it invalid.
 func NewRef(referenceString string) Ref {
 	if referenceString == "" || referenceString == "/" {
-		return Ref{err: errAttributeEmpty, rawPath: referenceString}
+		return Ref{err: lderrors.ErrAttributeEmpty{}, rawPath: referenceString}
 	}
 	if referenceString[0] != '/' {
 		// When there is no leading slash, this is a simple attribute reference with no character escaping.
@@ -94,18 +95,18 @@ func NewRef(referenceString string) Ref {
 		if unescaped, ok := unescapePath(path); ok {
 			return Ref{singlePathComponent: unescaped, rawPath: referenceString}
 		}
-		return Ref{err: errAttributeInvalidEscape, rawPath: referenceString}
+		return Ref{err: lderrors.ErrAttributeInvalidEscape{}, rawPath: referenceString}
 	}
 	parts := strings.Split(path, "/")
 	ret := Ref{rawPath: referenceString, components: make([]attrRefComponent, 0, len(parts))}
 	for _, p := range parts {
 		if p == "" {
-			ret.err = errAttributeExtraSlash
+			ret.err = lderrors.ErrAttributeExtraSlash{}
 			return ret
 		}
 		unescaped, ok := unescapePath(p)
 		if !ok {
-			return Ref{err: errAttributeInvalidEscape, rawPath: referenceString}
+			return Ref{err: lderrors.ErrAttributeInvalidEscape{}, rawPath: referenceString}
 		}
 		component := attrRefComponent{name: unescaped}
 		if p[0] >= '0' && p[0] <= '9' {
@@ -129,7 +130,7 @@ func NewRef(referenceString string) Ref {
 // or to ldattr.NewRef("/a~1b").
 func NewLiteralRef(attrName string) Ref {
 	if attrName == "" {
-		return Ref{err: errAttributeEmpty, rawPath: attrName}
+		return Ref{err: lderrors.ErrAttributeEmpty{}, rawPath: attrName}
 	}
 	if attrName[0] != '/' {
 		// When there is no leading slash, this is a simple attribute reference with no character escaping.
@@ -162,13 +163,9 @@ func (a Ref) Equal(other Ref) bool {
 
 // Err returns nil for a valid Ref, or a non-nil error value for an invalid Ref.
 //
-// A Ref can only be invalid for the following reasons:
-//
-// 1. The input string was empty, or consisted only of "/".
-//
-// 2. A slash-delimited string had a double slash causing one component to be empty, such as "/a//b".
-//
-// 3. A slash-delimited string contained a "~" character that was not followed by "0" or "1".
+// A Ref is invalid if the input string is empty, or starts with a slash but is not a valid
+// slash-delimited path, or starts with a slash and contains an invalid escape sequence. For a list of
+// the possible validation errors, see the ErrAttribute___ types in the lderrors package.
 //
 // Otherwise, the Ref is valid, but that does not guarantee that such an attribute exists in any
 // given Context. For instance, NewRef("name") is a valid Ref, but a specific Context might or might
@@ -177,7 +174,7 @@ func (a Ref) Equal(other Ref) bool {
 // See comments on the Ref type for more details of the attribute reference syntax.
 func (a Ref) Err() error {
 	if a.err == nil && a.rawPath == "" {
-		return errAttributeEmpty
+		return lderrors.ErrAttributeEmpty{}
 	}
 	return a.err
 }

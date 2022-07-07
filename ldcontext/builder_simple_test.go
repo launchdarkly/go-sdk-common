@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/launchdarkly/go-sdk-common/v3/ldattr"
+	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
 	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
 
 	m "github.com/launchdarkly/go-test-helpers/v2/matchers"
@@ -19,12 +20,12 @@ type invalidKindTestParams struct {
 
 func makeInvalidKindTestParams() []invalidKindTestParams {
 	return []invalidKindTestParams{
-		{"kind", errContextKindCannotBeKind},
-		{"multi", errContextKindMultiWithSimpleBuilder},
-		{"örg", errContextKindInvalidChars},
-		{"o~rg", errContextKindInvalidChars},
-		{"😀rg", errContextKindInvalidChars},
-		{"o\trg", errContextKindInvalidChars},
+		{"kind", lderrors.ErrContextKindCannotBeKind{}},
+		{"multi", lderrors.ErrContextKindMultiForSingleKind{}},
+		{"örg", lderrors.ErrContextKindInvalidChars{}},
+		{"o~rg", lderrors.ErrContextKindInvalidChars{}},
+		{"😀rg", lderrors.ErrContextKindInvalidChars{}},
+		{"o\trg", lderrors.ErrContextKindInvalidChars{}},
 	}
 }
 
@@ -68,12 +69,12 @@ func TestBuilderKeyValidation(t *testing.T) {
 
 	c0 := b.Build()
 	assert.True(t, c0.IsDefined())
-	assert.Equal(t, errContextKeyEmpty, c0.Err())
+	assert.Equal(t, lderrors.ErrContextKeyEmpty{}, c0.Err())
 
 	c1, err := b.TryBuild()
 	assert.True(t, c1.IsDefined())
-	assert.Equal(t, errContextKeyEmpty, c1.Err())
-	assert.Equal(t, errContextKeyEmpty, err)
+	assert.Equal(t, lderrors.ErrContextKeyEmpty{}, c1.Err())
+	assert.Equal(t, lderrors.ErrContextKeyEmpty{}, err)
 }
 
 func TestBuilderFullyQualifiedKey(t *testing.T) {
