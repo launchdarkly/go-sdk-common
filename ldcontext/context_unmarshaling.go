@@ -8,7 +8,7 @@ import (
 	"github.com/launchdarkly/go-jsonstream/v2/jreader"
 )
 
-// See internalAttributeNameIfPossible().
+// See internAttributeNameIfPossible().
 var internCommonAttributeNamesMap = makeInternCommonAttributeNamesMap() //nolint:gochecknoglobals
 
 func makeInternCommonAttributeNamesMap() map[string]string {
@@ -23,9 +23,6 @@ func makeInternCommonAttributeNamesMap() map[string]string {
 //
 // LaunchDarkly's JSON schema for contexts is standardized across SDKs. For unmarshaling, there are
 // three supported formats:
-//
-// (TKTK: consider moving all this content into a non-platform-specific online docs page, since none
-// of this is specific to Go)
 //
 // 1. A single-kind context, identified by a top-level "kind" property that is not "multi".
 //
@@ -200,7 +197,9 @@ func unmarshalOldUserSchema(c *Context, r *jreader.Reader, usingEventFormat bool
 				name := string(customObj.Name())
 				var value ldvalue.Value
 				value.ReadFromJSONReader(r)
-				b.SetValue(name, value)
+				if isOldUserCustomAttributeNameAllowed(name) {
+					b.SetValue(name, value)
+				}
 			}
 		case jsonPropOldUserPrivate:
 			if usingEventFormat {
@@ -234,6 +233,17 @@ func unmarshalOldUserSchema(c *Context, r *jreader.Reader, usingEventFormat bool
 	}
 	*c = b.Build()
 	return c.Err()
+}
+
+func isOldUserCustomAttributeNameAllowed(name string) bool {
+	// If we see any of these names within the "custom": {} object in old-style user JSON, logically
+	// we can't use it because it would collide with a top-level property.
+	switch name {
+	case ldattr.KindAttr, ldattr.KeyAttr, ldattr.NameAttr, ldattr.AnonymousAttr, jsonPropMeta:
+		return false
+	default:
+		return true
+	}
 }
 
 // internAttributeNameIfPossible takes a byte slice representing a property name, and returns an existing
