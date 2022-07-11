@@ -290,7 +290,9 @@ func unmarshalOldUserSchemaEasyJSON(c *Context, in *jlexer.Lexer, usingEventForm
 				} else {
 					var value ldvalue.Value
 					value.UnmarshalEasyJSON(in)
-					attributes.Set(name, value)
+					if isOldUserCustomAttributeNameAllowed(name) {
+						attributes.Set(name, value)
+					}
 				}
 				in.WantComma()
 			}
