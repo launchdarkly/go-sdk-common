@@ -87,6 +87,11 @@ func TestBuilderFullyQualifiedKey(t *testing.T) {
 		c := NewWithKind("org", "my-org-key")
 		assert.Equal(t, "org:my-org-key", c.FullyQualifiedKey())
 	})
+
+	t.Run("key is escaped", func(t *testing.T) {
+		c := NewWithKind("org", "my:key%x/y")
+		assert.Equal(t, "org:my%3Akey%25x/y", c.FullyQualifiedKey())
+	})
 }
 
 func TestBuilderBasicSetters(t *testing.T) {

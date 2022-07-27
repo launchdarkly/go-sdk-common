@@ -43,6 +43,14 @@ func TestMultiBuilderFullyQualifiedKey(t *testing.T) {
 			Build()
 		assert.Equal(t, "kind-a:key-2:kind-b:key-4:kind-c:key-1:kind-d:key-3", c.FullyQualifiedKey())
 	})
+
+	t.Run("keys are escaped", func(t *testing.T) {
+		c := NewMultiBuilder().
+			Add(NewWithKind("kind-a", "key-1")).
+			Add(NewWithKind("kind-b", "key:2")).
+			Build()
+		assert.Equal(t, "kind-a:key-1:kind-b:key%3A2", c.FullyQualifiedKey())
+	})
 }
 
 func TestMultiBuilderErrors(t *testing.T) {

@@ -2,7 +2,7 @@ package ldcontext
 
 import (
 	"fmt"
-	"net/url"
+	"strings"
 
 	"github.com/launchdarkly/go-sdk-common/v3/ldattr"
 	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
@@ -525,10 +525,12 @@ func (b *Builder) copyFrom(fromContext Context) {
 func makeFullyQualifiedKeySingleKind(kind Kind, key string, omitDefaultKind bool) string {
 	// Per the users-to-contexts specification, the fully-qualified key for a single-kind context is:
 	// - equal to the regular "key" property, if the kind is "user" (a.k.a. DefaultKind)
-	// - or, for any other kind, it's the kind plus ":" plus the result of URL-encoding the "key"
-	// property (the URL-encoding is to avoid ambiguity if the key contains colons).
+	// - or, for any other kind, it's the kind plus ":" plus the result of partially URL-encoding the
+	// "key" property ("partially URL-encoding" here means that ':' and '%' are percent-escaped; other
+	// URL-encoding behaviors are inconsistent across platforms, so we do not use a library function).
 	if omitDefaultKind && kind == DefaultKind {
 		return key
 	}
-	return fmt.Sprintf("%s:%s", kind, url.PathEscape(key))
+	escapedKey := strings.ReplaceAll(strings.ReplaceAll(key, "%", "%25"), ":", "%3A")
+	return fmt.Sprintf("%s:%s", kind, escapedKey)
 }
