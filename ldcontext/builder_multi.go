@@ -159,6 +159,19 @@ func (m *MultiBuilder) TryBuild() (Context, error) {
 //
 // It is invalid to add more than one context with the same Kind. This error is detected
 // when you call Build() or TryBuild().
+//
+// If the nested context is multi-kind, this is exactly equivalent to adding each of the
+// individual kinds from it separately. For instance, in the following example, "multi1" and
+// "multi2" end up being exactly the same:
+//
+//     c1 := ldcontext.NewWithKind("kind1", "key1")
+//     c2 := ldcontext.NewWithKind("kind2", "key2")
+//     c3 := ldcontext.NewWithKind("kind3", "key3")
+//
+//     multi1 := ldcontext.NewMultiBuilder().Add(c1).Add(c2).Add(c3).Build()
+//
+//     c1plus2 := ldcontext.NewMultiBuilder().Add(c1).Add(c2).Build()
+//     multi2 := ldcontext.NewMultiBuilder().Add(c1plus2).Add(c3).Build()
 func (m *MultiBuilder) Add(context Context) *MultiBuilder {
 	if m.contextsCopyOnWrite {
 		m.contexts = append([]Context(nil), m.contexts...)

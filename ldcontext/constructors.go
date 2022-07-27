@@ -28,11 +28,23 @@ func NewWithKind(kind Kind, key string) Context {
 // To create a single-kind Context, use New(), NewWithKind, or NewBuilder().
 //
 // For the returned Context to be valid, the contexts list must not be empty, and all of its
-// elements must be single-kind Contexts. Otherwise, the returned Context will be invalid as
-// reported by Context.Err().
+// elements must be valid Contexts. Otherwise, the returned Context will be invalid as reported
+// by Context.Err().
 //
-// If only one context parameter is given, NewMulti returns a single-kind context (that is,
-// just that same context) rather than a multi-kind context.
+// If only one context parameter is given, NewMulti returns that same context.
+//
+// If one of the nested contexts is multi-kind, this is exactly equivalent to adding each of the
+// individual kinds from it separately. For instance, in the following example, "multi1" and
+// "multi2" end up being exactly the same:
+//
+//     c1 := ldcontext.NewWithKind("kind1", "key1")
+//     c2 := ldcontext.NewWithKind("kind2", "key2")
+//     c3 := ldcontext.NewWithKind("kind3", "key3")
+//
+//     multi1 := ldcontext.NewMulti(c1, c2, c3)
+//
+//     c1plus2 := ldcontext.NewMulti(c1, c2)
+//     multi2 := ldcontext.NewMulti(c1plus2, c3)
 func NewMulti(contexts ...Context) Context {
 	// Same rationale as for New/NewWithKey of using the builder instead of constructing directly.
 	var m MultiBuilder
