@@ -56,12 +56,8 @@ func (m *MultiBuilder) Build() Context {
 	}
 
 	if len(m.contexts) == 1 {
-		// Never return a multi-kind context with just one kind; instead return the individual one
-		c := m.contexts[0]
-		if c.Multiple() {
-			return Context{defined: true, err: lderrors.ErrContextKindMultiWithinMulti{}}
-		}
-		return c
+		// If only one context was added, the result is just the same as that one
+		return m.contexts[0]
 	}
 
 	m.contextsCopyOnWrite = true // see note on ___CopyOnWrite in Builder.Build()
@@ -72,7 +68,6 @@ func (m *MultiBuilder) Build() Context {
 
 	// Check for conditions that could make a multi-kind context invalid
 	var individualErrors map[string]error
-	nestedMulti := false
 	duplicates := false
 	for i, c := range m.contexts {
 		err := c.Err()
@@ -82,8 +77,6 @@ func (m *MultiBuilder) Build() Context {
 				individualErrors = make(map[string]error)
 			}
 			individualErrors[string(c.Kind())] = err
-		case c.Multiple(): // multi-kind inside multi-kind is not allowed
-			nestedMulti = true
 		default:
 			for j := 0; j < i; j++ {
 				if c.Kind() == m.contexts[j].Kind() { // same kind was seen twice
@@ -95,8 +88,6 @@ func (m *MultiBuilder) Build() Context {
 	}
 	var err error
 	switch {
-	case nestedMulti:
-		err = lderrors.ErrContextKindMultiWithinMulti{}
 	case duplicates:
 		err = lderrors.ErrContextKindMultiDuplicates{}
 	case len(individualErrors) != 0:
@@ -173,6 +164,10 @@ func (m *MultiBuilder) Add(context Context) *MultiBuilder {
 		m.contexts = append([]Context(nil), m.contexts...)
 		m.contextsCopyOnWrite = true
 	}
-	m.contexts = append(m.contexts, context)
+	if context.Multiple() {
+		m.contexts = append(m.contexts, context.multiContexts...)
+	} else {
+		m.contexts = append(m.contexts, context)
+	}
 	return m
 }
