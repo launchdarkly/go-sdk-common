@@ -2,6 +2,10 @@
 
 All notable changes to the project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [2.5.1] - 2022-06-30
+### Changed:
+- If you create an `ldvalue.Value` with the `ldvalue.Raw(json.RawMessage)` constructor, and you pass a zero-length or nil value to the constructor, and then encode the `Value` to JSON with `json.Marshal` or an equivalent method, the JSON output will now be `null` (that is, the literal characters `null` representing a JSON null value). Previously it would have been a zero-length string, which is not valid as the JSON encoding of any value and could cause the SDK to output a malformed JSON document if the document contained such a value.
+
 ## [2.5.0] - 2021-10-14
 _This release was unintended and can be ignored. It contains no code changes, only changes to the CI build._
 
