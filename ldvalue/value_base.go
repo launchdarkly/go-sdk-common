@@ -79,6 +79,18 @@ func String(value string) Value {
 }
 
 // Raw creates an unparsed JSON Value.
+//
+// This constructor will store the json.RawMessage value as-is without syntax validation, and will set
+// the type of the Value to ldvalue.RawType. That means, for instance, that ldvalue.Raw(json.RawMessage("true"))
+// is not logically equivalent to ldvalue.Bool(true), even though they will produce the same result if
+// they are re-encoded to JSON.
+//
+// That also means that if you pass malformed data that is not valid JSON, you will get malformed data if
+// it is re-encoded to JSON. It is the caller's responsibility to make sure the json.RawMessage really is
+// valid JSON. However, since it is easy to mistakenly write json.RawMessage(nil) (a zero-length value)
+// when what is really meant is a JSON null value, the ldvalue.Value JSON encoder will detect any use of
+// json.RawMessage(nil) or json.RawMessage("") and transparently convert it to "null" when it is
+// being encoded to JSON.
 func Raw(value json.RawMessage) Value {
 	return Value{valueType: RawType, stringValue: string(value)}
 }
@@ -355,6 +367,10 @@ func (v Value) AsOptionalString() OptionalString {
 //
 // If the value was originally created from a RawMessage, it returns the same value. For all other
 // values, it converts the value to its JSON representation and returns that representation.
+//
+// Note that the ldvalue.Raw(json.RawMessage) constructor does not do any syntax validation, so
+// if you create a Value from a malformed string such as ldvalue.Raw(json.RawMessage("{{{")), you
+// will get back the same string from AsRaw().
 func (v Value) AsRaw() json.RawMessage {
 	if v.valueType == RawType {
 		return json.RawMessage(v.stringValue)
