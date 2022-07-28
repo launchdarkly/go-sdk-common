@@ -20,7 +20,6 @@ func TestContextErrorMessages(t *testing.T) {
 		{ErrContextKindCannotBeKind{}, msgContextKindCannotBeKind},
 		{ErrContextKindMultiForSingleKind{}, msgContextKindMultiForSingleKind},
 		{ErrContextKindMultiWithNoKinds{}, msgContextKindMultiWithNoKinds},
-		{ErrContextKindMultiWithinMulti{}, msgContextKindMultiWithinMulti},
 		{ErrContextKindMultiDuplicates{}, msgContextKindMultiDuplicates},
 		{ErrContextKindInvalidChars{}, msgContextKindInvalidChars},
 	}
