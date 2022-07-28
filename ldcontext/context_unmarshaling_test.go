@@ -118,6 +118,11 @@ func makeContextUnmarshalFromOldUserSchemaParams() []contextSerializationParams 
 		{NewBuilder("key8").Name("x").Build(),
 			`{"key": "key8", "name": "x", "privateAttrs": ["name"]}`},
 		// privateAttrs is only a thing in the event output format
+
+		{NewBuilder("key9").Name("x").SetInt("a", 1).Anonymous(true).Build(),
+			`{"key": "key9", "name": "x", "anonymous": true, "custom": ` +
+				`{"kind": ".", "key": ".", "name": ".", "anonymous": false, "_meta": true, "a": 1}}`},
+		// don't let custom attributes overwrite top-level properties with the same reserved names
 	}
 	for _, attr := range []string{"firstName", "lastName", "email", "country", "avatar", "ip"} {
 		ret = append(ret,
@@ -197,10 +202,11 @@ func makeContextUnmarshalingErrorInputs() []string {
 		`{"kind": "org", "key": "my-key", "_meta": {"secondary": true}}}`,
 		`{"kind": "org", "key": "my-key", "_meta": {"privateAttributes": true}}}`,
 
-		`{"kind": "multi"}`,                                           // multi kind with no kinds
-		`{"kind": "multi", "user": {"key": ""}}`,                      // multi kind where subcontext fails validation
-		`{"kind": "multi", "user": {"key": true}}`,                    // multi kind where subcontext is malformed
-		`{"kind": "multi", "org": {"key": "x"}, "org": {"key": "y"}}`, // multi kind with repeated kind
+		`{"kind": "multi"}`,                                                       // multi kind with no kinds
+		`{"kind": "multi", "user": {"key": ""}}`,                                  // multi kind where subcontext fails validation
+		`{"kind": "multi", "user": {"key": true}}`,                                // multi kind where subcontext is malformed
+		`{"kind": "multi", "org": {"key": "x"}, "org": {"key": "y"}}`,             // multi kind with repeated kind
+		`{"kind": "multi", "multi": {"user": {"key": "a"}, "org": {"key": "x"}}}`, // multi within multi
 
 		// wrong types in old user schema
 		`{"key": null}`,

@@ -87,6 +87,11 @@ func TestBuilderFullyQualifiedKey(t *testing.T) {
 		c := NewWithKind("org", "my-org-key")
 		assert.Equal(t, "org:my-org-key", c.FullyQualifiedKey())
 	})
+
+	t.Run("key is escaped", func(t *testing.T) {
+		c := NewWithKind("org", "my:key%x/y")
+		assert.Equal(t, "org:my%3Akey%25x/y", c.FullyQualifiedKey())
+	})
 }
 
 func TestBuilderBasicSetters(t *testing.T) {
@@ -297,16 +302,25 @@ func TestBuilderSetBuiltInAttributesByName(t *testing.T) {
 }
 
 func TestBuilderSetValueCannotSetMetaProperties(t *testing.T) {
-	t.Run("privateAttributes", func(t *testing.T) {
-		assert.Equal(t,
-			makeBasicBuilder(),
-			makeBasicBuilder().SetValue("privateAttributes", ldvalue.ArrayOf(ldvalue.String("x"))))
-	})
+	for _, p := range []struct {
+		name  string
+		value ldvalue.Value
+	}{
+		{"secondary", ldvalue.String("x")},
+		{"privateAttributes", ldvalue.ArrayOf(ldvalue.String("x"))},
+	} {
+		t.Run(p.name, func(t *testing.T) {
+			c := makeBasicBuilder().SetValue(p.name, p.value).Build()
+			assert.Equal(t, p.value, c.attributes.Get(p.name))
+			assert.Equal(t, ldvalue.OptionalString{}, c.secondary)
+			assert.Len(t, c.privateAttrs, 0)
+		})
+	}
 
-	t.Run("secondary", func(t *testing.T) {
-		assert.Equal(t,
-			makeBasicBuilder(),
-			makeBasicBuilder().SetValue("secondary", ldvalue.String("x")))
+	t.Run("_meta", func(t *testing.T) {
+		b := makeBasicBuilder()
+		assert.False(t, b.TrySetValue("_meta", ldvalue.String("hi")))
+		assert.Equal(t, 0, b.Build().attributes.Count())
 	})
 }
 

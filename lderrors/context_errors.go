@@ -15,7 +15,6 @@ const (
 	msgContextKindCannotBeKind       = `"kind" is not a valid context kind`
 	msgContextKindMultiForSingleKind = `single-kind context cannot have the kind "multi"`
 	msgContextKindMultiWithNoKinds   = "multi-kind context must contain at least one kind"
-	msgContextKindMultiWithinMulti   = "multi-kind context cannot contain other multi-kind contexts"
 	msgContextKindMultiDuplicates    = "multi-kind context cannot have same kind more than once"
 	msgContextKindInvalidChars       = "context kind contains disallowed characters"
 )
@@ -53,10 +52,6 @@ type ErrContextKindMultiForSingleKind struct{}
 // for a multi-kind Context but you did not specify any individual Contexts in it.
 type ErrContextKindMultiWithNoKinds struct{}
 
-// ErrContextKindMultiWithinMulti means that you have used an ldcontext constructor or builder
-// for a multi-kind Context and you tried to embed another multi-kind Context in it.
-type ErrContextKindMultiWithinMulti struct{}
-
 // ErrContextKindMultiDuplicates means that you have used an ldcontext constructor or builder
 // for a multi-kind Context and you specified more than one individual Context in it with the
 // same kind.
@@ -82,7 +77,6 @@ func (e ErrContextKindEmpty) Error() string              { return msgContextKind
 func (e ErrContextKindCannotBeKind) Error() string       { return msgContextKindCannotBeKind }
 func (e ErrContextKindMultiForSingleKind) Error() string { return msgContextKindMultiForSingleKind }
 func (e ErrContextKindMultiWithNoKinds) Error() string   { return msgContextKindMultiWithNoKinds }
-func (e ErrContextKindMultiWithinMulti) Error() string   { return msgContextKindMultiWithinMulti }
 func (e ErrContextKindMultiDuplicates) Error() string    { return msgContextKindMultiDuplicates }
 func (e ErrContextKindInvalidChars) Error() string       { return msgContextKindInvalidChars }
 

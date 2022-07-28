@@ -29,6 +29,18 @@ func TestMultiBuilder(t *testing.T) {
 		assert.Equal(t, []Context{sub1, sub2}, c0.GetAllIndividualContexts(nil))
 		// other accessors are tested in context_test.go
 	})
+
+	t.Run("nested multi-kind contexts are flattened", func(t *testing.T) {
+		sub1 := NewWithKind("kind1", "key1")
+		sub2 := NewWithKind("kind2", "key2")
+		sub3 := NewWithKind("kind3", "key3")
+		sub4 := NewWithKind("kind3", "key3")
+		c0 := NewMultiBuilder().Add(sub2).Add(sub3).Build()
+		c1 := NewMultiBuilder().Add(sub1).Add(c0).Add(sub4).Build()
+
+		expected := NewMultiBuilder().Add(sub1).Add(sub2).Add(sub3).Add(sub4).Build()
+		assert.Equal(t, expected.multiContexts, c1.multiContexts)
+	})
 }
 
 func TestMultiBuilderFullyQualifiedKey(t *testing.T) {
@@ -42,6 +54,14 @@ func TestMultiBuilderFullyQualifiedKey(t *testing.T) {
 			Add(NewWithKind("kind-b", "key-4")).
 			Build()
 		assert.Equal(t, "kind-a:key-2:kind-b:key-4:kind-c:key-1:kind-d:key-3", c.FullyQualifiedKey())
+	})
+
+	t.Run("keys are escaped", func(t *testing.T) {
+		c := NewMultiBuilder().
+			Add(NewWithKind("kind-a", "key-1")).
+			Add(NewWithKind("kind-b", "key:2")).
+			Build()
+		assert.Equal(t, "kind-a:key-1:kind-b:key%3A2", c.FullyQualifiedKey())
 	})
 }
 
@@ -59,16 +79,6 @@ func TestMultiBuilderErrors(t *testing.T) {
 
 	t.Run("empty", func(t *testing.T) {
 		verifyError(t, NewMultiBuilder(), lderrors.ErrContextKindMultiWithNoKinds{})
-	})
-
-	t.Run("nested multi", func(t *testing.T) {
-		sub1 := NewWithKind("org", "my-key")
-		sub2 := NewMulti(New("user-key"), NewWithKind("org", "other"))
-		b0 := NewMultiBuilder().Add(sub1).Add(sub2)
-		verifyError(t, b0, lderrors.ErrContextKindMultiWithinMulti{})
-
-		b1 := NewMultiBuilder().Add(sub2)
-		verifyError(t, b1, lderrors.ErrContextKindMultiWithinMulti{})
 	})
 
 	t.Run("duplicate kind", func(t *testing.T) {

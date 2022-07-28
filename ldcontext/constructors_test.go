@@ -39,9 +39,12 @@ func TestNewWithKindErrors(t *testing.T) {
 }
 
 func TestNewMulti(t *testing.T) {
-	c1 := NewWithKind("org", "my-org-key")
-	c2 := NewWithKind("user", "my-user-key")
-	c0 := NewMulti(c1, c2)
+	sub1 := NewWithKind("kind1", "key1")
+	sub2 := NewWithKind("kind2", "key2")
+	sub3 := NewWithKind("kind3", "key3")
+	sub4 := NewWithKind("kind3", "key3")
 
-	assert.Equal(t, NewMultiBuilder().Add(c1).Add(c2).Build(), c0)
+	assert.Equal(t, NewMultiBuilder().Add(sub1).Add(sub2).Build(), NewMulti(sub1, sub2))
+	assert.Equal(t, NewMultiBuilder().Add(sub1).Add(sub2).Add(sub3).Add(sub4).Build(),
+		NewMulti(sub1, NewMulti(sub2, sub3), sub4))
 }

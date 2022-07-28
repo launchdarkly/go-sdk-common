@@ -2,7 +2,7 @@ package ldcontext
 
 import (
 	"fmt"
-	"net/url"
+	"strings"
 
 	"github.com/launchdarkly/go-sdk-common/v3/ldattr"
 	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
@@ -279,8 +279,9 @@ func (b *Builder) SetString(attributeName string, value string) *Builder {
 // SetValue sets the value of any attribute for the Context.
 //
 // This includes only attributes that are addressable in evaluations-- not metadata such as
-// Secondary() or Private(). If attributeName is "secondary" or "privateAttributes", it is
-// ignored and no attribute is set.
+// Secondary() or Private(). If attributeName is "secondary" or "privateAttributes", you will be
+// setting an attribute with that name which you can use in evaluations or to record data for
+// your own purposes, but it will be unrelated to Secondary() and Private().
 //
 // This method uses the ldvalue.Value type to represent a value of any JSON type: null, boolean,
 // number, string, array, or object. For all attribute names that do not have special meaning
@@ -296,6 +297,9 @@ func (b *Builder) SetString(attributeName string, value string) *Builder {
 // - "name": Must be a string or null. See Builder.Name() and Builder.OptName().
 //
 // - "anonymous": Must be a boolean. See Builder.Anonymous().
+//
+// The attribute name "_meta" is not allowed, because it has special meaning in the JSON
+// schema for contexts; any attempt to set an attribute with this name has no effect.
 //
 // Values that are JSON arrays or objects have special behavior when referenced in flag/segment
 // rules.
@@ -341,7 +345,7 @@ func (b *Builder) TrySetValue(attributeName string, value ldvalue.Value) bool {
 			return false
 		}
 		b.Anonymous(value.BoolValue())
-	case jsonPropPrivate, jsonPropSecondary:
+	case jsonPropMeta:
 		return false
 	default:
 		if value.IsNull() {
@@ -360,8 +364,10 @@ func (b *Builder) TrySetValue(attributeName string, value ldvalue.Value) bool {
 // (https://docs.launchdarkly.com/home/flags/targeting-users#targeting-rules-based-on-user-attributes)
 // as follows: if you have chosen to bucket users by a specific attribute, the secondary key (if set)
 // is used to further distinguish between users who are otherwise identical according to that attribute.
-// This value is not addressable as an attribute in evaluations: that is, a rule clause cannot use the
-// attribute name "secondary".
+//
+// This is a metadata property, rather than an attribute that can be addressed in evaluations: that is,
+// a rule clause that references the attribute name "secondary" will not use this value, but instead will
+// use whatever value (if any) you have set for the name "secondary" with a method such as SetString.
 //
 // Setting this value to an empty string is not the same as leaving it unset. If you need to clear this
 // attribute to a "no value" state, use OptSecondary().
@@ -374,9 +380,6 @@ func (b *Builder) Secondary(value string) *Builder {
 // Calling b.OptSecondary(ldvalue.NewOptionalString("x")) is equivalent to b.Secondary("x"), but since it uses
 // the OptionalString type, it also allows clearing a previously set name with
 // b.OptSecondary(ldvalue.OptionalString{}).
-//
-// This value is not addressable as an attribute in evaluations: that is, a rule clause cannot use the
-// attribute name "secondary".
 func (b *Builder) OptSecondary(value ldvalue.OptionalString) *Builder {
 	if b != nil {
 		b.secondary = value
@@ -396,7 +399,7 @@ func (b *Builder) OptSecondary(value ldvalue.OptionalString) *Builder {
 // other attributes may be included (so, for instance, Anonymous does not mean there is no Name).
 //
 // This value is also addressable in evaluations as the attribute name "anonymous". It is always treated as
-// a boolean true or false in evaluations.
+// a boolean true or false in evaluations; it cannot be null/undefined.
 func (b *Builder) Anonymous(value bool) *Builder {
 	if b != nil {
 		b.anonymous = value
@@ -406,9 +409,6 @@ func (b *Builder) Anonymous(value bool) *Builder {
 
 // Private designates any number of Context attributes, or properties within them, as private: that is,
 // their values will not be sent to LaunchDarkly.
-//
-// (TKTK: possibly move some of this conceptual information to a non-platform-specific docs page and/or
-// have docs team copyedit it here)
 //
 // Each parameter can be a simple attribute name, such as "email". Or, if the first character is a slash,
 // the parameter is interpreted as a slash-delimited path to a property within a JSON object, where the
@@ -434,6 +434,11 @@ func (b *Builder) Anonymous(value bool) *Builder {
 //         SetString("lastName", "Menard").
 //	       Private("firstName").
 //         Build()
+//
+// This is a metadata property, rather than an attribute that can be addressed in evaluations: that is,
+// a rule clause that references the attribute name "private" (or "privateAttributes", as it appears
+// in JSON representations) will not use this value, but instead will use whatever value (if any) you
+// have set for that name with a method such as SetString.
 func (b *Builder) Private(attrRefStrings ...string) *Builder {
 	refs := make([]ldattr.Ref, 0, 20) // arbitrary capacity that's likely greater than needed, to preallocate on stack
 	for _, s := range attrRefStrings {
@@ -520,10 +525,12 @@ func (b *Builder) copyFrom(fromContext Context) {
 func makeFullyQualifiedKeySingleKind(kind Kind, key string, omitDefaultKind bool) string {
 	// Per the users-to-contexts specification, the fully-qualified key for a single-kind context is:
 	// - equal to the regular "key" property, if the kind is "user" (a.k.a. DefaultKind)
-	// - or, for any other kind, it's the kind plus ":" plus the result of URL-encoding the "key"
-	// property (the URL-encoding is to avoid ambiguity if the key contains colons).
+	// - or, for any other kind, it's the kind plus ":" plus the result of partially URL-encoding the
+	// "key" property ("partially URL-encoding" here means that ':' and '%' are percent-escaped; other
+	// URL-encoding behaviors are inconsistent across platforms, so we do not use a library function).
 	if omitDefaultKind && kind == DefaultKind {
 		return key
 	}
-	return fmt.Sprintf("%s:%s", kind, url.PathEscape(key))
+	escapedKey := strings.ReplaceAll(strings.ReplaceAll(key, "%", "%25"), ":", "%3A")
+	return fmt.Sprintf("%s:%s", kind, escapedKey)
 }

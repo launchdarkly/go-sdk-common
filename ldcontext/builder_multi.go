@@ -56,12 +56,8 @@ func (m *MultiBuilder) Build() Context {
 	}
 
 	if len(m.contexts) == 1 {
-		// Never return a multi-kind context with just one kind; instead return the individual one
-		c := m.contexts[0]
-		if c.Multiple() {
-			return Context{defined: true, err: lderrors.ErrContextKindMultiWithinMulti{}}
-		}
-		return c
+		// If only one context was added, the result is just the same as that one
+		return m.contexts[0]
 	}
 
 	m.contextsCopyOnWrite = true // see note on ___CopyOnWrite in Builder.Build()
@@ -72,7 +68,6 @@ func (m *MultiBuilder) Build() Context {
 
 	// Check for conditions that could make a multi-kind context invalid
 	var individualErrors map[string]error
-	nestedMulti := false
 	duplicates := false
 	for i, c := range m.contexts {
 		err := c.Err()
@@ -82,8 +77,6 @@ func (m *MultiBuilder) Build() Context {
 				individualErrors = make(map[string]error)
 			}
 			individualErrors[string(c.Kind())] = err
-		case c.Multiple(): // multi-kind inside multi-kind is not allowed
-			nestedMulti = true
 		default:
 			for j := 0; j < i; j++ {
 				if c.Kind() == m.contexts[j].Kind() { // same kind was seen twice
@@ -95,8 +88,6 @@ func (m *MultiBuilder) Build() Context {
 	}
 	var err error
 	switch {
-	case nestedMulti:
-		err = lderrors.ErrContextKindMultiWithinMulti{}
 	case duplicates:
 		err = lderrors.ErrContextKindMultiDuplicates{}
 	case len(individualErrors) != 0:
@@ -168,11 +159,28 @@ func (m *MultiBuilder) TryBuild() (Context, error) {
 //
 // It is invalid to add more than one context with the same Kind. This error is detected
 // when you call Build() or TryBuild().
+//
+// If the nested context is multi-kind, this is exactly equivalent to adding each of the
+// individual kinds from it separately. For instance, in the following example, "multi1" and
+// "multi2" end up being exactly the same:
+//
+//     c1 := ldcontext.NewWithKind("kind1", "key1")
+//     c2 := ldcontext.NewWithKind("kind2", "key2")
+//     c3 := ldcontext.NewWithKind("kind3", "key3")
+//
+//     multi1 := ldcontext.NewMultiBuilder().Add(c1).Add(c2).Add(c3).Build()
+//
+//     c1plus2 := ldcontext.NewMultiBuilder().Add(c1).Add(c2).Build()
+//     multi2 := ldcontext.NewMultiBuilder().Add(c1plus2).Add(c3).Build()
 func (m *MultiBuilder) Add(context Context) *MultiBuilder {
 	if m.contextsCopyOnWrite {
 		m.contexts = append([]Context(nil), m.contexts...)
 		m.contextsCopyOnWrite = true
 	}
-	m.contexts = append(m.contexts, context)
+	if context.Multiple() {
+		m.contexts = append(m.contexts, context.multiContexts...)
+	} else {
+		m.contexts = append(m.contexts, context)
+	}
 	return m
 }

@@ -11,8 +11,6 @@ import (
 
 // Context is a collection of attributes that can be referenced in flag evaluations and analytics events.
 //
-// (TKTK - some conceptual text here, and/or a link to a docs page)
-//
 // To create a Context of a single kind, such as a user, you may use the New() or NewWithKind()
 // constructors. Or, to specify other attributes, use NewBuilder().
 //
