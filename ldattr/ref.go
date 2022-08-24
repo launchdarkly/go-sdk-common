@@ -25,7 +25,7 @@ import (
 // If a Ref instance was created from an invalid string, or if it is an uninitialized Ref{}, it is
 // considered invalid and its Err() method will return a non-nil error.
 //
-// Syntax
+// # Syntax
 //
 // The string representation of an attribute reference in LaunchDarkly JSON data uses the following
 // syntax:
@@ -40,20 +40,20 @@ import (
 // respectively. This syntax deliberately resembles JSON Pointer, but no JSON Pointer behaviors other
 // than those mentioned here are supported.
 //
-// Examples
+// # Examples
 //
 // Suppose there is a context whose JSON implementation looks like this:
 //
-//     {
-//       "kind": "user",
-//       "key": "value1",
-//       "address": {
-//         "street": "value2",
-//         "city": "value3"
-//       },
-//       "groups": [ "value4", "value5" ],
-//       "good/bad": "value6"
-//     }
+//	{
+//	  "kind": "user",
+//	  "key": "value1",
+//	  "address": {
+//	    "street": "value2",
+//	    "city": "value3"
+//	  },
+//	  "groups": [ "value4", "value5" ],
+//	  "good/bad": "value6"
+//	}
 //
 // The attribute references "key" and "/key" would both point to "value1".
 //
@@ -209,9 +209,9 @@ func (a Ref) Depth() int {
 //
 // If index is out of range, it returns "" and an empty ldvalue.OptionalInt{}.
 //
-//     NewRef("a").Component(0)      // returns ("a", ldvalue.OptionalInt{})
-//     NewRef("/a/b").Component(1)   // returns ("b", ldvalue.OptionalInt{})
-//     NewRef("/a/3").Component(1)   // returns ("3", ldvalue.NewOptionalInt(3))
+//	NewRef("a").Component(0)      // returns ("a", ldvalue.OptionalInt{})
+//	NewRef("/a/b").Component(1)   // returns ("b", ldvalue.OptionalInt{})
+//	NewRef("/a/3").Component(1)   // returns ("3", ldvalue.NewOptionalInt(3))
 func (a Ref) Component(index int) (string, ldvalue.OptionalInt) {
 	if index == 0 && len(a.components) == 0 {
 		return a.singlePathComponent, ldvalue.OptionalInt{}

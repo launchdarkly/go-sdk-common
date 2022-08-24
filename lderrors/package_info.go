@@ -10,9 +10,9 @@
 // has properties that can vary, or is a singleton with no properties. So, for instance, rather
 // than doing an equality test like this--
 //
-//     if err == lderrors.ErrContextKeyEmpty
+//	if err == lderrors.ErrContextKeyEmpty
 //
 // --do a type check:
 //
-//     if _, ok := err.(lderrors.ErrContextKeyEmpty); ok
+//	if _, ok := err.(lderrors.ErrContextKeyEmpty); ok
 package lderrors

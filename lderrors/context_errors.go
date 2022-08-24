@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"golang.org/x/exp/maps"
 )
 
 const (
@@ -81,10 +83,7 @@ func (e ErrContextKindMultiDuplicates) Error() string    { return msgContextKind
 func (e ErrContextKindInvalidChars) Error() string       { return msgContextKindInvalidChars }
 
 func (e ErrContextPerKindErrors) Error() string {
-	sortedKeys := make([]string, 0, len(e.Errors))
-	for kind := range e.Errors {
-		sortedKeys = append(sortedKeys, kind)
-	}
+	sortedKeys := maps.Keys(e.Errors)
 	sort.Strings(sortedKeys)
 	messages := make([]string, 0, len(e.Errors))
 	for _, kind := range sortedKeys {

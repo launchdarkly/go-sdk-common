@@ -5,6 +5,8 @@ import (
 
 	"github.com/launchdarkly/go-jsonstream/v2/jreader"
 	"github.com/launchdarkly/go-jsonstream/v2/jwriter"
+
+	"golang.org/x/exp/slices"
 )
 
 // we reuse this for all non-nil zero-length ValueArray instances
@@ -76,7 +78,7 @@ func (b *ValueArrayBuilder) Build() ValueArray {
 
 // ValueArrayBuild creates a builder for constructing an immutable ValueArray.
 //
-//     ValueArray := ldvalue.ValueArrayBuild().Add(ldvalue.Int(100)).Add(ldvalue.Int(200)).Build()
+//	ValueArray := ldvalue.ValueArrayBuild().Add(ldvalue.Int(100)).Add(ldvalue.Int(200)).Build()
 func ValueArrayBuild() *ValueArrayBuilder {
 	return &ValueArrayBuilder{}
 }
@@ -86,7 +88,7 @@ func ValueArrayBuild() *ValueArrayBuilder {
 // The capacity parameter is the same as the capacity of a slice, allowing you to preallocate space
 // if you know the number of elements; otherwise you can pass zero.
 //
-//     arrayValue := ldvalue.ValueArrayBuildWithCapacity(2).Add(ldvalue.Int(100)).Add(ldvalue.Int(200)).Build()
+//	arrayValue := ldvalue.ValueArrayBuildWithCapacity(2).Add(ldvalue.Int(100)).Add(ldvalue.Int(200)).Build()
 func ValueArrayBuildWithCapacity(capacity int) *ValueArrayBuilder {
 	return &ValueArrayBuilder{output: make([]Value, 0, capacity)}
 }
@@ -187,12 +189,7 @@ func (a ValueArray) TryGet(index int) (Value, bool) {
 //
 // For an uninitialized ValueArray{}, this returns nil.
 func (a ValueArray) AsSlice() []Value {
-	if a.data == nil {
-		return nil
-	}
-	ret := make([]Value, len(a.data))
-	copy(ret, a.data)
-	return ret
+	return slices.Clone(a.data)
 }
 
 // AsArbitraryValueSlice returns a copy of the wrapped data as a simple Go slice whose values are
@@ -213,15 +210,10 @@ func (a ValueArray) AsArbitraryValueSlice() []interface{} {
 // Equal returns true if the two arrays are deeply equal. Nil and zero-length arrays are not considered
 // equal to each other.
 func (a ValueArray) Equal(other ValueArray) bool {
-	if len(a.data) != len(other.data) || a.IsDefined() != other.IsDefined() {
+	if a.IsDefined() != other.IsDefined() {
 		return false
 	}
-	for i, v := range a.data {
-		if !v.Equal(other.data[i]) {
-			return false
-		}
-	}
-	return true
+	return slices.EqualFunc(a.data, other.data, Value.Equal)
 }
 
 // Transform applies a transformation function to a ValueArray, returning a new ValueArray.

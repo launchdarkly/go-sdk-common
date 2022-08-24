@@ -7,6 +7,8 @@ import (
 	"github.com/launchdarkly/go-sdk-common/v3/ldattr"
 	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
 	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
+
+	"golang.org/x/exp/slices"
 )
 
 // Builder is a mutable object that uses the builder pattern to specify properties for a Context.
@@ -19,10 +21,10 @@ import (
 // Context. All of the Builder setters return a reference to the same builder, so they can be
 // chained together:
 //
-//     context := ldcontext.NewBuilder("user-key").
-//         Name("my-name").
-//         SetString("country", "us").
-//         Build()
+//	context := ldcontext.NewBuilder("user-key").
+//	    Name("my-name").
+//	    SetString("country", "us").
+//	    Build()
 //
 // A Builder should not be accessed by multiple goroutines at once. Once you have called Build(),
 // the resulting Context is immutable and is safe to use from multiple goroutines. Instances
@@ -59,8 +61,8 @@ type Builder struct {
 // you do not want to allocate a Builder on the heap with NewBuilder, you can declare one
 // locally instead:
 //
-//     var b ldcontext.Builder
-//     c := b.Kind("org").Key("my-key").Name("my-name").Build()
+//	var b ldcontext.Builder
+//	c := b.Kind("org").Key("my-key").Name("my-name").Build()
 func NewBuilder(key string) *Builder {
 	b := &Builder{}
 	return b.Key(key)
@@ -140,23 +142,23 @@ func (b *Builder) Build() Context {
 // detected by calling the context's Err() method. But, if you prefer to use the two-value
 // pattern that is common in Go, you can call TryBuild instead:
 //
-//     c, err := ldcontext.NewBuilder("my-key").
-//         Name("my-name").
-//         TryBuild()
-//     if err != nil {
-//         // do whatever is appropriate if building the context failed
-//     }
+//	c, err := ldcontext.NewBuilder("my-key").
+//	    Name("my-name").
+//	    TryBuild()
+//	if err != nil {
+//	    // do whatever is appropriate if building the context failed
+//	}
 //
 // The two return values are the same as to 1. the Context that would be returned by Build(),
 // and 2. the result of calling Err() on that Context. So, the above example is exactly
 // equivalent to:
 //
-//     c := ldcontext.NewBuilder("my-key").
-//         Name("my-name").
-//         Build()
-//     if c.Err() != nil {
-//         // do whatever is appropriate if building the context failed
-//     }
+//	c := ldcontext.NewBuilder("my-key").
+//	    Name("my-name").
+//	    Build()
+//	if c.Err() != nil {
+//	    // do whatever is appropriate if building the context failed
+//	}
 //
 // Note that unlike some Go methods where the first return value is normally an
 // uninitialized zero value if the error is non-nil, the Context returned by TryBuild in case
@@ -415,7 +417,7 @@ func (b *Builder) Anonymous(value bool) *Builder {
 // first path component is a Context attribute name and each following component is a nested property name:
 // for example, suppose the attribute "address" had the following JSON object value:
 //
-//     {"street": {"line1": "abc", "line2": "def"}}
+//	{"street": {"line1": "abc", "line2": "def"}}
 //
 // Calling Builder.Private("/address/street/line1") in this case would cause the "line1" property to be
 // marked as private. This syntax deliberately resembles JSON Pointer, but other JSON Pointer features
@@ -429,11 +431,11 @@ func (b *Builder) Anonymous(value bool) *Builder {
 //
 // In this example, firstName is marked as private, but lastName is not:
 //
-//     c := ldcontext.NewBuilder("org", "my-key").
-//         SetString("firstName", "Pierre").
-//         SetString("lastName", "Menard").
-//	       Private("firstName").
-//         Build()
+//	    c := ldcontext.NewBuilder("org", "my-key").
+//	        SetString("firstName", "Pierre").
+//	        SetString("lastName", "Menard").
+//		       Private("firstName").
+//	        Build()
 //
 // This is a metadata property, rather than an attribute that can be addressed in evaluations: that is,
 // a rule clause that references the attribute name "private" (or "privateAttributes", as it appears
@@ -464,7 +466,7 @@ func (b *Builder) PrivateRef(attrRefs ...ldattr.Ref) *Builder {
 		b.privateAttrs = make([]ldattr.Ref, 0, len(attrRefs))
 	} else if b.privateCopyOnWrite {
 		// See note in Build() on ___CopyOnWrite
-		b.privateAttrs = append([]ldattr.Ref(nil), b.privateAttrs...)
+		b.privateAttrs = slices.Clone(b.privateAttrs)
 		b.privateCopyOnWrite = false
 	}
 	b.privateAttrs = append(b.privateAttrs, attrRefs...)
@@ -493,7 +495,7 @@ func (b *Builder) RemovePrivateRef(attrRefs ...ldattr.Ref) *Builder {
 	}
 	if b.privateCopyOnWrite {
 		// See note in Build() on ___CopyOnWrite
-		b.privateAttrs = append([]ldattr.Ref(nil), b.privateAttrs...)
+		b.privateAttrs = slices.Clone(b.privateAttrs)
 		b.privateCopyOnWrite = false
 	}
 	for _, attrRefToRemove := range attrRefs {
