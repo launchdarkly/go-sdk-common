@@ -5,8 +5,8 @@ import (
 
 	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
 
-	"github.com/launchdarkly/go-jsonstream/v2/jreader"
-	"github.com/launchdarkly/go-jsonstream/v2/jwriter"
+	"github.com/launchdarkly/go-jsonstream/v3/jreader"
+	"github.com/launchdarkly/go-jsonstream/v3/jwriter"
 )
 
 // EvalReasonKind defines the possible values of EvaluationReason.GetKind().
