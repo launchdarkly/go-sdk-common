@@ -33,12 +33,12 @@ func NewAnonymousUser(key string) ldcontext.Context {
 // Name to specify any additional user properties. Then, call Build() to construct the Context. All
 // of the UserBuilder setters return a reference the same builder, so they can be chained together:
 //
-//     context := NewUserBuilder("user-key").Name("Bob").Email("test@example.com").Build()
+//	context := NewUserBuilder("user-key").Name("Bob").Email("test@example.com").Build()
 //
 // Setters for attributes that can be designated private return the type
 // UserBuilderCanMakeAttributePrivate, so you can chain the AsPrivateAttribute method:
 //
-//     context := NewUserBuilder("user-key").Name("Bob").AsPrivateAttribute().Build() // Name is now private
+//	context := NewUserBuilder("user-key").Name("Bob").AsPrivateAttribute().Build() // Name is now private
 //
 // A UserBuilder should not be accessed by multiple goroutines at once.
 //

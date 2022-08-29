@@ -16,14 +16,14 @@ import (
 // There is no corresponding method for creating an instance with no value; simply use the empty
 // literal OptionalString{}.
 //
-//     os1 := NewOptionalString("this has a value")
-//     os2 := NewOptionalString("") // this has a value which is an empty string
-//     os2 := OptionalString{} // this does not have a value
+//	os1 := NewOptionalString("this has a value")
+//	os2 := NewOptionalString("") // this has a value which is an empty string
+//	os2 := OptionalString{} // this does not have a value
 //
 // This can also be used as a convenient way to construct a string pointer within an expression.
 // For instance, this example causes myStringPointer to point to the string "x":
 //
-//     var myStringPointer *string = NewOptionalString("x").AsPointer()
+//	var myStringPointer *string = NewOptionalString("x").AsPointer()
 type OptionalString struct {
 	value    string
 	hasValue bool
@@ -106,9 +106,9 @@ func (o OptionalString) AsValue() Value {
 // Since String() is used by methods like fmt.Printf, if you want to use the actual string value
 // of the OptionalString instead of this special representation, you should call StringValue():
 //
-//     s := OptionalString{}
-//     fmt.Printf("it is '%s'", s) // prints "it is '[none]'"
-//     fmt.Printf("it is '%s'", s.StringValue()) // prints "it is ''"
+//	s := OptionalString{}
+//	fmt.Printf("it is '%s'", s) // prints "it is '[none]'"
+//	fmt.Printf("it is '%s'", s.StringValue()) // prints "it is ''"
 func (o OptionalString) String() string {
 	if o.hasValue {
 		if o.value == "" {

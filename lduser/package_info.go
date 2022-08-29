@@ -13,7 +13,7 @@
 // attributes were considered "custom" attributes, and were enclosed in a "custom" object in JSON
 // representations.
 //
-// Updating code while still using UserBuilder
+// # Updating code while still using UserBuilder
 //
 // The lduser.User type has been removed; the SDK now operates only on Contexts. However,
 // the lduser.UserBuilder type has been retained and modified to be a wrapper for ldcontext.Builder.
@@ -35,18 +35,18 @@
 // false"). Now, the property is a simple boolean defaulting to false, and the undefined state is
 // the same as false.
 //
-// Migrating from UserBuilder to the ldcontext API
+// # Migrating from UserBuilder to the ldcontext API
 //
 // It is preferable to update existing code to use the ldcontext package directly, rather than
 // the UserBuilder wrapper. Here are the kinds of changes you may need to make:
 //
 // - Code that previously created a simple User with only a key should now use ldcontext.New().
 //
-//     // old
-//     user := lduser.NewUser("my-user-key")
+//	// old
+//	user := lduser.NewUser("my-user-key")
 //
-//     // new
-//     user := ldcontext.New("my-user-key")
+//	// new
+//	user := ldcontext.New("my-user-key")
 //
 // - Code that previously created a User with an empty string key ("") must be changed to use a
 // non-empty key instead. If you do not care about the value of the key, use an arbitrary value.
@@ -59,47 +59,47 @@
 // that you are setting to a string value, you should instead call Builder.SetString() and
 // specify the attribute name as the first parameter.
 //
-//     // old
-//     user := lduser.NewUserBuilder("my-user-key").
-//         Name("my-name").
-//         Email("my-email").
-//         Build()
+//	// old
+//	user := lduser.NewUserBuilder("my-user-key").
+//	    Name("my-name").
+//	    Email("my-email").
+//	    Build()
 //
-//     // new
-//     user := ldcontext.NewBuilder("my-user-key").
-//         Name("my-name").
-//         SetString("email", "my-email").
-//         Build()
+//	// new
+//	user := ldcontext.NewBuilder("my-user-key").
+//	    Name("my-name").
+//	    SetString("email", "my-email").
+//	    Build()
 //
 // - The SetCustom method has been replaced by several Set methods for specific value types,
 // and the SetValue method which takes an ldvalue.Value representing a value of any type
 // (boolean, number, string, array, or object).
 //
-//     // old
-//     user := lduser.NewUserBuilder("my-user-key").
-//         Custom("my-string-attr", ldvalue.String("value")).
-//         Custom("my-array-attr", ldvalue.ArrayOf(ldvalue.String("a"), ldvalue.String("b"))).
-//         Build()
+//	// old
+//	user := lduser.NewUserBuilder("my-user-key").
+//	    Custom("my-string-attr", ldvalue.String("value")).
+//	    Custom("my-array-attr", ldvalue.ArrayOf(ldvalue.String("a"), ldvalue.String("b"))).
+//	    Build()
 //
-//     // new
-//     user := ldcontext.NewBuilder("my-user-key").
-//         SetString("my-string-attr", "value").
-//         SetValue("my-array-attr", ldvalue.ArrayOf(ldvalue.String("a"), ldvalue.String("b"))).
-//         Build()
+//	// new
+//	user := ldcontext.NewBuilder("my-user-key").
+//	    SetString("my-string-attr", "value").
+//	    SetValue("my-array-attr", ldvalue.ArrayOf(ldvalue.String("a"), ldvalue.String("b"))).
+//	    Build()
 //
 // - Private attributes are now designated by attribute name, instead of by chaining a call to
 // AsPrivateAttribute() after calling the setter.
 //
-//     // old
-//     user := lduser.NewUserBuilder("my-user-key").
-//         Name("my-name").AsPrivateAttribute().
-//         Email("my-email").AsPrivateAttribute().
-//         Build()
+//	// old
+//	user := lduser.NewUserBuilder("my-user-key").
+//	    Name("my-name").AsPrivateAttribute().
+//	    Email("my-email").AsPrivateAttribute().
+//	    Build()
 //
-//     // new
-//     user := ldcontext.NewBuilder("my-user-key").
-//         Name("my-name").
-//         SetString("email", "my-email").
-//         Private("name", "email").
-//         Build()
+//	// new
+//	user := ldcontext.NewBuilder("my-user-key").
+//	    Name("my-name").
+//	    SetString("email", "my-email").
+//	    Private("name", "email").
+//	    Build()
 package lduser

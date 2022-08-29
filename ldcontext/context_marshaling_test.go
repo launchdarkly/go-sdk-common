@@ -7,9 +7,9 @@ import (
 	"github.com/launchdarkly/go-sdk-common/v3/ldattr"
 	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
 	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
+	"github.com/launchdarkly/go-test-helpers/v3/jsonhelpers"
 
 	"github.com/launchdarkly/go-jsonstream/v2/jwriter"
-	m "github.com/launchdarkly/go-test-helpers/v2/matchers"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -78,7 +78,7 @@ func contextMarshalingTests(t *testing.T, marshalFn func(*Context) ([]byte, erro
 		t.Run(params.json, func(t *testing.T) {
 			bytes, err := marshalFn(&params.context)
 			assert.NoError(t, err)
-			m.In(t).Assert(bytes, m.JSONStrEqual(params.json))
+			jsonhelpers.AssertEqual(t, params.json, bytes)
 		})
 	}
 
@@ -124,7 +124,7 @@ func TestContextMarshalEventOutputFormat(t *testing.T) {
 			ec := EventOutputContext{Context: p.context}
 			ContextSerialization.MarshalToJSONWriterEventOutput(&w, &ec)
 			assert.NoError(t, w.Error())
-			m.In(t).Assert(w.Bytes(), m.JSONStrEqual(p.json))
+			jsonhelpers.AssertEqual(t, p.json, w.Bytes())
 		})
 	}
 

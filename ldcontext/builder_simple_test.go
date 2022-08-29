@@ -8,7 +8,7 @@ import (
 	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
 	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
 
-	m "github.com/launchdarkly/go-test-helpers/v2/matchers"
+	"github.com/launchdarkly/go-test-helpers/v3/jsonhelpers"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -164,8 +164,8 @@ func TestBuilderSetCustomAttributes(t *testing.T) {
 					SetValue("other-attr", otherValue).
 					Build()
 				assert.Len(t, c.attributes.Keys(nil), 2)
-				m.In(t).Assert(c.attributes.Get("my-attr"), m.JSONEqual(value))
-				m.In(t).Assert(c.attributes.Get("other-attr"), m.JSONEqual(otherValue))
+				jsonhelpers.AssertEqual(t, value, c.attributes.Get("my-attr"))
+				jsonhelpers.AssertEqual(t, otherValue, c.attributes.Get("other-attr"))
 			})
 		}
 	})
@@ -330,13 +330,13 @@ func TestBuilderAttributesCopyOnWrite(t *testing.T) {
 	b := makeBasicBuilder().SetValue("attr", value1)
 
 	c1 := b.Build()
-	m.In(t).Assert(c1.attributes.Get("attr"), m.JSONEqual(value1))
+	jsonhelpers.AssertEqual(t, value1, c1.attributes.Get("attr"))
 
 	b.SetValue("attr", value2)
 
 	c2 := b.Build()
-	m.In(t).Assert(c2.attributes.Get("attr"), m.JSONEqual(value2))
-	m.In(t).Assert(c1.attributes.Get("attr"), m.JSONEqual(value1)) // unchanged
+	jsonhelpers.AssertEqual(t, value2, c2.attributes.Get("attr"))
+	jsonhelpers.AssertEqual(t, value1, c1.attributes.Get("attr")) // unchanged
 }
 
 func TestBuilderPrivate(t *testing.T) {
@@ -413,7 +413,7 @@ func TestNewBuilderFromContext(t *testing.T) {
 	b1 := NewBuilder("key1").Kind("kind1").Name("name1").Secondary("sec1").Anonymous(true).SetValue("attr", value1)
 	b1.Private("private1")
 	c1 := b1.Build()
-	m.In(t).Assert(c1.attributes.Get("attr"), m.JSONEqual(value1))
+	jsonhelpers.AssertEqual(t, value1, c1.attributes.Get("attr"))
 	assert.Len(t, c1.privateAttrs, 1)
 
 	b2 := NewBuilderFromContext(c1)
@@ -422,15 +422,15 @@ func TestNewBuilderFromContext(t *testing.T) {
 	assert.Equal(t, "key1", c2.Key())
 	assert.Equal(t, ldvalue.NewOptionalString("sec1"), c2.Secondary())
 	assert.True(t, c2.Anonymous())
-	m.In(t).Assert(c2.attributes.Get("attr"), m.JSONEqual(value1))
+	jsonhelpers.AssertEqual(t, value1, c2.attributes.Get("attr"))
 	assert.Equal(t, c1.privateAttrs, c2.privateAttrs)
 
 	b3 := NewBuilderFromContext(c1)
 	b3.SetValue("attr", value2)
 	b3.Private("private2")
 	c3 := b3.Build()
-	m.In(t).Assert(c3.attributes.Get("attr"), m.JSONEqual(value2))
-	m.In(t).Assert(c1.attributes.Get("attr"), m.JSONEqual(value1)) // unchanged
+	jsonhelpers.AssertEqual(t, value2, c3.attributes.Get("attr"))
+	jsonhelpers.AssertEqual(t, value1, c1.attributes.Get("attr")) // unchanged
 	assert.Len(t, c3.privateAttrs, 2)
 	assert.Len(t, c1.privateAttrs, 1) // unchanged
 

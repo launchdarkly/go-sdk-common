@@ -15,14 +15,14 @@ import (
 // To create an instance with an int value, use NewOptionalInt. There is no corresponding method
 // for creating an instance with no value; simply use the empty literal OptionalInt{}.
 //
-//     oi1 := NewOptionalInt(1)
-//     oi2 := NewOptionalInt(0) // this has a value which is zero
-//     oi3 := OptionalInt{}     // this does not have a value
+//	oi1 := NewOptionalInt(1)
+//	oi2 := NewOptionalInt(0) // this has a value which is zero
+//	oi3 := OptionalInt{}     // this does not have a value
 //
 // This can also be used as a convenient way to construct an int pointer within an expression.
 // For instance, this example causes myIntPointer to point to the int value 2:
 //
-//     var myIntPointer *int = NewOptionalInt("x").AsPointer()
+//	var myIntPointer *int = NewOptionalInt("x").AsPointer()
 //
 // This type is used in ldreason.EvaluationDetail.VariationIndex, and for other similar fields
 // in the LaunchDarkly Go SDK where an int value may or may not be defined.

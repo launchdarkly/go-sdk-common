@@ -45,7 +45,7 @@ func ArrayOf(items ...Value) Value {
 
 // ArrayBuild creates a builder for constructing an immutable array Value.
 //
-//     arrayValue := ldvalue.ArrayBuild().Add(ldvalue.Int(100)).Add(ldvalue.Int(200)).Build()
+//	arrayValue := ldvalue.ArrayBuild().Add(ldvalue.Int(100)).Add(ldvalue.Int(200)).Build()
 func ArrayBuild() *ArrayBuilder {
 	return ArrayBuildWithCapacity(1)
 }
@@ -55,7 +55,7 @@ func ArrayBuild() *ArrayBuilder {
 // The capacity parameter is the same as the capacity of a slice, allowing you to preallocate space
 // if you know the number of elements; otherwise you can pass zero.
 //
-//     arrayValue := ldvalue.ArrayBuildWithCapacity(2).Add(ldvalue.Int(100)).Add(ldvalue.Int(200)).Build()
+//	arrayValue := ldvalue.ArrayBuildWithCapacity(2).Add(ldvalue.Int(100)).Add(ldvalue.Int(200)).Build()
 func ArrayBuildWithCapacity(capacity int) *ArrayBuilder {
 	return &ArrayBuilder{ValueArrayBuilder{output: make([]Value, 0, capacity)}}
 }
@@ -69,7 +69,7 @@ func CopyObject(m map[string]Value) Value {
 
 // ObjectBuild creates a builder for constructing an immutable JSON object Value.
 //
-//     objValue := ldvalue.ObjectBuild().Set("a", ldvalue.Int(100)).Set("b", ldvalue.Int(200)).Build()
+//	objValue := ldvalue.ObjectBuild().Set("a", ldvalue.Int(100)).Set("b", ldvalue.Int(200)).Build()
 func ObjectBuild() *ObjectBuilder {
 	return ObjectBuildWithCapacity(1)
 }
@@ -79,7 +79,7 @@ func ObjectBuild() *ObjectBuilder {
 // The capacity parameter is the same as the capacity of a map, allowing you to preallocate space
 // if you know the number of elements; otherwise you can pass zero.
 //
-//     objValue := ldvalue.ObjectBuildWithCapacity(2).Set("a", ldvalue.Int(100)).Set("b", ldvalue.Int(200)).Build()
+//	objValue := ldvalue.ObjectBuildWithCapacity(2).Set("a", ldvalue.Int(100)).Set("b", ldvalue.Int(200)).Build()
 func ObjectBuildWithCapacity(capacity int) *ObjectBuilder {
 	return &ObjectBuilder{ValueMapBuilder{output: make(map[string]Value, capacity)}}
 }
@@ -200,35 +200,35 @@ func (v Value) TryGetByKey(name string) (Value, bool) {
 // first parameter, "" in the second, and the element value in the third. The return values of fn
 // can be either a transformed value and true, or any value and false to remove the element.
 //
-//     ldvalue.ArrayOf(ldvalue.Int(1), ldvalue.Int(2), ldvalue.Int(3)).Build().
-//         Transform(func(index int, key string, value Value) (Value, bool) {
-//             if value.IntValue() == 2 {
-//                 return ldvalue.Null(), false
-//             }
-//             return ldvalue.Int(value.IntValue() * 10), true
-//         })
-//     // returns [10, 30]
+//	ldvalue.ArrayOf(ldvalue.Int(1), ldvalue.Int(2), ldvalue.Int(3)).Build().
+//	    Transform(func(index int, key string, value Value) (Value, bool) {
+//	        if value.IntValue() == 2 {
+//	            return ldvalue.Null(), false
+//	        }
+//	        return ldvalue.Int(value.IntValue() * 10), true
+//	    })
+//	// returns [10, 30]
 //
 // If the input value is an object, fn is called for each key-value pair, with 0 in the first
 // parameter, the key in the second, and the value in the third. Again, fn can choose to either
 // transform or drop the value.
 //
-//     ldvalue.ObjectBuild().Set("a", ldvalue.Int(1)).Set("b", ldvalue.Int(2)).Set("c", ldvalue.Int(3)).Build().
-//         Transform(func(index int, key string, value Value) (Value, bool) {
-//             if key == "b" {
-//                 return ldvalue.Null(), false
-//             }
-//             return ldvalue.Int(value.IntValue() * 10), true
-//         })
-//     // returns {"a": 10, "c": 30}
+//	ldvalue.ObjectBuild().Set("a", ldvalue.Int(1)).Set("b", ldvalue.Int(2)).Set("c", ldvalue.Int(3)).Build().
+//	    Transform(func(index int, key string, value Value) (Value, bool) {
+//	        if key == "b" {
+//	            return ldvalue.Null(), false
+//	        }
+//	        return ldvalue.Int(value.IntValue() * 10), true
+//	    })
+//	// returns {"a": 10, "c": 30}
 //
 // For any other value type, fn is called once for that value; if it provides a transformed
 // value and true, the transformed value is returned, otherwise Null().
 //
-//     ldvalue.Int(2).Transform(func(index int, key string, value Value) (Value, bool) {
-//         return ldvalue.Int(value.IntValue() * 10), true
-//     })
-//     // returns numeric value of 20
+//	ldvalue.Int(2).Transform(func(index int, key string, value Value) (Value, bool) {
+//	    return ldvalue.Int(value.IntValue() * 10), true
+//	})
+//	// returns numeric value of 20
 //
 // For array and object values, if the function does not modify or drop any values, the exact
 // same instance is returned without allocating a new slice or map.

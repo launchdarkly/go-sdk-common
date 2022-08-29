@@ -3,6 +3,8 @@ package ldvalue
 import (
 	"github.com/launchdarkly/go-jsonstream/v2/jreader"
 	"github.com/launchdarkly/go-jsonstream/v2/jwriter"
+
+	"golang.org/x/exp/maps"
 )
 
 // we reuse this for all non-nil zero-length ValueMap instances
@@ -38,7 +40,7 @@ func (b *ValueMapBuilder) Set(key string, value Value) *ValueMapBuilder {
 		return b
 	}
 	if b.copyOnWrite {
-		b.output = copyValueMap(b.output)
+		b.output = maps.Clone(b.output)
 		b.copyOnWrite = false
 	}
 	if b.output == nil {
@@ -71,7 +73,7 @@ func (b *ValueMapBuilder) Remove(key string) *ValueMapBuilder {
 	}
 	if b.output != nil {
 		if b.copyOnWrite {
-			b.output = copyValueMap(b.output)
+			b.output = maps.Clone(b.output)
 			b.copyOnWrite = false
 		}
 		delete(b.output, key)
@@ -100,7 +102,7 @@ func (b *ValueMapBuilder) Build() ValueMap {
 
 // ValueMapBuild creates a builder for constructing an immutable ValueMap.
 //
-//     valueMap := ldvalue.ValueMapBuild().Set("a", ldvalue.Int(100)).Set("b", ldvalue.Int(200)).Build()
+//	valueMap := ldvalue.ValueMapBuild().Set("a", ldvalue.Int(100)).Set("b", ldvalue.Int(200)).Build()
 func ValueMapBuild() *ValueMapBuilder {
 	return &ValueMapBuilder{}
 }
@@ -110,7 +112,7 @@ func ValueMapBuild() *ValueMapBuilder {
 // The capacity parameter is the same as the capacity of a map, allowing you to preallocate space
 // if you know the number of elements; otherwise you can pass zero.
 //
-//     objValue := ldvalue.ObjectBuildWithCapacity(2).Set("a", ldvalue.Int(100)).Set("b", ldvalue.Int(200)).Build()
+//	objValue := ldvalue.ObjectBuildWithCapacity(2).Set("a", ldvalue.Int(100)).Set("b", ldvalue.Int(200)).Build()
 func ValueMapBuildWithCapacity(capacity int) *ValueMapBuilder {
 	return &ValueMapBuilder{output: make(map[string]Value, capacity)}
 }
@@ -124,14 +126,6 @@ func ValueMapBuildFromMap(m ValueMap) *ValueMapBuilder {
 	return &ValueMapBuilder{output: m.data, copyOnWrite: true}
 }
 
-func copyValueMap(m map[string]Value) map[string]Value {
-	ret := make(map[string]Value, len(m))
-	for k, v := range m {
-		ret[k] = v
-	}
-	return ret
-}
-
 // CopyValueMap copies an existing ordinary map to a ValueMap.
 //
 // If the parameter is nil, an uninitialized ValueMap{} is returned instead of a zero-length map.
@@ -142,7 +136,7 @@ func CopyValueMap(data map[string]Value) ValueMap {
 	if len(data) == 0 {
 		return ValueMap{emptyMap}
 	}
-	return ValueMap{copyValueMap(data)}
+	return ValueMap{maps.Clone(data)}
 }
 
 // CopyArbitraryValueMap copies an existing ordinary map of interface{} values to a ValueMap. The
@@ -215,14 +209,7 @@ func (m ValueMap) Keys(sliceIn []string) []string {
 //
 // For an uninitialized ValueMap{}, this returns nil.
 func (m ValueMap) AsMap() map[string]Value {
-	if m.data == nil {
-		return nil
-	}
-	ret := make(map[string]Value, len(m.data))
-	for k, v := range m.data {
-		ret[k] = v
-	}
-	return ret
+	return maps.Clone(m.data)
 }
 
 // AsArbitraryValueMap returns a copy of the wrapped data as a simple Go map whose values are of type
@@ -243,16 +230,10 @@ func (m ValueMap) AsArbitraryValueMap() map[string]interface{} {
 // Equal returns true if the two maps are deeply equal. Nil and zero-length maps are not considered
 // equal to each other.
 func (m ValueMap) Equal(other ValueMap) bool {
-	if len(m.data) != len(other.data) || m.IsDefined() != other.IsDefined() {
+	if m.IsDefined() != other.IsDefined() {
 		return false
 	}
-	for k, v := range m.data {
-		v1, ok := other.data[k]
-		if !ok || !v.Equal(v1) {
-			return false
-		}
-	}
-	return true
+	return maps.EqualFunc(m.data, other.data, Value.Equal)
 }
 
 // Transform applies a transformation function to a ValueMap, returning a new ValueMap.

@@ -7,7 +7,8 @@ import (
 	"testing"
 
 	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
-	m "github.com/launchdarkly/go-test-helpers/v2/matchers"
+
+	"github.com/launchdarkly/go-test-helpers/v3/jsonhelpers"
 
 	"github.com/mailru/easyjson"
 	"github.com/mailru/easyjson/jlexer"
@@ -50,7 +51,7 @@ func TestContextEasyJSONMarshalEventOutputFormat(t *testing.T) {
 			ec := EventOutputContext{Context: p.context}
 			data, err := easyjson.Marshal(ec)
 			assert.NoError(t, err)
-			m.In(t).Assert(data, m.JSONStrEqual(p.json))
+			jsonhelpers.AssertEqual(t, p.json, data)
 		})
 	}
 

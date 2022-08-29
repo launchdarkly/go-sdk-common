@@ -4,6 +4,8 @@ import (
 	"sort"
 
 	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
+
+	"golang.org/x/exp/slices"
 )
 
 const defaultMultiBuilderCapacity = 3 // arbitrary value based on presumed likely use cases
@@ -17,10 +19,10 @@ const defaultMultiBuilderCapacity = 3 // arbitrary value based on presumed likel
 // nested Context for each Kind. MultiBuilder setters return a reference the same builder, so they
 // can be chained together:
 //
-//     context := ldcontext.NewMultiBuilder().
-//         Add(ldcontext.New("my-user-key")).
-//         Add(ldcontext.NewBuilder("my-org-key").Kind("organization").Name("Org1").Build()).
-//         Build()
+//	context := ldcontext.NewMultiBuilder().
+//	    Add(ldcontext.New("my-user-key")).
+//	    Add(ldcontext.NewBuilder("my-org-key").Kind("organization").Name("Org1").Build()).
+//	    Build()
 //
 // A MultiBuilder should not be accessed by multiple goroutines at once. Once you have called Build(),
 // the resulting Context is immutable and is safe to use from multiple goroutines. Instances
@@ -128,23 +130,23 @@ func (m *MultiBuilder) Build() Context {
 // detected by calling the context's Err() method. But, if you prefer to use the two-value
 // pattern that is common in Go, you can call TryBuild instead:
 //
-//     c, err := ldcontext.NewMultiBuilder().
-//         Add(context1).Add(context2).
-//         TryBuild()
-//     if err != nil {
-//         // do whatever is appropriate if building the context failed
-//     }
+//	c, err := ldcontext.NewMultiBuilder().
+//	    Add(context1).Add(context2).
+//	    TryBuild()
+//	if err != nil {
+//	    // do whatever is appropriate if building the context failed
+//	}
 //
 // The two return values are the same as to 1. the Context that would be returned by Build(),
 // and 2. the result of calling Err() on that Context. So, the above example is exactly
 // equivalent to:
 //
-//     c := ldcontext.NewMultiBuilder().
-//         Add(context1).Add(context2).
-//         Build()
-//     if c.Err() != nil {
-//         // do whatever is appropriate if building the context failed
-//     }
+//	c := ldcontext.NewMultiBuilder().
+//	    Add(context1).Add(context2).
+//	    Build()
+//	if c.Err() != nil {
+//	    // do whatever is appropriate if building the context failed
+//	}
 //
 // Note that unlike some Go methods where the first return value is normally an
 // uninitialized zero value if the error is non-nil, the Context returned by TryBuild in case
@@ -164,17 +166,17 @@ func (m *MultiBuilder) TryBuild() (Context, error) {
 // individual kinds from it separately. For instance, in the following example, "multi1" and
 // "multi2" end up being exactly the same:
 //
-//     c1 := ldcontext.NewWithKind("kind1", "key1")
-//     c2 := ldcontext.NewWithKind("kind2", "key2")
-//     c3 := ldcontext.NewWithKind("kind3", "key3")
+//	c1 := ldcontext.NewWithKind("kind1", "key1")
+//	c2 := ldcontext.NewWithKind("kind2", "key2")
+//	c3 := ldcontext.NewWithKind("kind3", "key3")
 //
-//     multi1 := ldcontext.NewMultiBuilder().Add(c1).Add(c2).Add(c3).Build()
+//	multi1 := ldcontext.NewMultiBuilder().Add(c1).Add(c2).Add(c3).Build()
 //
-//     c1plus2 := ldcontext.NewMultiBuilder().Add(c1).Add(c2).Build()
-//     multi2 := ldcontext.NewMultiBuilder().Add(c1plus2).Add(c3).Build()
+//	c1plus2 := ldcontext.NewMultiBuilder().Add(c1).Add(c2).Build()
+//	multi2 := ldcontext.NewMultiBuilder().Add(c1plus2).Add(c3).Build()
 func (m *MultiBuilder) Add(context Context) *MultiBuilder {
 	if m.contextsCopyOnWrite {
-		m.contexts = append([]Context(nil), m.contexts...)
+		m.contexts = slices.Clone(m.contexts)
 		m.contextsCopyOnWrite = true
 	}
 	if context.Multiple() {
