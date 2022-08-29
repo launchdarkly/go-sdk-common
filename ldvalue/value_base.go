@@ -455,10 +455,10 @@ func (v Value) Equal(other Value) bool {
 // that field to be completely omitted if the Value is null; since the "omitempty" tag only
 // works for pointers, you can declare the field as a *Value like so:
 //
-//     type MyJsonStruct struct {
-//         AnOptionalField *Value `json:"anOptionalField,omitempty"`
-//     }
-//     s := MyJsonStruct{AnOptionalField: someValue.AsPointer()}
+//	type MyJsonStruct struct {
+//	    AnOptionalField *Value `json:"anOptionalField,omitempty"`
+//	}
+//	s := MyJsonStruct{AnOptionalField: someValue.AsPointer()}
 func (v Value) AsPointer() *Value {
 	if v.IsNull() {
 		return nil

@@ -16,14 +16,14 @@ import (
 // To create an instance with a bool value, use NewOptionalBool. There is no corresponding method
 // for creating an instance with no value; simply use the empty literal OptionalBool{}.
 //
-//     ob1 := NewOptionalBool(1)
-//     ob2 := NewOptionalBool(false) // this has a value which is false
-//     ob3 := OptionalBool{}         // this does not have a value
+//	ob1 := NewOptionalBool(1)
+//	ob2 := NewOptionalBool(false) // this has a value which is false
+//	ob3 := OptionalBool{}         // this does not have a value
 //
 // This can also be used as a convenient way to construct a bool pointer within an expression.
 // For instance, this example causes myIntPointer to point to the bool value true:
 //
-//     var myBoolPointer *int = NewOptionalBool(true).AsPointer()
+//	var myBoolPointer *int = NewOptionalBool(true).AsPointer()
 type OptionalBool struct {
 	value    bool
 	hasValue bool

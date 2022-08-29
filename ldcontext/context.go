@@ -7,6 +7,8 @@ import (
 	"github.com/launchdarkly/go-sdk-common/v3/ldattr"
 	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
 	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
+
+	"golang.org/x/exp/slices"
 )
 
 // Context is a collection of attributes that can be referenced in flag evaluations and analytics events.
@@ -125,8 +127,8 @@ func (c Context) Name() ldvalue.OptionalString {
 // For instance, in the following example, no heap allocations will happen unless there are more than 10
 // optional attribute names; if there are more than 10, the slice will be allocated on the stack:
 //
-//     preallocNames := make([]string, 0, 10)
-//     names := c.GetOptionalAttributeNames(preallocNames)
+//	preallocNames := make([]string, 0, 10)
+//	names := c.GetOptionalAttributeNames(preallocNames)
 func (c Context) GetOptionalAttributeNames(sliceIn []string) []string {
 	if c.Multiple() {
 		return nil
@@ -353,8 +355,8 @@ func (c Context) IndividualContextKeyByKind(kind Kind) string {
 // are more than 10 individual contexts; if there are more than 10, the slice will be allocated on
 // the stack:
 //
-//     preallocContexts := make([]ldcontext.Context, 0, 10)
-//     contexts := c.GetAllIndividualContexts(preallocContexts)
+//	preallocContexts := make([]ldcontext.Context, 0, 10)
+//	contexts := c.GetAllIndividualContexts(preallocContexts)
 func (c Context) GetAllIndividualContexts(sliceIn []Context) []Context {
 	ret := sliceIn[0:0]
 	if len(c.multiContexts) == 0 {
@@ -439,10 +441,5 @@ func (c Context) Equal(other Context) bool {
 		return ret
 	}
 	attrs1, attrs2 := sortedPrivateAttrs(c.privateAttrs), sortedPrivateAttrs(other.privateAttrs)
-	for i, a := range attrs1 {
-		if a != attrs2[i] {
-			return false
-		}
-	}
-	return true
+	return slices.Equal(attrs1, attrs2)
 }

@@ -25,10 +25,10 @@ type MockLogItem struct {
 // It contains a Loggers instance which can be used like any other Loggers, but all of the output is
 // captured by the enclosing MockLog and can be retrieved with the MockLog methods.
 //
-//     mockLog := ldlogtest.NewMockLog()
-//     mockLog.Loggers.Warn("message")
-//     mockLog.Loggers.Warnf("also: %t", true)
-//     warnMessages := mockLog.GetOutput(ldlog.Warn) // returns {"message", "also: true"}
+//	mockLog := ldlogtest.NewMockLog()
+//	mockLog.Loggers.Warn("message")
+//	mockLog.Loggers.Warnf("also: %t", true)
+//	warnMessages := mockLog.GetOutput(ldlog.Warn) // returns {"message", "also: true"}
 type MockLog struct {
 	// Loggers is the ldlog.Loggers instance to be used for tests.
 	Loggers ldlog.Loggers
@@ -113,11 +113,11 @@ func (ml *MockLog) Dump(w io.Writer) {
 // This is useful in tests where you normally don't want to see the log output, but you do want to see it
 // if there was a failure. The simplest way to do this is to use defer:
 //
-//     func TestSomething(t *testing.T) {
-//         ml := ldlogtest.NewMockLog()
-//         defer ml.DumpIfTestFailed(t)
-//         // ... do some test things that may generate log output and/or cause a failure
-//     }
+//	func TestSomething(t *testing.T) {
+//	    ml := ldlogtest.NewMockLog()
+//	    defer ml.DumpIfTestFailed(t)
+//	    // ... do some test things that may generate log output and/or cause a failure
+//	}
 func (ml *MockLog) DumpIfTestFailed(t *testing.T) {
 	if t.Failed() { // COVERAGE: there's no way to test this in unit tests
 		ml.Dump(os.Stdout)

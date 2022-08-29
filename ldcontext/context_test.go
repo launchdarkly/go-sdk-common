@@ -9,7 +9,7 @@ import (
 	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
 	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
 
-	m "github.com/launchdarkly/go-test-helpers/v2/matchers"
+	"github.com/launchdarkly/go-test-helpers/v3/jsonhelpers"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -309,7 +309,7 @@ func TestContextString(t *testing.T) {
 	c := makeBasicBuilder().Name("x").Anonymous(true).SetString("attr", "value").Build()
 	j, _ := json.Marshal(c)
 	s := c.String()
-	m.In(t).Assert(json.RawMessage(s), m.JSONEqual(json.RawMessage(j)))
+	jsonhelpers.AssertEqual(t, j, s)
 }
 
 func TestGetValueForInvalidRef(t *testing.T) {
@@ -509,26 +509,26 @@ func expectAttributeFoundForName(t *testing.T, expected ldvalue.Value, c Context
 	t.Helper()
 	value := c.GetValue(attrName)
 	assert.True(t, value.IsDefined(), "attribute %q should have been found, but was not", attrName)
-	m.In(t).Assert(value, m.JSONEqual(expected))
+	jsonhelpers.AssertEqual(t, expected, value)
 }
 
 func expectAttributeNotFoundForName(t *testing.T, c Context, attrName string) {
 	t.Helper()
 	value := c.GetValue(attrName)
 	assert.False(t, value.IsDefined(), "attribute %q should not have been found, but was", attrName)
-	m.In(t).Assert(value, m.JSONEqual(nil))
+	jsonhelpers.AssertEqual(t, `null`, value)
 }
 
 func expectAttributeFoundForRef(t *testing.T, expected ldvalue.Value, c Context, attrRefString string) {
 	t.Helper()
 	value := c.GetValueForRef(ldattr.NewRef(attrRefString))
 	assert.True(t, value.IsDefined(), "attribute %q should have been found, but was not", attrRefString)
-	m.In(t).Assert(value, m.JSONEqual(expected))
+	jsonhelpers.AssertEqual(t, expected, value)
 }
 
 func expectAttributeNotFoundForRef(t *testing.T, c Context, attrRefString string) {
 	t.Helper()
 	value := c.GetValueForRef(ldattr.NewRef(attrRefString))
 	assert.False(t, value.IsDefined(), "attribute %q should not have been found, but was", attrRefString)
-	m.In(t).Assert(value, m.JSONEqual(nil))
+	jsonhelpers.AssertEqual(t, `null`, value)
 }
