@@ -1,8 +1,8 @@
 package ldcontext
 
 import (
-	"github.com/launchdarkly/go-jsonstream/v2/jreader"
-	"github.com/launchdarkly/go-jsonstream/v2/jwriter"
+	"github.com/launchdarkly/go-jsonstream/v3/jreader"
+	"github.com/launchdarkly/go-jsonstream/v3/jwriter"
 )
 
 // Note: other ContextSerialization methods are in the conditionally-compiled file

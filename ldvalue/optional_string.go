@@ -3,8 +3,8 @@ package ldvalue
 import (
 	"encoding/json"
 
-	"github.com/launchdarkly/go-jsonstream/v2/jreader"
-	"github.com/launchdarkly/go-jsonstream/v2/jwriter"
+	"github.com/launchdarkly/go-jsonstream/v3/jreader"
+	"github.com/launchdarkly/go-jsonstream/v3/jwriter"
 )
 
 // OptionalString represents a string that may or may not have a value. This is similar to using a

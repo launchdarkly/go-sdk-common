@@ -5,8 +5,8 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/launchdarkly/go-jsonstream/v2/jreader"
-	"github.com/launchdarkly/go-jsonstream/v2/jwriter"
+	"github.com/launchdarkly/go-jsonstream/v3/jreader"
+	"github.com/launchdarkly/go-jsonstream/v3/jwriter"
 )
 
 // This file contains methods for converting Value to and from JSON.
