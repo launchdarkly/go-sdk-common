@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	helpers "github.com/launchdarkly/go-test-helpers/v2"
+	helpers "github.com/launchdarkly/go-test-helpers/v3"
 )
 
 func TestValueTypes(t *testing.T) {
@@ -216,8 +216,8 @@ func TestConvertPrimitivesFromArbitraryValue(t *testing.T) {
 	t.Run("bool", func(t *testing.T) {
 		assert.Equal(t, Bool(true), CopyArbitraryValue(true))
 		assert.Equal(t, Bool(false), CopyArbitraryValue(false))
-		assert.Equal(t, Bool(true), CopyArbitraryValue(helpers.BoolPtr(true)))
-		assert.Equal(t, Bool(false), CopyArbitraryValue(helpers.BoolPtr(false)))
+		assert.Equal(t, Bool(true), CopyArbitraryValue(helpers.AsPointer(true)))
+		assert.Equal(t, Bool(false), CopyArbitraryValue(helpers.AsPointer(false)))
 		assert.Equal(t, Null(), CopyArbitraryValue((*bool)(nil)))
 	})
 	t.Run("int8", func(t *testing.T) {
