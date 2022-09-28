@@ -2,11 +2,9 @@ package ldattr
 
 import (
 	"encoding/json"
-	"strconv"
 	"strings"
 
 	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
-	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
 
 	"github.com/launchdarkly/go-jsonstream/v3/jreader"
 )
@@ -34,11 +32,10 @@ import (
 // An attribute name can contain any characters, but must not be empty.
 //
 // If the first character is a slash, the string is interpreted as a slash-delimited path where the
-// first path component is an attribute name, and each subsequent path component is either the name of
-// a property in a JSON object, or a decimal numeric string that is the index of an element in a JSON
-// array. Any instances of the characters "/" or "~" in a path component are escaped as "~1" or "~0"
-// respectively. This syntax deliberately resembles JSON Pointer, but no JSON Pointer behaviors other
-// than those mentioned here are supported.
+// first path component is an attribute name, and each subsequent path component is the name of a
+// property in a JSON object. Any instances of the characters "/" or "~" in a path component are
+// escaped as "~1" or "~0" respectively. This syntax deliberately resembles JSON Pointer, but no JSON
+// Pointer behaviors other than those mentioned here are supported.
 //
 // # Examples
 //
@@ -48,30 +45,25 @@ import (
 //	  "kind": "user",
 //	  "key": "value1",
 //	  "address": {
-//	    "street": "value2",
-//	    "city": "value3"
+//	    "street": {
+//        "line1": "value2",
+//        "line2": "value3"
+//      },
+//	    "city": "value4"
 //	  },
-//	  "groups": [ "value4", "value5" ],
-//	  "good/bad": "value6"
+//	  "good/bad": "value5"
 //	}
 //
 // The attribute references "key" and "/key" would both point to "value1".
 //
-// The attribute reference "/address/street" would point to "value2".
+// The attribute reference "/address/street/line1" would point to "value2".
 //
-// The attribute reference "/groups/0" would point to "value4".
-//
-// The attribute references "good/bad" and "/good~1bad" would both point to "value6".
+// The attribute references "good/bad" and "/good~1bad" would both point to "value5".
 type Ref struct {
 	err                 error
 	rawPath             string
 	singlePathComponent string
-	components          []attrRefComponent
-}
-
-type attrRefComponent struct {
-	name     string
-	intValue ldvalue.OptionalInt
+	components          []string
 }
 
 // NewRef creates a Ref from a string. For the supported syntax and examples, see comments on the Ref type.
@@ -98,7 +90,7 @@ func NewRef(referenceString string) Ref {
 		return Ref{err: lderrors.ErrAttributeInvalidEscape{}, rawPath: referenceString}
 	}
 	parts := strings.Split(path, "/")
-	ret := Ref{rawPath: referenceString, components: make([]attrRefComponent, 0, len(parts))}
+	ret := Ref{rawPath: referenceString, components: make([]string, 0, len(parts))}
 	for _, p := range parts {
 		if p == "" {
 			ret.err = lderrors.ErrAttributeExtraSlash{}
@@ -108,13 +100,7 @@ func NewRef(referenceString string) Ref {
 		if !ok {
 			return Ref{err: lderrors.ErrAttributeInvalidEscape{}, rawPath: referenceString}
 		}
-		component := attrRefComponent{name: unescaped}
-		if p[0] >= '0' && p[0] <= '9' {
-			if n, err := strconv.Atoi(p); err == nil {
-				component.intValue = ldvalue.NewOptionalInt(n)
-			}
-		}
-		ret.components = append(ret.components, component)
+		ret.components = append(ret.components, unescaped)
 	}
 	return ret
 }
@@ -198,29 +184,23 @@ func (a Ref) Depth() int {
 // Component retrieves a single path component from the attribute reference.
 //
 // For a simple attribute reference such as "name" with no leading slash, if index is zero,
-// Component returns the attribute name and an empty ldvalue.OptionalInt{}.
+// Component returns the attribute name.
 //
 // For an attribute reference with a leading slash, if index is non-negative and less than
-// a.Depth(), Component returns the path component as a string for its first value. The
-// second value is an ldvalue.OptionalInt that is the integer value of that string as returned
-// by strconv.Atoi() if applicable, or an empty ldvalue.OptionalInt{} if the string does not
-// represent an integer; this is used to implement a "find a value by index within a JSON
-// array" behavior similar to JSON Pointer.
+// a.Depth(), Component returns the path component.
 //
-// If index is out of range, it returns "" and an empty ldvalue.OptionalInt{}.
+// If index is out of range, it returns "".
 //
-//	NewRef("a").Component(0)      // returns ("a", ldvalue.OptionalInt{})
-//	NewRef("/a/b").Component(1)   // returns ("b", ldvalue.OptionalInt{})
-//	NewRef("/a/3").Component(1)   // returns ("3", ldvalue.NewOptionalInt(3))
-func (a Ref) Component(index int) (string, ldvalue.OptionalInt) {
+//	NewRef("a").Component(0)      // returns "a"
+//	NewRef("/a/b").Component(1)   // returns "b"
+func (a Ref) Component(index int) string {
 	if index == 0 && len(a.components) == 0 {
-		return a.singlePathComponent, ldvalue.OptionalInt{}
+		return a.singlePathComponent
 	}
 	if index < 0 || index >= len(a.components) {
-		return "", ldvalue.OptionalInt{}
+		return ""
 	}
-	c := a.components[index]
-	return c.name, c.intValue
+	return a.components[index]
 }
 
 // String returns the attribute reference as a string, in the same format used by NewRef().

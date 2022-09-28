@@ -188,7 +188,7 @@ func (c Context) GetValueForRef(ref ldattr.Ref) ldvalue.Value {
 		return ldvalue.Null()
 	}
 
-	firstPathComponent, _ := ref.Component(0)
+	firstPathComponent := ref.Component(0)
 
 	if c.Multiple() {
 		if ref.Depth() == 1 && firstPathComponent == ldattr.KindAttr {
@@ -203,13 +203,9 @@ func (c Context) GetValueForRef(ref ldattr.Ref) ldvalue.Value {
 		return ldvalue.Null()
 	}
 	for i := 1; i < ref.Depth(); i++ {
-		name, index := ref.Component(i)
-		if index.IsDefined() && value.Type() == ldvalue.ArrayType {
-			value, ok = value.TryGetByIndex(index.IntValue())
-		} else {
-			value, ok = value.TryGetByKey(name)
-		}
-		if !ok {
+		name := ref.Component(i)
+		value, ok = value.TryGetByKey(name)
+		if !ok { // ok is false if either the name is not found or the value was not an object
 			return ldvalue.Null()
 		}
 	}
