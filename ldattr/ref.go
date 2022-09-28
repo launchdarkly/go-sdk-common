@@ -46,9 +46,9 @@ import (
 //	  "key": "value1",
 //	  "address": {
 //	    "street": {
-//        "line1": "value2",
-//        "line2": "value3"
-//      },
+//	      "line1": "value2",
+//	      "line2": "value3"
+//	    },
 //	    "city": "value4"
 //	  },
 //	  "good/bad": "value5"
