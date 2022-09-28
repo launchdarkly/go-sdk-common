@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
-	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -58,8 +57,7 @@ func TestRefWithNoLeadingSlash(t *testing.T) {
 			assert.NoError(t, a.Err())
 			assert.Equal(t, s, a.String())
 			assert.Equal(t, 1, a.Depth())
-			name, _ := a.Component(0)
-			assert.Equal(t, s, name)
+			assert.Equal(t, s, a.Component(0))
 		})
 	}
 }
@@ -82,8 +80,7 @@ func TestRefSimpleWithLeadingSlash(t *testing.T) {
 			assert.NoError(t, a.Err())
 			assert.Equal(t, params.input, a.String())
 			assert.Equal(t, 1, a.Depth())
-			name, _ := a.Component(0)
-			assert.Equal(t, params.path, name)
+			assert.Equal(t, params.path, a.Component(0))
 		})
 	}
 }
@@ -108,44 +105,37 @@ func TestNewLiteralRef(t *testing.T) {
 }
 
 func TestRefComponents(t *testing.T) {
-	undefined := -99
 	for _, params := range []struct {
-		input         string
-		depth         int
-		index         int
-		expectedName  string
-		expectedIndex int
+		input        string
+		depth        int
+		index        int
+		expectedName string
 	}{
-		{"", 0, 0, "", undefined},
-		{"key", 1, 0, "key", undefined},
-		{"/key", 1, 0, "key", undefined},
-		{"/a/b", 2, 0, "a", undefined},
-		{"/a/b", 2, 1, "b", undefined},
-		{"/a~1b/c", 2, 0, "a/b", undefined},
-		{"/a~0b/c", 2, 0, "a~b", undefined},
-		{"/a/10/20/30x", 4, 1, "10", 10},
-		{"/a/10/20/30x", 4, 2, "20", 20},
-		{"/a/10/20/30x", 4, 3, "30x", undefined},
+		{"", 0, 0, ""},
+		{"key", 1, 0, "key"},
+		{"/key", 1, 0, "key"},
+		{"/a/b", 2, 0, "a"},
+		{"/a/b", 2, 1, "b"},
+		{"/a~1b/c", 2, 0, "a/b"},
+		{"/a~0b/c", 2, 0, "a~b"},
+		{"/a/10/20/30x", 4, 1, "10"},
+		{"/a/10/20/30x", 4, 2, "20"},
+		{"/a/10/20/30x", 4, 3, "30x"},
 
 		// invalid arguments don't cause an error, they just return empty values
-		{"", 0, -1, "", undefined},
-		{"key", 1, -1, "", undefined},
-		{"key", 1, 1, "", undefined},
-		{"/key", 1, -1, "", undefined},
-		{"/key", 1, 1, "", undefined},
-		{"/a/b", 2, -1, "", undefined},
-		{"/a/b", 2, 2, "", undefined},
+		{"", 0, -1, ""},
+		{"key", 1, -1, ""},
+		{"key", 1, 1, ""},
+		{"/key", 1, -1, ""},
+		{"/key", 1, 1, ""},
+		{"/a/b", 2, -1, ""},
+		{"/a/b", 2, 2, ""},
 	} {
 		t.Run(fmt.Sprintf("input string %q, index %d", params.input, params.index), func(t *testing.T) {
 			a := NewRef(params.input)
 			assert.Equal(t, params.depth, a.Depth())
-			name, index := a.Component(params.index)
+			name := a.Component(params.index)
 			assert.Equal(t, params.expectedName, name)
-			if params.expectedIndex == undefined {
-				assert.Equal(t, ldvalue.OptionalInt{}, index)
-			} else {
-				assert.Equal(t, ldvalue.NewOptionalInt(params.expectedIndex), index)
-			}
 		})
 	}
 }

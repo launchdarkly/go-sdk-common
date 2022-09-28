@@ -270,38 +270,22 @@ func TestGetValueForRefCustomAttributeSingleKind(t *testing.T) {
 		expectAttributeNotFoundForRef(t, c, "/my-attr/my-prop")
 	})
 
-	t.Run("element in array", func(t *testing.T) {
+	t.Run("property whose name is a numeric string", func(t *testing.T) {
 		expected := ldvalue.String("good")
-		array := ldvalue.ArrayOf(ldvalue.String("bad"), expected, ldvalue.String("worse"))
-		c := makeBasicBuilder().SetValue("my-attr", array).Build()
+		object := ldvalue.ObjectBuild().Set("1", expected).Build()
+		c := makeBasicBuilder().SetValue("my-attr", object).Build()
 		expectAttributeFoundForRef(t, expected, c, "/my-attr/1")
 	})
 
-	t.Run("element in nested array in object", func(t *testing.T) {
-		expected := ldvalue.String("good")
-		array := ldvalue.ArrayOf(ldvalue.String("bad"), expected, ldvalue.String("worse"))
-		object := ldvalue.ObjectBuild().Set("my-prop", array).Build()
-		c := makeBasicBuilder().SetValue("my-attr", object).Build()
-		expectAttributeFoundForRef(t, expected, c, "/my-attr/my-prop/1")
-	})
-
-	t.Run("index too low in array", func(t *testing.T) {
-		expected := ldvalue.String("good")
-		array := ldvalue.ArrayOf(ldvalue.String("bad"), expected, ldvalue.String("worse"))
+	t.Run("property not applicable to array", func(t *testing.T) {
+		array := ldvalue.ArrayOf(ldvalue.String("bad"), ldvalue.String("worse"))
 		c := makeBasicBuilder().SetValue("my-attr", array).Build()
-		expectAttributeNotFoundForRef(t, c, "/my-attr/-1")
-	})
-
-	t.Run("index too high in array", func(t *testing.T) {
-		expected := ldvalue.String("good")
-		array := ldvalue.ArrayOf(ldvalue.String("bad"), expected, ldvalue.String("worse"))
-		c := makeBasicBuilder().SetValue("my-attr", array).Build()
-		expectAttributeNotFoundForRef(t, c, "/my-attr/3")
-	})
-
-	t.Run("index in value that is not an object", func(t *testing.T) {
-		c := makeBasicBuilder().SetValue("my-attr", ldvalue.String("xyz")).Build()
 		expectAttributeNotFoundForRef(t, c, "/my-attr/1")
+	})
+
+	t.Run("property not applicable to simple value", func(t *testing.T) {
+		c := makeBasicBuilder().SetValue("my-attr", ldvalue.String("xyz")).Build()
+		expectAttributeNotFoundForRef(t, c, "/my-attr/a")
 	})
 }
 
