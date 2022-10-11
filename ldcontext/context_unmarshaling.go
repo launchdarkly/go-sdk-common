@@ -122,8 +122,6 @@ func unmarshalSingleKind(c *Context, r *jreader.Reader, knownKind Kind, usingEve
 		case jsonPropMeta:
 			for metaObj := r.ObjectOrNull(); metaObj.Next(); {
 				switch string(metaObj.Name()) {
-				case jsonPropSecondary:
-					b.OptSecondary(readOptString(r))
 				case jsonPropPrivate:
 					if usingEventFormat {
 						_ = r.SkipValue()
@@ -179,6 +177,7 @@ func unmarshalMultiKind(c *Context, r *jreader.Reader, usingEventFormat bool) er
 func unmarshalOldUserSchema(c *Context, r *jreader.Reader, usingEventFormat bool) error {
 	var b Builder
 	b.setAllowEmptyKey(true)
+	var secondary ldvalue.OptionalString
 	hasKey := false
 	for obj := r.Object(); obj.Next(); {
 		switch string(obj.Name()) {
@@ -187,8 +186,8 @@ func unmarshalOldUserSchema(c *Context, r *jreader.Reader, usingEventFormat bool
 			hasKey = true
 		case ldattr.NameAttr:
 			b.OptName(readOptString(r))
-		case jsonPropSecondary:
-			b.OptSecondary(readOptString(r))
+		case jsonPropOldUserSecondary:
+			secondary = readOptString(r)
 		case ldattr.AnonymousAttr:
 			value, _ := r.BoolOrNull()
 			b.Anonymous(value)
@@ -232,6 +231,9 @@ func unmarshalOldUserSchema(c *Context, r *jreader.Reader, usingEventFormat bool
 		return lderrors.ErrContextKeyMissing{}
 	}
 	*c = b.Build()
+	if secondary.IsDefined() {
+		c.secondary = secondary // there is deliberately no way to do this via the builder API
+	}
 	return c.Err()
 }
 

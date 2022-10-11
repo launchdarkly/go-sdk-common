@@ -284,7 +284,6 @@ func TestUserBuilderCanCopyFromExistingUserWithAllAttributes(t *testing.T) {
 		Avatar("avatar").
 		IP("ip").
 		Custom("attr", ldvalue.String("value")).
-		Secondary("secondary").
 		Anonymous(true).
 		Build()
 	user1 := NewUserBuilderFromUser(user0).Build()

@@ -48,14 +48,6 @@ type UserBuilder interface {
 	// Key changes the unique key for the user being built.
 	Key(value string) UserBuilder
 
-	// Secondary sets the secondary key attribute for the user being built.
-	//
-	// This affects feature flag targeting
-	// (https://docs.launchdarkly.com/home/flags/targeting-users#targeting-rules-based-on-user-attributes)
-	// as follows: if you have chosen to bucket users by a specific attribute, the secondary key (if set)
-	// is used to further distinguish between users who are otherwise identical according to that attribute.
-	Secondary(value string) UserBuilderCanMakeAttributePrivate
-
 	// IP sets the IP address attribute for the user being built.
 	IP(value string) UserBuilderCanMakeAttributePrivate
 
@@ -201,11 +193,6 @@ func (b *userBuilderImpl) Key(value string) UserBuilder {
 	return b
 }
 
-func (b *userBuilderImpl) Secondary(value string) UserBuilderCanMakeAttributePrivate {
-	b.builder.Secondary(value)
-	return b.canMakeAttributePrivate(string(SecondaryKeyAttribute))
-}
-
 func (b *userBuilderImpl) IP(value string) UserBuilderCanMakeAttributePrivate {
 	b.builder.SetString("ip", value)
 	return b.canMakeAttributePrivate(string(IPAttribute))
@@ -282,10 +269,6 @@ func (b *userBuilderImpl) SetAttribute(
 	// supports setting Secondary by name-- and, UserBuilder enforces that formerly-built-in
 	// attributes like Email can only be a string or null.
 	switch attribute {
-	case SecondaryKeyAttribute:
-		if value.IsString() || value.IsNull() {
-			b.builder.OptSecondary(value.AsOptionalString())
-		}
 	case AnonymousAttribute:
 		if value.IsBool() || value.IsNull() {
 			b.builder.Anonymous(value.BoolValue())

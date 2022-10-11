@@ -32,6 +32,10 @@ type Context struct {
 	secondary         ldvalue.OptionalString
 	anonymous         bool
 	privateAttrs      []ldattr.Ref
+
+	// Note that the secondary field cannot be set by any builder method. We support this
+	// meta-attribute internally in order to be able to evaluate flags for old-style users,
+	// and the only way it can be set is from the user JSON unmarshaling logic.
 }
 
 // IsDefined returns true if this is a Context that was created with a constructor or builder
@@ -224,14 +228,14 @@ func (c Context) Anonymous() bool {
 	return c.anonymous
 }
 
-// Secondary returns the secondary key attribute for the Context, if any.
+// Secondary returns the deprecated secondary key meta-attribute for the Context, if any.
 //
-// For a single-kind context, this value can be set by Builder.Secondary(), and is an empty
-// ldvalue.OptionalString{} value if not specified.
+// This corresponds to the "secondary" attribute in the older LaunchDarkly user schema. Since LaunchDarkly
+// still supports evaluating feature flags for old-style users, this attribute is still available to the
+// evaluation logic if it was present in user JSON, but it cannot be set via the Context or Builder APIs.
 //
-// For a multi-kind context, there is no single value, so Secondary() always returns an empty value; use
-// IndividualContextByIndex(), IndividualContextByName(), or GetAllIndividualContexts() to inspect
-// a Context for a particular kind and then call Secondary() on it.
+// Deprecated: Application code should not rely on the availability of this value. It is likely to be
+// removed from the product in the future.
 func (c Context) Secondary() ldvalue.OptionalString {
 	return c.secondary
 }

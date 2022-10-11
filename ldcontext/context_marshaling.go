@@ -39,11 +39,9 @@ func (c *Context) writeToJSONWriterInternalSingle(w *jwriter.Writer, withinKind 
 		obj.Name(ldattr.AnonymousAttr).Bool(true)
 	}
 
-	if c.secondary.IsDefined() || len(c.privateAttrs) != 0 {
+	needMeta := len(c.privateAttrs) != 0
+	if needMeta {
 		metaJSON := obj.Name(jsonPropMeta).Object()
-		if c.secondary.IsDefined() {
-			metaJSON.Name(jsonPropSecondary).String(c.secondary.StringValue())
-		}
 		if len(c.privateAttrs) != 0 {
 			name := jsonPropPrivate
 			if usingEventFormat {
