@@ -35,7 +35,6 @@ type Builder struct {
 	allowEmptyKey      bool
 	name               ldvalue.OptionalString
 	attributes         ldvalue.ValueMapBuilder
-	secondary          ldvalue.OptionalString
 	anonymous          bool
 	privateAttrs       []ldattr.Ref
 	privateCopyOnWrite bool
@@ -113,7 +112,6 @@ func (b *Builder) Build() Context {
 		key:       b.key,
 		name:      b.name,
 		anonymous: b.anonymous,
-		secondary: b.secondary,
 	}
 
 	ret.fullyQualifiedKey = makeFullyQualifiedKeySingleKind(actualKind, ret.key, true)
@@ -360,35 +358,6 @@ func (b *Builder) TrySetValue(attributeName string, value ldvalue.Value) bool {
 	return true
 }
 
-// Secondary sets a secondary key for the Context.
-//
-// This affects feature flag targeting
-// (https://docs.launchdarkly.com/home/flags/targeting-users#targeting-rules-based-on-user-attributes)
-// as follows: if you have chosen to bucket users by a specific attribute, the secondary key (if set)
-// is used to further distinguish between users who are otherwise identical according to that attribute.
-//
-// This is a metadata property, rather than an attribute that can be addressed in evaluations: that is,
-// a rule clause that references the attribute name "secondary" will not use this value, but instead will
-// use whatever value (if any) you have set for the name "secondary" with a method such as SetString.
-//
-// Setting this value to an empty string is not the same as leaving it unset. If you need to clear this
-// attribute to a "no value" state, use OptSecondary().
-func (b *Builder) Secondary(value string) *Builder {
-	return b.OptSecondary(ldvalue.NewOptionalString(value))
-}
-
-// OptSecondary sets a secondary key for the Context.
-//
-// Calling b.OptSecondary(ldvalue.NewOptionalString("x")) is equivalent to b.Secondary("x"), but since it uses
-// the OptionalString type, it also allows clearing a previously set name with
-// b.OptSecondary(ldvalue.OptionalString{}).
-func (b *Builder) OptSecondary(value ldvalue.OptionalString) *Builder {
-	if b != nil {
-		b.secondary = value
-	}
-	return b
-}
-
 // Anonymous sets whether the Context is only intended for flag evaluations and should not be indexed by
 // LaunchDarkly.
 //
@@ -516,7 +485,6 @@ func (b *Builder) copyFrom(fromContext Context) {
 	b.kind = fromContext.kind
 	b.key = fromContext.key
 	b.name = fromContext.name
-	b.secondary = fromContext.secondary
 	b.anonymous = fromContext.anonymous
 	b.attributes = ldvalue.ValueMapBuilder{}
 	b.attributes.SetAllFromValueMap(fromContext.attributes)

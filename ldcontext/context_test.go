@@ -44,7 +44,7 @@ func TestGetOptionalAttributeNames(t *testing.T) {
 	})
 
 	t.Run("meta not included", func(t *testing.T) {
-		c := NewBuilder("my-key").Secondary("x").Anonymous(true).Build()
+		c := NewBuilder("my-key").Private("x").Anonymous(true).Build()
 		an := c.GetOptionalAttributeNames(nil)
 		assert.Len(t, an, 0)
 	})
@@ -211,23 +211,6 @@ func TestGetValueForRefCannotGetMetaProperties(t *testing.T) {
 		t.Run("multi-kind", func(t *testing.T) {
 			c := NewMultiBuilder().Add(makeBasicBuilder().Private("attr").Build()).Build()
 			expectAttributeNotFoundForRef(t, c, "privateAttributes")
-		})
-	})
-
-	t.Run("secondary", func(t *testing.T) {
-		t.Run("single-kind, defined", func(t *testing.T) {
-			c := makeBasicBuilder().Secondary("my-value").Build()
-			expectAttributeNotFoundForRef(t, c, "secondary")
-		})
-
-		t.Run("single-kind, undefined", func(t *testing.T) {
-			c := makeBasicBuilder().Build()
-			expectAttributeNotFoundForRef(t, c, "secondary")
-		})
-
-		t.Run("multi-kind", func(t *testing.T) {
-			c := NewMultiBuilder().Add(makeBasicBuilder().Secondary("my-value").Build()).Build()
-			expectAttributeNotFoundForRef(t, c, "secondary")
 		})
 	})
 }
@@ -436,6 +419,13 @@ func TestGetAllIndividualContexts(t *testing.T) {
 	})
 }
 
+func TestCanGetSecondaryKeyIfPrivatelySet(t *testing.T) {
+	c1, c2 := New("key1"), New("key2")
+	c2.secondary = ldvalue.NewOptionalString("x")
+	assert.Equal(t, ldvalue.OptionalString{}, c1.Secondary())
+	assert.Equal(t, c2.secondary, c2.Secondary())
+}
+
 func TestContextEqual(t *testing.T) {
 	// Each top-level element in makeInstances is a slice of factories that should produce contexts equal to
 	// each other, and unequal to the contexts produced by the factories in any other slice.
@@ -447,8 +437,6 @@ func TestContextEqual(t *testing.T) {
 		{func() Context { return NewWithKind("k2", "a") }},
 		{func() Context { return NewBuilder("a").Name("b").Build() }},
 		{func() Context { return NewBuilder("a").Name("c").Build() }},
-		{func() Context { return NewBuilder("a").Secondary("b").Build() }},
-		{func() Context { return NewBuilder("a").Secondary("").Build() }}, // "" is not the same as undefined
 		{func() Context { return NewBuilder("a").Anonymous(true).Build() }},
 		{func() Context { return NewBuilder("a").SetBool("b", true).Build() }},
 		{func() Context { return NewBuilder("a").SetBool("b", false).Build() }},

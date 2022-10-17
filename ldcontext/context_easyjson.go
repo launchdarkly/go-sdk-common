@@ -171,8 +171,6 @@ func unmarshalSingleKindEasyJSON(c *Context, in *jlexer.Lexer, knownKind Kind, u
 				key := in.UnsafeBytes() // see comment above
 				in.WantColon()
 				switch string(key) {
-				case jsonPropSecondary:
-					c.secondary = readOptStringEasyJSON(in)
 				case jsonPropPrivate:
 					if usingEventFormat {
 						in.SkipRecursive()
@@ -266,7 +264,7 @@ func unmarshalOldUserSchemaEasyJSON(c *Context, in *jlexer.Lexer, usingEventForm
 			hasKey = true
 		case ldattr.NameAttr:
 			c.name = readOptStringEasyJSON(in)
-		case jsonPropSecondary:
+		case jsonPropOldUserSecondary:
 			c.secondary = readOptStringEasyJSON(in)
 		case ldattr.AnonymousAttr:
 			if in.IsNull() {

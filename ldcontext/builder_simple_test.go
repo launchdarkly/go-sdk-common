@@ -122,15 +122,6 @@ func TestBuilderBasicSetters(t *testing.T) {
 	t.Run("Secondary", func(t *testing.T) {
 		c0 := makeBasicBuilder().Build()
 		assert.Equal(t, ldvalue.OptionalString{}, c0.Secondary())
-
-		c1 := makeBasicBuilder().Secondary("value").Build()
-		assert.Equal(t, ldvalue.NewOptionalString("value"), c1.Secondary())
-
-		c2 := makeBasicBuilder().OptSecondary(ldvalue.OptionalString{}).Build()
-		assert.Equal(t, ldvalue.OptionalString{}, c2.Secondary())
-
-		c3 := makeBasicBuilder().OptSecondary(ldvalue.NewOptionalString("value")).Build()
-		assert.Equal(t, ldvalue.NewOptionalString("value"), c3.Secondary())
 	})
 
 	t.Run("Anonymous", func(t *testing.T) {
@@ -410,7 +401,7 @@ func TestBuilderPrivate(t *testing.T) {
 func TestNewBuilderFromContext(t *testing.T) {
 	value1, value2 := ldvalue.String("value1"), ldvalue.String("value2")
 
-	b1 := NewBuilder("key1").Kind("kind1").Name("name1").Secondary("sec1").Anonymous(true).SetValue("attr", value1)
+	b1 := NewBuilder("key1").Kind("kind1").Name("name1").Anonymous(true).SetValue("attr", value1)
 	b1.Private("private1")
 	c1 := b1.Build()
 	jsonhelpers.AssertEqual(t, value1, c1.attributes.Get("attr"))
@@ -420,7 +411,6 @@ func TestNewBuilderFromContext(t *testing.T) {
 	c2 := b2.Build()
 	assert.Equal(t, Kind("kind1"), c2.Kind())
 	assert.Equal(t, "key1", c2.Key())
-	assert.Equal(t, ldvalue.NewOptionalString("sec1"), c2.Secondary())
 	assert.True(t, c2.Anonymous())
 	jsonhelpers.AssertEqual(t, value1, c2.attributes.Get("attr"))
 	assert.Equal(t, c1.privateAttrs, c2.privateAttrs)
@@ -450,7 +440,6 @@ func TestBuilderSafety(t *testing.T) {
 	var nilPtr *Builder
 	assert.Nil(t, nilPtr.Key("a"))
 	assert.Nil(t, nilPtr.Name("a"))
-	assert.Nil(t, nilPtr.Secondary("a"))
 	assert.Nil(t, nilPtr.Anonymous(true))
 	assert.Nil(t, nilPtr.SetValue("a", ldvalue.Bool(true)))
 	assert.Nil(t, nilPtr.Private("a"))

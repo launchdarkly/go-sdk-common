@@ -30,25 +30,23 @@ func makeStringGetter(name string) func(c ldcontext.Context) ldvalue.OptionalStr
 }
 
 var optionalStringGetters = map[UserAttribute]func(ldcontext.Context) ldvalue.OptionalString{
-	SecondaryKeyAttribute: ldcontext.Context.Secondary, // Context doesn't consider this to be an addressable attribute
-	IPAttribute:           makeStringGetter("ip"),
-	CountryAttribute:      makeStringGetter("country"),
-	EmailAttribute:        makeStringGetter("email"),
-	FirstNameAttribute:    makeStringGetter("firstName"),
-	LastNameAttribute:     makeStringGetter("lastName"),
-	AvatarAttribute:       makeStringGetter("avatar"),
-	NameAttribute:         makeStringGetter("name"),
+	IPAttribute:        makeStringGetter("ip"),
+	CountryAttribute:   makeStringGetter("country"),
+	EmailAttribute:     makeStringGetter("email"),
+	FirstNameAttribute: makeStringGetter("firstName"),
+	LastNameAttribute:  makeStringGetter("lastName"),
+	AvatarAttribute:    makeStringGetter("avatar"),
+	NameAttribute:      makeStringGetter("name"),
 }
 
 var optionalStringSetters = map[UserAttribute]func(UserBuilder, string) UserBuilderCanMakeAttributePrivate{
-	SecondaryKeyAttribute: UserBuilder.Secondary,
-	IPAttribute:           UserBuilder.IP,
-	CountryAttribute:      UserBuilder.Country,
-	EmailAttribute:        UserBuilder.Email,
-	FirstNameAttribute:    UserBuilder.FirstName,
-	LastNameAttribute:     UserBuilder.LastName,
-	AvatarAttribute:       UserBuilder.Avatar,
-	NameAttribute:         UserBuilder.Name,
+	IPAttribute:        UserBuilder.IP,
+	CountryAttribute:   UserBuilder.Country,
+	EmailAttribute:     UserBuilder.Email,
+	FirstNameAttribute: UserBuilder.FirstName,
+	LastNameAttribute:  UserBuilder.LastName,
+	AvatarAttribute:    UserBuilder.Avatar,
+	NameAttribute:      UserBuilder.Name,
 }
 
 func assertStringAttrNotSet(t *testing.T, a UserAttribute, c ldcontext.Context) {

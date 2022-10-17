@@ -45,10 +45,6 @@ func makeContextUnmarshalUnimportantVariantsParams() []contextSerializationParam
 		{NewBuilder("my-key").Build(),
 			`{"kind": "user", "key": "my-key", "_meta": {"privateAttributes": null}}`},
 
-		// explicit null is same as unset for secondary
-		{NewBuilder("my-key").Build(),
-			`{"kind": "user", "key": "my-key", "_meta": {"secondary": null}}`},
-
 		// unrecognized properties within _meta are ignored
 		{NewBuilder("my-key").Build(),
 			`{"kind": "user", "key": "my-key", "_meta": {"unknownProp": false}}`},
@@ -70,9 +66,9 @@ func makeContextUnmarshalFromOldUserSchemaParams() []contextSerializationParams 
 		{NewBuilder("key2").Build(),
 			`{"key": "key2", "name": null}`},
 
-		{NewBuilder("key3").Secondary("value").Build(),
+		{contextWithSecondary(New("key3"), "value"),
 			`{"key": "key3", "secondary": "value"}`},
-		{NewBuilder("key3").Build(),
+		{New("key3"),
 			`{"key": "key3", "secondary": null}`},
 
 		{NewBuilder("key4").Anonymous(true).Build(),
@@ -199,7 +195,6 @@ func makeContextUnmarshalingErrorInputs() []string {
 
 		// wrong type within _meta
 		`{"kind": "org", "key": "my-key", "_meta": true}}`,
-		`{"kind": "org", "key": "my-key", "_meta": {"secondary": true}}}`,
 		`{"kind": "org", "key": "my-key", "_meta": {"privateAttributes": true}}}`,
 
 		`{"kind": "multi"}`,                                                       // multi kind with no kinds
@@ -449,4 +444,9 @@ func TestContextReadKindAndKeyOnly(t *testing.T) {
 			})
 		}
 	})
+}
+
+func contextWithSecondary(c Context, s string) Context {
+	c.secondary = ldvalue.NewOptionalString(s)
+	return c
 }

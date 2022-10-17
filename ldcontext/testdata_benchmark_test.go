@@ -66,7 +66,6 @@ func makeBenchmarkContextWithFewAttributesJSON() []byte {
 
 func makeBenchmarkContextWithAllAttributes() Context {
 	return NewBuilder("user-key").
-		Secondary("secondary-value").
 		SetString("name", "Name").
 		SetString("ip", "ip-value").
 		SetString("country", "us").
