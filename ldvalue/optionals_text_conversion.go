@@ -56,6 +56,11 @@ func (o OptionalString) String() string {
 }
 
 // MarshalText implements the encoding.TextMarshaler interface.
+//
+// This may be useful with packages that support describing arbitrary types via that interface.
+//
+// The behavior for OptionalBool is that a true or false value produces the string "true" or
+// "false", and an undefined value produces an empty string.
 func (o OptionalBool) MarshalText() ([]byte, error) {
 	if value, ok := o.optValue.get(); ok {
 		if value {
@@ -67,6 +72,11 @@ func (o OptionalBool) MarshalText() ([]byte, error) {
 }
 
 // MarshalText implements the encoding.TextMarshaler interface.
+//
+// This may be useful with packages that support describing arbitrary types via that interface.
+//
+// The behavior for OptionalBool is that a true or false value produces a decimal numeric
+// string, and an undefined value produces an empty string.
 func (o OptionalInt) MarshalText() ([]byte, error) {
 	if value, ok := o.optValue.get(); ok {
 		return []byte(strconv.Itoa(value)), nil
@@ -76,7 +86,10 @@ func (o OptionalInt) MarshalText() ([]byte, error) {
 
 // MarshalText implements the encoding.TextMarshaler interface.
 //
-// Marshaling an empty OptionalString{} will return nil, rather than a zero-length slice.
+// This may be useful with packages that support describing arbitrary types via that interface.
+//
+// The behavior for OptionalString is that a defined string value produces the same string,
+// and an undefined value produces nil.
 func (o OptionalString) MarshalText() ([]byte, error) {
 	if value, ok := o.optValue.get(); ok {
 		return []byte(value), nil
@@ -85,6 +98,9 @@ func (o OptionalString) MarshalText() ([]byte, error) {
 }
 
 // UnmarshalText implements the encoding.TextUnmarshaler interface.
+//
+// This may be useful with packages that support parsing arbitrary types via that interface,
+// such as gcfg.
 //
 // If the input data is nil or empty, the result is an empty OptionalBool{}. Otherwise, it
 // recognizes "true" or "false" as valid inputs and returns an error for all other values.
@@ -99,6 +115,9 @@ func (o *OptionalBool) UnmarshalText(text []byte) error {
 }
 
 // UnmarshalText implements the encoding.TextUnmarshaler interface.
+//
+// This may be useful with packages that support parsing arbitrary types via that interface,
+// such as gcfg.
 //
 // If the input data is nil or empty, the result is an empty OptionalInt{}. Otherwise, it
 // uses strconv.Atoi() to parse a numeric value.
@@ -119,7 +138,8 @@ func (o *OptionalInt) UnmarshalText(text []byte) error {
 
 // UnmarshalText implements the encoding.TextUnmarshaler interface.
 //
-// This allows OptionalString to be used with packages that can parse text content, such as gcfg.
+// This may be useful with packages that support parsing arbitrary types via that interface,
+// such as gcfg.
 //
 // If the byte slice is nil, rather than zero-length, it will set the target value to an empty
 // OptionalString{}. Otherwise, it will set it to a string value.
