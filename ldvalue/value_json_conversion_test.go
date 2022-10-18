@@ -34,7 +34,6 @@ func TestValueJSONMarshalUnmarshal(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, item.json, string(j))
 
-			assert.Equal(t, item.json, item.value.String())
 			assert.Equal(t, item.json, item.value.JSONString())
 			assert.Equal(t, json.RawMessage(item.json), item.value.AsRaw())
 
@@ -119,7 +118,6 @@ func TestValueArrayJSONMarshalUnmarshal(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, item.json, string(j))
 
-			assert.Equal(t, item.json, item.valueArray.String())
 			assert.Equal(t, item.json, item.valueArray.JSONString())
 
 			var a ValueArray
@@ -162,7 +160,6 @@ func TestValueMapJSONMarshalUnmarshal(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, item.json, string(j))
 
-			assert.Equal(t, item.json, item.valueMap.String())
 			assert.Equal(t, item.json, item.valueMap.JSONString())
 
 			var m ValueMap
