@@ -234,6 +234,13 @@ func TestGetValueForRefCustomAttributeSingleKind(t *testing.T) {
 		expectAttributeFoundForRef(t, expected, c, "/my-attr/my-prop")
 	})
 
+	t.Run("property in raw JSON object", func(t *testing.T) {
+		expected := ldvalue.String("abc")
+		object := ldvalue.Raw(json.RawMessage(`{"my-prop": "abc"}`))
+		c := makeBasicBuilder().SetValue("my-attr", object).Build()
+		expectAttributeFoundForRef(t, expected, c, "/my-attr/my-prop")
+	})
+
 	t.Run("property in object not found", func(t *testing.T) {
 		expected := ldvalue.String("abc")
 		object := ldvalue.ObjectBuild().Set("my-prop", expected).Build()
