@@ -79,7 +79,7 @@ func (a *ValueArray) UnmarshalEasyJSON(lexer *jlexer.Lexer) {
 	for !lexer.IsDelim(']') {
 		var value Value
 		value.UnmarshalEasyJSON(lexer)
-		a.data = append(v.data, value)
+		a.data = append(a.data, value)
 		lexer.WantComma()
 	}
 	lexer.Delim(']')
