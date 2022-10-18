@@ -143,3 +143,13 @@ func TestContextMarshalEventOutputFormat(t *testing.T) {
 		assert.Contains(t, w.Error().Error(), lderrors.ErrContextUninitialized{}.Error())
 	})
 }
+
+func TestContextJSONStringIsEquivalentToJSONMarshal(t *testing.T) {
+	for _, params := range makeContextMarshalingAndUnmarshalingParams() {
+		t.Run(params.json, func(t *testing.T) {
+			bytes, err := json.Marshal(&params.context)
+			assert.NoError(t, err)
+			jsonhelpers.AssertEqual(t, string(bytes), params.context.JSONString())
+		})
+	}
+}
