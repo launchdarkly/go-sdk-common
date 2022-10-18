@@ -37,8 +37,8 @@ func (v *Value) UnmarshalText(text []byte) error {
 // This may be useful with packages that support describing arbitrary types via that interface.
 //
 // The behavior for ValueArray is the same as ValueArray.MarshalJSON.
-func (v ValueArray) MarshalText() ([]byte, error) {
-	return v.MarshalJSON()
+func (a ValueArray) MarshalText() ([]byte, error) {
+	return a.MarshalJSON()
 }
 
 // UnmarshalText implements the encoding.TextUnmarshaler interface.
@@ -47,8 +47,8 @@ func (v ValueArray) MarshalText() ([]byte, error) {
 // such as gcfg.
 //
 // The behavior for ValueArray is the same as ValueArray.UnmarshalJSON.
-func (v *ValueArray) UnmarshalText(text []byte) error {
-	return v.UnmarshalJSON(text)
+func (a *ValueArray) UnmarshalText(text []byte) error {
+	return a.UnmarshalJSON(text)
 }
 
 // MarshalText implements the encoding.TextMarshaler interface.
@@ -56,8 +56,8 @@ func (v *ValueArray) UnmarshalText(text []byte) error {
 // This may be useful with packages that support describing arbitrary types via that interface.
 //
 // The behavior for ValueMap is the same as ValueMap.MarshalJSON.
-func (v ValueMap) MarshalText() ([]byte, error) {
-	return v.MarshalJSON()
+func (m ValueMap) MarshalText() ([]byte, error) {
+	return m.MarshalJSON()
 }
 
 // UnmarshalText implements the encoding.TextUnmarshaler interface.
@@ -66,6 +66,6 @@ func (v ValueMap) MarshalText() ([]byte, error) {
 // such as gcfg.
 //
 // The behavior for ValueMap is the same as ValueMap.UnmarshalJSON.
-func (v *ValueMap) UnmarshalText(text []byte) error {
-	return v.UnmarshalJSON(text)
+func (m *ValueMap) UnmarshalText(text []byte) error {
+	return m.UnmarshalJSON(text)
 }
