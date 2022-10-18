@@ -46,6 +46,10 @@ linters-settings:
     local-prefixes: github.com/launchdarkly
   
 issues:
+  exclude-rules:
+    - path: ldvalue/optional_.*.go
+      linters:
+        - dupl  # This linter would produce false positives due to necessary boilerplate code in ldvalue/optional_*.go
   exclude-use-default: false
   max-same-issues: 1000
   max-per-linter: 1000
