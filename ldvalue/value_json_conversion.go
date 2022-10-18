@@ -24,6 +24,10 @@ func Parse(jsonData []byte) Value {
 }
 
 // JSONString returns the JSON representation of the value.
+//
+// This is equivalent to calling [Value.MarshalJSON] and converting the result to a string.
+// Since all Values by definition can be represented in JSON, this method does not need to
+// return an error value so it can be easily used within an expression.
 func (v Value) JSONString() string {
 	// The following is somewhat redundant with json.Marshal, but it avoids the overhead of
 	// converting between byte arrays and strings.
@@ -87,8 +91,8 @@ func (v *Value) UnmarshalJSON(data []byte) error {
 
 // ReadFromJSONReader provides JSON deserialization for use with the jsonstream API.
 //
-// This implementation is used by the SDK in cases where it is more efficient than JSON.Unmarshal.
-// See the jsonstream package for more details.
+// This implementation is used by the SDK in cases where it is more efficient than [json.Unmarshal].
+// See [github.com/launchdarkly/go-jsonstream/v3] for more details.
 func (v *Value) ReadFromJSONReader(r *jreader.Reader) {
 	a := r.Any()
 	if r.Error() != nil {
@@ -118,8 +122,8 @@ func (v *Value) ReadFromJSONReader(r *jreader.Reader) {
 
 // WriteToJSONWriter provides JSON serialization for use with the jsonstream API.
 //
-// This implementation is used by the SDK in cases where it is more efficient than JSON.Marshal.
-// See https://github.com/launchdarkly/go-jsonstream for more details.
+// This implementation is used by the SDK in cases where it is more efficient than [json.Marshal].
+// See [github.com/launchdarkly/go-jsonstream/v3] for more details.
 func (v Value) WriteToJSONWriter(w *jwriter.Writer) {
 	switch v.valueType {
 	case NullType:
@@ -165,8 +169,8 @@ func (a *ValueArray) UnmarshalJSON(data []byte) error {
 
 // ReadFromJSONReader provides JSON deserialization for use with the jsonstream API.
 //
-// This implementation is used by the SDK in cases where it is more efficient than JSON.Unmarshal.
-// See the jsonstream package for more details.
+// This implementation is used by the SDK in cases where it is more efficient than [json.Unmarshal].
+// See [github.com/launchdarkly/go-jsonstream/v3] for more details.
 func (a *ValueArray) ReadFromJSONReader(r *jreader.Reader) {
 	arr := r.ArrayOrNull()
 	a.readFromJSONArray(r, &arr)
@@ -174,8 +178,8 @@ func (a *ValueArray) ReadFromJSONReader(r *jreader.Reader) {
 
 // WriteToJSONWriter provides JSON serialization for use with the jsonstream API.
 //
-// The JSON output format is identical to what is produced by json.Marshal, but this implementation is
-// more efficient when building output with jsonstream. See the jsonstream package for more details.
+// This implementation is used by the SDK in cases where it is more efficient than [json.Marshal].
+// See [github.com/launchdarkly/go-jsonstream/v3] for more details.
 //
 // Like a Go slice, a ValueArray in an uninitialized/nil state produces a JSON null rather than an empty [].
 func (a ValueArray) WriteToJSONWriter(w *jwriter.Writer) {
@@ -241,8 +245,8 @@ func (m *ValueMap) UnmarshalJSON(data []byte) error {
 
 // ReadFromJSONReader provides JSON deserialization for use with the jsonstream API.
 //
-// This implementation is used by the SDK in cases where it is more efficient than JSON.Unmarshal.
-// See the jsonstream package for more details.
+// This implementation is used by the SDK in cases where it is more efficient than [json.Unmarshal].
+// See [github.com/launchdarkly/go-jsonstream/v3] for more details.
 func (m *ValueMap) ReadFromJSONReader(r *jreader.Reader) {
 	obj := r.ObjectOrNull()
 	m.readFromJSONObject(r, &obj)
@@ -250,8 +254,8 @@ func (m *ValueMap) ReadFromJSONReader(r *jreader.Reader) {
 
 // WriteToJSONWriter provides JSON serialization for use with the jsonstream API.
 //
-// The JSON output format is identical to what is produced by json.Marshal, but this implementation is
-// more efficient when building output with JSONBuffer. See the jsonstream package for more details.
+// This implementation is used by the SDK in cases where it is more efficient than [json.Marshal].
+// See [github.com/launchdarkly/go-jsonstream/v3] for more details.
 //
 // Like a Go map, a ValueMap in an uninitialized/nil state produces a JSON null rather than an empty {}.
 func (m ValueMap) WriteToJSONWriter(w *jwriter.Writer) {

@@ -34,7 +34,7 @@ func (s ContextSerializationMethods) UnmarshalFromJSONReaderEventOutput(r *jread
 }
 
 // UnmarshalWithKindAndKeyOnly is a special unmarshaling mode where all properties except kind and
-// key are discarded. It works for both single-kind and multi-kind contexts. This is more efficient
+// key are discarded. It works for both single and multi-contexts. This is more efficient
 // than the regular unmarshaling logic in situations where contexts need to be indexed by Key or
 // FullyQualifiedKey.
 //

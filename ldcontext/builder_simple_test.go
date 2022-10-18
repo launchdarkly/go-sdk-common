@@ -427,7 +427,7 @@ func TestNewBuilderFromContext(t *testing.T) {
 	multi := NewMulti(NewWithKind("kind1", "key1"), NewWithKind("kind2", "key2"))
 	assert.NoError(t, multi.Err())
 	c4 := NewBuilderFromContext(multi).Build()
-	assert.Error(t, c4.Err()) // can't copy Builder from multi-kind context
+	assert.Error(t, c4.Err()) // can't copy Builder from multi-context
 }
 
 func TestBuilderSafety(t *testing.T) {

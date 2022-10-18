@@ -6,13 +6,22 @@ import (
 	"github.com/launchdarkly/go-jsonstream/v3/jwriter"
 )
 
-// MarshalJSON provides JSON serialization for Context when using json.MarshalJSON.
+// JSONString returns the JSON representation of the Context.
+//
+// This is equivalent to calling [Context.MarshalJSON] and converting the result to a string.
+// An invalid Context cannot be represented in JSON and produces an empty string.
+func (c Context) JSONString() string {
+	bytes, _ := c.MarshalJSON()
+	return string(bytes)
+}
+
+// MarshalJSON provides JSON serialization for Context when using [encoding/json.MarshalJSON].
 //
 // LaunchDarkly's JSON schema for contexts is standardized across SDKs. There are two output formats,
-// depending on whether it is a single-kind context or a multi-kind context. Unlike the unmarshaler,
+// depending on whether it is a single context or a multi-context. Unlike the unmarshaler,
 // the marshaler never uses the old-style user context schema from older SDKs.
 //
-// If the Context is invalid (that is, it returns a non-nil Error()) then marshaling fails with the
+// If the Context is invalid (that is, it has a non-nil [Context.Err]) then marshaling fails with the
 // same error.
 func (c Context) MarshalJSON() ([]byte, error) {
 	w := jwriter.NewWriter()

@@ -7,14 +7,14 @@ import (
 // we reuse this for all non-nil zero-length ValueArray instances
 var emptyArray = []Value{} //nolint:gochecknoglobals
 
-// ValueArray is an immutable array of Value values.
+// ValueArray is an immutable array of [Value]s.
 //
 // This is used internally to hold the contents of a JSON array in a Value. You can also use it
 // separately in any context where you know that the data must be array-like, rather than any of the
 // other types that a Value can be.
 //
 // The wrapped slice is not directly accessible, so it cannot be modified. You can obtain a copy of
-// it with AsSlice() if necessary.
+// it with [ValueArray.AsSlice] if necessary.
 //
 // Like a Go slice, there is a distinction between an array in a nil state-- which is the zero
 // value of ValueArray{}-- and a non-nil aray that is empty. The former is represented in JSON as a
@@ -23,7 +23,7 @@ type ValueArray struct {
 	data []Value
 }
 
-// ValueArrayBuilder is a builder created by ValueArrayBuild(), for creating immutable JSON arrays.
+// ValueArrayBuilder is a builder created by [ValueArrayBuild], for creating immutable JSON arrays.
 //
 // A ValueArrayBuilder should not be accessed by multiple goroutines at once.
 type ValueArrayBuilder struct {
@@ -58,7 +58,7 @@ func (b *ValueArrayBuilder) AddAllFromValueArray(a ValueArray) *ValueArrayBuilde
 	return b
 }
 
-// Build creates a Value containing the previously added array elements. Continuing to modify the
+// Build creates a ValueArray containing the previously added array elements. Continuing to modify the
 // same builder by calling Add after that point does not affect the returned array.
 func (b *ValueArrayBuilder) Build() ValueArray {
 	if b == nil {
@@ -71,14 +71,14 @@ func (b *ValueArrayBuilder) Build() ValueArray {
 	return ValueArray{b.output}
 }
 
-// ValueArrayBuild creates a builder for constructing an immutable ValueArray.
+// ValueArrayBuild creates a builder for constructing an immutable [ValueArray].
 //
 //	ValueArray := ldvalue.ValueArrayBuild().Add(ldvalue.Int(100)).Add(ldvalue.Int(200)).Build()
 func ValueArrayBuild() *ValueArrayBuilder {
 	return &ValueArrayBuilder{}
 }
 
-// ValueArrayBuildWithCapacity creates a builder for constructing an immutable ValueArray.
+// ValueArrayBuildWithCapacity creates a builder for constructing an immutable [ValueArray].
 //
 // The capacity parameter is the same as the capacity of a slice, allowing you to preallocate space
 // if you know the number of elements; otherwise you can pass zero.
@@ -88,7 +88,7 @@ func ValueArrayBuildWithCapacity(capacity int) *ValueArrayBuilder {
 	return &ValueArrayBuilder{output: make([]Value, 0, capacity)}
 }
 
-// ValueArrayBuildFromArray creates a builder for constructing an immutable ValueArray, initializing it
+// ValueArrayBuildFromArray creates a builder for constructing an immutable [ValueArray], initializing it
 // from an existing ValueArray.
 //
 // The builder has copy-on-write behavior, so if you make no changes before calling Build(), the
@@ -97,7 +97,7 @@ func ValueArrayBuildFromArray(a ValueArray) *ValueArrayBuilder {
 	return &ValueArrayBuilder{output: a.data, copyOnWrite: true}
 }
 
-// ValueArrayOf creates a ValueArray from a list of Values.
+// ValueArrayOf creates a ValueArray from a list of [Value]s.
 //
 // This requires a slice copy to ensure immutability; otherwise, an existing slice could be passed
 // using the spread operator, and then modified. However, since Value is itself immutable, it does
@@ -125,7 +125,7 @@ func CopyValueArray(data []Value) ValueArray {
 }
 
 // CopyArbitraryValueArray copies an existing ordinary slice of values of any type to a ValueArray.
-// The behavior for each value is the same as CopyArbitraryValue.
+// The behavior for each value is the same as [CopyArbitraryValue].
 //
 // If the parameter is nil, an uninitialized ValueArray{} is returned instead of a zero-length map.
 func CopyArbitraryValueArray(data []any) ValueArray {
@@ -149,7 +149,7 @@ func (a ValueArray) Count() int {
 	return len(a.data)
 }
 
-// AsValue converts the ValueArray to a Value which is either Null() or an array. This does not
+// AsValue converts the ValueArray to a Value which is either [Null]() or an array. This does not
 // cause any new allocations.
 func (a ValueArray) AsValue() Value {
 	if a.data == nil {
@@ -160,7 +160,7 @@ func (a ValueArray) AsValue() Value {
 
 // Get gets a value from the array by index.
 //
-// If the index is out of range, it returns Null().
+// If the index is out of range, it returns [Null]().
 func (a ValueArray) Get(index int) Value {
 	if index < 0 || index >= len(a.data) {
 		return Null()
@@ -170,7 +170,7 @@ func (a ValueArray) Get(index int) Value {
 
 // TryGet gets a value from the map by index, with a second return value of true if successful.
 //
-// If the index is out of range, it returns (Null(), false).
+// If the index is out of range, it returns ([Null](), false).
 func (a ValueArray) TryGet(index int) (Value, bool) {
 	if index < 0 || index >= len(a.data) {
 		return Null(), false
@@ -178,7 +178,7 @@ func (a ValueArray) TryGet(index int) (Value, bool) {
 	return a.data[index], true
 }
 
-// AsSlice returns a copy of the wrapped data as a simple Go slice whose values are of type Value.
+// AsSlice returns a copy of the wrapped data as a simple Go slice whose values are of type [Value].
 //
 // For an uninitialized ValueArray{}, this returns nil.
 func (a ValueArray) AsSlice() []Value {
@@ -186,7 +186,7 @@ func (a ValueArray) AsSlice() []Value {
 }
 
 // AsArbitraryValueSlice returns a copy of the wrapped data as a simple Go slice whose values are
-// of any type. The behavior for each value is the same as Value.AsArbitraryValue().
+// of any type. The behavior for each value is the same as [Value.AsArbitraryValue].
 //
 // For an uninitialized ValueArray{}, this returns nil.
 func (a ValueArray) AsArbitraryValueSlice() []any {
@@ -240,7 +240,7 @@ func (a ValueArray) Transform(fn func(index int, value Value) (Value, bool)) Val
 	return ValueArray{ret}
 }
 
-// String converts the value to a string representation, equivalent to JSONString().
+// String converts the value to a string representation, equivalent to [ValueArray.JSONString].
 //
 // This method is provided because it is common to use the Stringer interface as a quick way to
 // summarize the contents of a value. The simplest way to do so in this case is to use the JSON
