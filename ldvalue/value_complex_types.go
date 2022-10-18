@@ -3,7 +3,7 @@ package ldvalue
 // This file contains types and methods that are only used for complex data structures (array and
 // object), in the fully immutable model where no slices, maps, or interface{} values are exposed.
 
-// ArrayBuilder is a builder created by ArrayBuild(), for creating immutable arrays.
+// ArrayBuilder is a builder created by ArrayBuild(), for creating immutable JSON arrays.
 //
 // An ArrayBuilder should not be accessed by multiple goroutines at once.
 type ArrayBuilder struct {
@@ -93,21 +93,29 @@ func (b *ObjectBuilder) Set(key string, value Value) *ObjectBuilder {
 }
 
 // SetBool sets a key-value pair in the object builder to a boolean value.
+//
+// This is exactly equivalent to b.Set(key, ldvalue.Bool(value)).
 func (b *ObjectBuilder) SetBool(key string, value bool) *ObjectBuilder {
 	return b.Set(key, Bool(value))
 }
 
-// SetInt sets a key-value pair in the object builder to an int value.
+// SetInt sets a key-value pair in the object builder to an integer numeric value.
+//
+// This is exactly equivalent to b.Set(key, ldvalue.Int(value)).
 func (b *ObjectBuilder) SetInt(key string, value int) *ObjectBuilder {
 	return b.Set(key, Int(value))
 }
 
-// SetFloat64 sets a key-value pair in the object builder to a float64 value.
+// SetFloat64 sets a key-value pair in the object builder to a float64 numeric value.
+//
+// This is exactly equivalent to b.Set(key, ldvalue.Float64(value)).
 func (b *ObjectBuilder) SetFloat64(key string, value float64) *ObjectBuilder {
 	return b.Set(key, Float64(value))
 }
 
 // SetString sets a key-value pair in the object builder to a string value.
+//
+// This is exactly equivalent to b.Set(key, ldvalue.String(value)).
 func (b *ObjectBuilder) SetString(key string, value string) *ObjectBuilder {
 	return b.Set(key, String(value))
 }
@@ -132,12 +140,17 @@ func (b *ObjectBuilder) Build() Value {
 // Count returns the number of elements in an array or JSON object.
 //
 // For values of any other type, it returns zero.
+//
+// If the value is a JSON array or object created from unparsed JSON with Raw(), this method
+// first parses the JSON, which can be inefficient. See Raw().
 func (v Value) Count() int {
 	switch v.valueType {
 	case ArrayType:
 		return v.arrayValue.Count()
 	case ObjectType:
 		return v.objectValue.Count()
+	case RawType:
+		return v.parseIfRaw().Count()
 	}
 	return 0
 }
@@ -145,6 +158,9 @@ func (v Value) Count() int {
 // GetByIndex gets an element of an array by index.
 //
 // If the value is not an array, or if the index is out of range, it returns Null().
+//
+// If the value is a JSON array object created from unparsed JSON with Raw(), this method
+// first parses the JSON, which can be inefficient. See Raw().
 func (v Value) GetByIndex(index int) Value {
 	ret, _ := v.TryGetByIndex(index)
 	return ret
@@ -154,7 +170,13 @@ func (v Value) GetByIndex(index int) Value {
 // successful.
 //
 // If the value is not an array, or if the index is out of range, it returns (Null(), false).
+//
+// If the value is a JSON array object created from unparsed JSON with Raw(), this method
+// first parses the JSON, which can be inefficient. See Raw().
 func (v Value) TryGetByIndex(index int) (Value, bool) {
+	if v.valueType == RawType {
+		return v.parseIfRaw().TryGetByIndex(index)
+	}
 	return v.arrayValue.TryGet(index)
 	// This is always safe because if v isn't an array, arrayValue is an empty ValueArray{}
 	// and TryGet will always return Null(), false.
@@ -166,7 +188,13 @@ func (v Value) TryGetByIndex(index int) (Value, bool) {
 // Otherwise, a new slice is allocated if there are any keys.
 //
 // The ordering of the keys is undefined.
+//
+// If the value is a JSON array object created from unparsed JSON with Raw(), this method
+// first parses the JSON, which can be inefficient. See Raw().
 func (v Value) Keys(sliceIn []string) []string {
+	if v.Type() == RawType {
+		return Parse(v.rawValue).Keys(sliceIn)
+	}
 	if v.valueType == ObjectType {
 		return v.objectValue.Keys(sliceIn)
 	}
@@ -176,8 +204,12 @@ func (v Value) Keys(sliceIn []string) []string {
 // GetByKey gets a value from a JSON object by key.
 //
 // If the value is not an object, or if the key is not found, it returns Null().
+//
+// If the value is a JSON array object created from unparsed JSON with Raw(), this method
+// first parses the JSON, which can be inefficient. See Raw().
 func (v Value) GetByKey(name string) Value {
-	return v.objectValue.Get(name)
+	ret, _ := v.TryGetByKey(name)
+	return ret
 	// This is always safe because if v isn't an object, objectValue is an empty ValueMap{}
 	// and keys will never be found.
 }
@@ -186,7 +218,13 @@ func (v Value) GetByKey(name string) Value {
 // successful.
 //
 // If the value is not an object, or if the key is not found, it returns (Null(), false).
+//
+// If the value is a JSON array object created from unparsed JSON with Raw(), this method
+// first parses the JSON, which can be inefficient. See Raw().
 func (v Value) TryGetByKey(name string) (Value, bool) {
+	if v.Type() == RawType {
+		return Parse(v.rawValue).TryGetByKey(name)
+	}
 	return v.objectValue.TryGet(name)
 }
 
@@ -232,6 +270,9 @@ func (v Value) TryGetByKey(name string) (Value, bool) {
 //
 // For array and object values, if the function does not modify or drop any values, the exact
 // same instance is returned without allocating a new slice or map.
+//
+// If the value is a JSON array object created from unparsed JSON with Raw(), this method
+// first parses the JSON, which can be inefficient. See Raw().
 func (v Value) Transform(fn func(index int, key string, value Value) (Value, bool)) Value {
 	switch v.valueType {
 	case NullType:
@@ -249,6 +290,8 @@ func (v Value) Transform(fn func(index int, key string, value Value) (Value, boo
 				return key, resultValue, ok
 			},
 		)}
+	case RawType:
+		return v.parseIfRaw().Transform(fn)
 	default:
 		if transformedValue, ok := fn(0, "", v); ok {
 			return transformedValue
@@ -260,13 +303,19 @@ func (v Value) Transform(fn func(index int, key string, value Value) (Value, boo
 // AsValueArray converts the Value to the immutable ValueArray type if it is a JSON array.
 // Otherwise it returns a ValueArray in an uninitialized (nil) state. This is an efficient operation
 // that does not allocate a new slice.
+//
+// If the value is a JSON array object created from unparsed JSON with Raw(), this method
+// first parses the JSON, which can be inefficient. See Raw().
 func (v Value) AsValueArray() ValueArray {
-	return v.arrayValue
+	return v.parseIfRaw().arrayValue
 }
 
 // AsValueMap converts the Value to the immutable ValueMap type if it is a JSON object. Otherwise
 // it returns a ValueMap in an uninitialized (nil) state. This is an efficient operation that does
 // not allocate a new map.
+//
+// If the value is a JSON array object created from unparsed JSON with Raw(), this method
+// first parses the JSON, which can be inefficient. See Raw().
 func (v Value) AsValueMap() ValueMap {
-	return v.objectValue
+	return v.parseIfRaw().objectValue
 }

@@ -1,4 +1,4 @@
-// +build launchdarkly_easyjson
+//go:build launchdarkly_easyjson
 
 package ldvalue
 

@@ -1,5 +1,4 @@
 //go:build launchdarkly_easyjson
-// +build launchdarkly_easyjson
 
 package ldvalue
 
@@ -36,11 +35,7 @@ func (v Value) MarshalEasyJSON(writer *ej_jwriter.Writer) {
 	case ObjectType:
 		v.objectValue.MarshalEasyJSON(writer)
 	case RawType:
-		if len(v.stringValue) == 0 {
-			writer.Raw(nullAsJSONBytes, nil) // see Value.MarshalJSON
-		} else {
-			writer.RawString(v.stringValue)
-		}
+		writer.Raw(v.rawValue, nil)
 	}
 }
 
@@ -56,60 +51,6 @@ func (v *Value) UnmarshalEasyJSON(lexer *jlexer.Lexer) {
 	} else {
 		*v = CopyArbitraryValue(lexer.Interface())
 	}
-}
-
-func (v OptionalBool) MarshalEasyJSON(writer *ej_jwriter.Writer) {
-	if v.hasValue {
-		writer.Bool(v.value)
-	} else {
-		writer.Raw(nullAsJSONBytes, nil)
-	}
-}
-
-func (v *OptionalBool) UnmarshalEasyJSON(lexer *jlexer.Lexer) {
-	if lexer.IsNull() {
-		lexer.Null()
-		*v = OptionalBool{}
-		return
-	}
-	v.hasValue = true
-	v.value = lexer.Bool()
-}
-
-func (v OptionalInt) MarshalEasyJSON(writer *ej_jwriter.Writer) {
-	if v.hasValue {
-		writer.Int(v.value)
-	} else {
-		writer.Raw(nullAsJSONBytes, nil)
-	}
-}
-
-func (v *OptionalInt) UnmarshalEasyJSON(lexer *jlexer.Lexer) {
-	if lexer.IsNull() {
-		lexer.Null()
-		*v = OptionalInt{}
-		return
-	}
-	v.hasValue = true
-	v.value = lexer.Int()
-}
-
-func (v OptionalString) MarshalEasyJSON(writer *ej_jwriter.Writer) {
-	if v.hasValue {
-		writer.String(v.value)
-	} else {
-		writer.Raw(nullAsJSONBytes, nil)
-	}
-}
-
-func (v *OptionalString) UnmarshalEasyJSON(lexer *jlexer.Lexer) {
-	if lexer.IsNull() {
-		lexer.Null()
-		*v = OptionalString{}
-		return
-	}
-	v.hasValue = true
-	v.value = lexer.String()
 }
 
 func (v ValueArray) MarshalEasyJSON(writer *ej_jwriter.Writer) {
@@ -146,7 +87,7 @@ func (v *ValueArray) UnmarshalEasyJSON(lexer *jlexer.Lexer) {
 
 func (v ValueMap) MarshalEasyJSON(writer *ej_jwriter.Writer) {
 	if v.data == nil {
-		writer.Raw(nullAsJSONBytes, nil)
+		writer.Raw(nullAsJSONBytes, nil) //COVERAGE: EasyJSON optimizations may prevent us from reaching this line
 		return
 	}
 	writer.RawByte('{')

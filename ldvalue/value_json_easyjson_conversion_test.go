@@ -1,5 +1,4 @@
 //go:build launchdarkly_easyjson
-// +build launchdarkly_easyjson
 
 package ldvalue
 
@@ -12,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestEasyJsonMarshalUnmarshal(t *testing.T) {
+func TestValueEasyJsonMarshalUnmarshal(t *testing.T) {
 	items := []struct {
 		value Value
 		json  string
@@ -82,6 +81,58 @@ func TestEasyJsonMarshalRaw(t *testing.T) {
 			j, err := easyjson.Marshal(value)
 			assert.NoError(t, err)
 			assert.Equal(t, params.output, string(j))
+		})
+	}
+}
+
+func TestValueArrayEasyJsonMarshalUnmarshal(t *testing.T) {
+	items := []struct {
+		valueArray ValueArray
+		json       string
+	}{
+		{ValueArray{}, nullAsJSON},
+		{ValueArrayOf(), `[]`},
+		{ValueArrayOf(String("a"), String("b")), `["a", "b"]`},
+	}
+	for _, item := range items {
+		t.Run(fmt.Sprintf("json %v", item.json), func(t *testing.T) {
+			j, err := easyjson.Marshal(item.valueArray)
+			assert.NoError(t, err)
+			assert.JSONEq(t, item.json, string(j))
+
+			assert.JSONEq(t, item.json, item.valueArray.String())
+			assert.JSONEq(t, item.json, item.valueArray.JSONString())
+
+			var a ValueArray
+			err = easyjson.Unmarshal([]byte(item.json), &a)
+			assert.NoError(t, err)
+			assert.Equal(t, item.valueArray, a)
+		})
+	}
+}
+
+func TestValueMapEasyJsonMarshalUnmarshal(t *testing.T) {
+	items := []struct {
+		valueMap ValueMap
+		json     string
+	}{
+		{ValueMap{}, nullAsJSON},
+		{ValueMapBuild().Build(), `{}`},
+		{ValueMapBuild().Set("a", Int(1)).Set("b", Int(2)).Build(), `{"a": 1, "b": 2}`},
+	}
+	for _, item := range items {
+		t.Run(fmt.Sprintf("json %v", item.json), func(t *testing.T) {
+			j, err := easyjson.Marshal(item.valueMap)
+			assert.NoError(t, err)
+			assert.JSONEq(t, item.json, string(j))
+
+			assert.JSONEq(t, item.json, item.valueMap.String())
+			assert.JSONEq(t, item.json, item.valueMap.JSONString())
+
+			var m ValueMap
+			err = easyjson.Unmarshal([]byte(item.json), &m)
+			assert.NoError(t, err)
+			assert.Equal(t, item.valueMap, m)
 		})
 	}
 }
