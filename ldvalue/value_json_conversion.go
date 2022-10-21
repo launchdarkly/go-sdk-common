@@ -143,7 +143,7 @@ func (v Value) WriteToJSONWriter(w *jwriter.Writer) {
 	}
 }
 
-// JSONString returns the JSON representation of the map.
+// JSONString returns the JSON representation of the array.
 func (a ValueArray) JSONString() string {
 	bytes, _ := a.MarshalJSON()
 	// It shouldn't be possible for marshalling to fail, because Value can only contain

@@ -82,11 +82,9 @@ func (m *MultiBuilder) Build() Context {
 			}
 			individualErrors[string(c.Kind())] = err
 		default:
-			for j := 0; j < i; j++ {
-				if c.Kind() == m.contexts[j].Kind() { // same kind was seen twice
-					duplicates = true
-					break
-				}
+			// duplicate check's correctness relies on m.contexts being sorted by kind.
+			if i > 0 && m.contexts[i-1].Kind() == c.Kind() {
+				duplicates = true
 			}
 		}
 	}

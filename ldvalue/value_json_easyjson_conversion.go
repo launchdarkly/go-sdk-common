@@ -104,20 +104,20 @@ func (m ValueMap) MarshalEasyJSON(writer *ej_jwriter.Writer) {
 	writer.RawByte('}')
 }
 
-func (v *ValueMap) UnmarshalEasyJSON(lexer *jlexer.Lexer) {
+func (m *ValueMap) UnmarshalEasyJSON(lexer *jlexer.Lexer) {
 	if lexer.IsNull() {
 		lexer.Null()
-		*v = ValueMap{}
+		*m = ValueMap{}
 		return
 	}
-	v.data = make(map[string]Value)
+	m.data = make(map[string]Value)
 	lexer.Delim('{')
 	for !lexer.IsDelim('}') {
 		key := string(lexer.String())
 		lexer.WantColon()
 		var value Value
 		value.UnmarshalEasyJSON(lexer)
-		v.data[key] = value
+		m.data[key] = value
 		lexer.WantComma()
 	}
 	lexer.Delim('}')
