@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestJsonMarshalUnmarshal(t *testing.T) {
+func TestValueJSONMarshalUnmarshal(t *testing.T) {
 	items := []struct {
 		value Value
 		json  string
@@ -34,7 +34,6 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, item.json, string(j))
 
-			assert.Equal(t, item.json, item.value.String())
 			assert.Equal(t, item.json, item.value.JSONString())
 			assert.Equal(t, json.RawMessage(item.json), item.value.AsRaw())
 
@@ -86,7 +85,7 @@ func TestMarshalRaw(t *testing.T) {
 	}
 }
 
-func TestUnmarshalErrorConditions(t *testing.T) {
+func TestValueUnmarshalErrorConditions(t *testing.T) {
 	var v Value
 	for _, data := range [][]byte{
 		nil,
@@ -101,5 +100,89 @@ func TestUnmarshalErrorConditions(t *testing.T) {
 	} {
 		assert.Error(t, json.Unmarshal(data, &v))
 		assert.Equal(t, Null(), Parse(data))
+	}
+}
+
+func TestValueArrayJSONMarshalUnmarshal(t *testing.T) {
+	items := []struct {
+		valueArray ValueArray
+		json       string
+	}{
+		{ValueArray{}, nullAsJSON},
+		{ValueArrayBuild().Build(), `[]`},
+		{ValueArrayOf(String("a"), String("b")), `["a","b"]`},
+	}
+	for _, item := range items {
+		t.Run(fmt.Sprintf("json %v", item.json), func(t *testing.T) {
+			j, err := json.Marshal(item.valueArray)
+			assert.NoError(t, err)
+			assert.Equal(t, item.json, string(j))
+
+			assert.Equal(t, item.json, item.valueArray.JSONString())
+
+			var a ValueArray
+			err = json.Unmarshal([]byte(item.json), &a)
+			assert.NoError(t, err)
+			assert.Equal(t, item.valueArray, a)
+
+			r := jreader.NewReader([]byte(item.json))
+			a = ValueArray{}
+			a.ReadFromJSONReader(&r)
+			assert.NoError(t, r.Error())
+			assert.Equal(t, item.valueArray, a)
+
+			w := jwriter.NewWriter()
+			item.valueArray.WriteToJSONWriter(&w)
+			assert.NoError(t, w.Error())
+			assert.Equal(t, item.json, string(w.Bytes()))
+		})
+	}
+
+	for _, badJSON := range []string{"true", "1", `"x"`, "{}"} {
+		err := json.Unmarshal([]byte(badJSON), &ValueArray{})
+		assert.Error(t, err)
+		assert.IsType(t, &json.UnmarshalTypeError{}, err)
+	}
+}
+
+func TestValueMapJSONMarshalUnmarshal(t *testing.T) {
+	items := []struct {
+		valueMap ValueMap
+		json     string
+	}{
+		{ValueMap{}, nullAsJSON},
+		{ValueMapBuild().Build(), `{}`},
+		{ValueMapBuild().Set("a", Bool(true)).Build(), `{"a":true}`},
+	}
+	for _, item := range items {
+		t.Run(fmt.Sprintf("json %v", item.json), func(t *testing.T) {
+			j, err := json.Marshal(item.valueMap)
+			assert.NoError(t, err)
+			assert.Equal(t, item.json, string(j))
+
+			assert.Equal(t, item.json, item.valueMap.JSONString())
+
+			var m ValueMap
+			err = json.Unmarshal([]byte(item.json), &m)
+			assert.NoError(t, err)
+			assert.Equal(t, item.valueMap, m)
+
+			r := jreader.NewReader([]byte(item.json))
+			m = ValueMap{}
+			m.ReadFromJSONReader(&r)
+			assert.NoError(t, r.Error())
+			assert.Equal(t, item.valueMap, m)
+
+			w := jwriter.NewWriter()
+			item.valueMap.WriteToJSONWriter(&w)
+			assert.NoError(t, w.Error())
+			assert.Equal(t, item.json, string(w.Bytes()))
+		})
+	}
+
+	for _, badJSON := range []string{"true", "1", `"x"`, "[]"} {
+		err := json.Unmarshal([]byte(badJSON), &ValueMap{})
+		assert.Error(t, err)
+		assert.IsType(t, &json.UnmarshalTypeError{}, err)
 	}
 }

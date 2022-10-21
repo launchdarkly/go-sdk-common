@@ -32,9 +32,6 @@ func makeContextMarshalingAndUnmarshalingParams() []contextSerializationParams {
 		{NewBuilder("key2").Name("my-name").Build(),
 			`{"kind": "user", "key": "key2", "name": "my-name"}`},
 
-		{NewBuilder("key3").Secondary("value").Build(),
-			`{"kind": "user", "key": "key3", "_meta": {"secondary": "value"}}`},
-
 		{NewBuilder("key4").Anonymous(true).Build(),
 			`{"kind": "user", "key": "key4", "anonymous": true}`},
 		{NewBuilder("key5").Anonymous(false).Build(),
@@ -145,4 +142,14 @@ func TestContextMarshalEventOutputFormat(t *testing.T) {
 		require.Error(t, w.Error())
 		assert.Contains(t, w.Error().Error(), lderrors.ErrContextUninitialized{}.Error())
 	})
+}
+
+func TestContextJSONStringIsEquivalentToJSONMarshal(t *testing.T) {
+	for _, params := range makeContextMarshalingAndUnmarshalingParams() {
+		t.Run(params.json, func(t *testing.T) {
+			bytes, err := json.Marshal(&params.context)
+			assert.NoError(t, err)
+			jsonhelpers.AssertEqual(t, string(bytes), params.context.JSONString())
+		})
+	}
 }

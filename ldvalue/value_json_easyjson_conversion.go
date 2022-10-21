@@ -1,5 +1,4 @@
 //go:build launchdarkly_easyjson
-// +build launchdarkly_easyjson
 
 package ldvalue
 
@@ -36,11 +35,7 @@ func (v Value) MarshalEasyJSON(writer *ej_jwriter.Writer) {
 	case ObjectType:
 		v.objectValue.MarshalEasyJSON(writer)
 	case RawType:
-		if len(v.stringValue) == 0 {
-			writer.Raw(nullAsJSONBytes, nil) // see Value.MarshalJSON
-		} else {
-			writer.RawString(v.stringValue)
-		}
+		writer.Raw(v.rawValue, nil)
 	}
 }
 
@@ -58,67 +53,13 @@ func (v *Value) UnmarshalEasyJSON(lexer *jlexer.Lexer) {
 	}
 }
 
-func (v OptionalBool) MarshalEasyJSON(writer *ej_jwriter.Writer) {
-	if v.hasValue {
-		writer.Bool(v.value)
-	} else {
-		writer.Raw(nullAsJSONBytes, nil)
-	}
-}
-
-func (v *OptionalBool) UnmarshalEasyJSON(lexer *jlexer.Lexer) {
-	if lexer.IsNull() {
-		lexer.Null()
-		*v = OptionalBool{}
-		return
-	}
-	v.hasValue = true
-	v.value = lexer.Bool()
-}
-
-func (v OptionalInt) MarshalEasyJSON(writer *ej_jwriter.Writer) {
-	if v.hasValue {
-		writer.Int(v.value)
-	} else {
-		writer.Raw(nullAsJSONBytes, nil)
-	}
-}
-
-func (v *OptionalInt) UnmarshalEasyJSON(lexer *jlexer.Lexer) {
-	if lexer.IsNull() {
-		lexer.Null()
-		*v = OptionalInt{}
-		return
-	}
-	v.hasValue = true
-	v.value = lexer.Int()
-}
-
-func (v OptionalString) MarshalEasyJSON(writer *ej_jwriter.Writer) {
-	if v.hasValue {
-		writer.String(v.value)
-	} else {
-		writer.Raw(nullAsJSONBytes, nil)
-	}
-}
-
-func (v *OptionalString) UnmarshalEasyJSON(lexer *jlexer.Lexer) {
-	if lexer.IsNull() {
-		lexer.Null()
-		*v = OptionalString{}
-		return
-	}
-	v.hasValue = true
-	v.value = lexer.String()
-}
-
-func (v ValueArray) MarshalEasyJSON(writer *ej_jwriter.Writer) {
-	if v.data == nil {
+func (a ValueArray) MarshalEasyJSON(writer *ej_jwriter.Writer) {
+	if a.data == nil {
 		writer.Raw(nullAsJSONBytes, nil)
 		return
 	}
 	writer.RawByte('[')
-	for i, value := range v.data {
+	for i, value := range a.data {
 		if i != 0 {
 			writer.RawByte(',')
 		}
@@ -127,31 +68,31 @@ func (v ValueArray) MarshalEasyJSON(writer *ej_jwriter.Writer) {
 	writer.RawByte(']')
 }
 
-func (v *ValueArray) UnmarshalEasyJSON(lexer *jlexer.Lexer) {
+func (a *ValueArray) UnmarshalEasyJSON(lexer *jlexer.Lexer) {
 	if lexer.IsNull() {
 		lexer.Null()
-		*v = ValueArray{}
+		*a = ValueArray{}
 		return
 	}
 	lexer.Delim('[')
-	v.data = make([]Value, 0, 4)
+	a.data = make([]Value, 0, 4)
 	for !lexer.IsDelim(']') {
 		var value Value
 		value.UnmarshalEasyJSON(lexer)
-		v.data = append(v.data, value)
+		a.data = append(a.data, value)
 		lexer.WantComma()
 	}
 	lexer.Delim(']')
 }
 
-func (v ValueMap) MarshalEasyJSON(writer *ej_jwriter.Writer) {
-	if v.data == nil {
-		writer.Raw(nullAsJSONBytes, nil)
+func (m ValueMap) MarshalEasyJSON(writer *ej_jwriter.Writer) {
+	if m.data == nil {
+		writer.Raw(nullAsJSONBytes, nil) //COVERAGE: EasyJSON optimizations may prevent us from reaching this line
 		return
 	}
 	writer.RawByte('{')
 	first := true
-	for key, value := range v.data {
+	for key, value := range m.data {
 		if !first {
 			writer.RawByte(',')
 		}
@@ -163,20 +104,20 @@ func (v ValueMap) MarshalEasyJSON(writer *ej_jwriter.Writer) {
 	writer.RawByte('}')
 }
 
-func (v *ValueMap) UnmarshalEasyJSON(lexer *jlexer.Lexer) {
+func (m *ValueMap) UnmarshalEasyJSON(lexer *jlexer.Lexer) {
 	if lexer.IsNull() {
 		lexer.Null()
-		*v = ValueMap{}
+		*m = ValueMap{}
 		return
 	}
-	v.data = make(map[string]Value)
+	m.data = make(map[string]Value)
 	lexer.Delim('{')
 	for !lexer.IsDelim('}') {
 		key := string(lexer.String())
 		lexer.WantColon()
 		var value Value
 		value.UnmarshalEasyJSON(lexer)
-		v.data[key] = value
+		m.data[key] = value
 		lexer.WantComma()
 	}
 	lexer.Delim('}')

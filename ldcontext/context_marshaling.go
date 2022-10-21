@@ -6,6 +6,15 @@ import (
 	"github.com/launchdarkly/go-jsonstream/v3/jwriter"
 )
 
+// JSONString returns the JSON representation of the Context.
+//
+// This is equivalent to calling [Context.MarshalJSON] and converting the result to a string.
+// An invalid Context cannot be represented in JSON and produces an empty string.
+func (c Context) JSONString() string {
+	bytes, _ := c.MarshalJSON()
+	return string(bytes)
+}
+
 // MarshalJSON provides JSON serialization for Context when using json.MarshalJSON.
 //
 // LaunchDarkly's JSON schema for contexts is standardized across SDKs. There are two output formats,
@@ -39,11 +48,9 @@ func (c *Context) writeToJSONWriterInternalSingle(w *jwriter.Writer, withinKind 
 		obj.Name(ldattr.AnonymousAttr).Bool(true)
 	}
 
-	if c.secondary.IsDefined() || len(c.privateAttrs) != 0 {
+	needMeta := len(c.privateAttrs) != 0
+	if needMeta {
 		metaJSON := obj.Name(jsonPropMeta).Object()
-		if c.secondary.IsDefined() {
-			metaJSON.Name(jsonPropSecondary).String(c.secondary.StringValue())
-		}
 		if len(c.privateAttrs) != 0 {
 			name := jsonPropPrivate
 			if usingEventFormat {

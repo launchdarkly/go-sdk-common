@@ -1,10 +1,7 @@
 package ldvalue
 
 import (
-	"encoding/json"
 	"testing"
-
-	"github.com/launchdarkly/go-jsonstream/v3/jwriter"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -54,100 +51,4 @@ func TestOptionalIntFromNonNilPointer(t *testing.T) {
 
 	assert.Equal(t, 3, *o.AsPointer())
 	assert.False(t, p == o.AsPointer()) // should not be the same pointer, just the same underlying value
-}
-
-func TestOptionalIntAsStringer(t *testing.T) {
-	assert.Equal(t, "[none]", OptionalInt{}.String())
-	assert.Equal(t, "3", NewOptionalInt(3).String())
-}
-
-func TestOptionalIntJSONMarshalling(t *testing.T) {
-	testWithMarshaler := func(t *testing.T, marshal func(OptionalInt) ([]byte, error)) {
-		bytes, err := marshal(OptionalInt{})
-		assert.NoError(t, err)
-		assert.Equal(t, nullAsJSON, string(bytes))
-
-		bytes, err = marshal(NewOptionalInt(3))
-		assert.NoError(t, err)
-		assert.Equal(t, `3`, string(bytes))
-	}
-
-	t.Run("with json.Marshal", func(t *testing.T) {
-		testWithMarshaler(t, func(o OptionalInt) ([]byte, error) {
-			return json.Marshal(o)
-		})
-
-		swos := structWithOptionalInts{N1: NewOptionalInt(3)}
-		bytes, err := json.Marshal(swos)
-		assert.NoError(t, err)
-		assert.Equal(t, `{"n1":3,"n2":null,"n3":null}`, string(bytes))
-	})
-
-	t.Run("with WriteToJSONWriter", func(t *testing.T) {
-		testWithMarshaler(t, func(o OptionalInt) ([]byte, error) {
-			w := jwriter.NewWriter()
-			o.WriteToJSONWriter(&w)
-			return w.Bytes(), w.Error()
-		})
-	})
-}
-
-func TestOptionalIntJSONUnmarshalling(t *testing.T) {
-	var o OptionalInt
-	err := json.Unmarshal([]byte(nullAsJSON), &o)
-	assert.NoError(t, err)
-	assert.False(t, o.IsDefined())
-
-	err = json.Unmarshal([]byte(`3`), &o)
-	assert.NoError(t, err)
-	assert.Equal(t, NewOptionalInt(3), o)
-
-	err = json.Unmarshal([]byte(`true`), &o)
-	assert.Error(t, err)
-	assert.IsType(t, &json.UnmarshalTypeError{}, err)
-
-	err = json.Unmarshal([]byte(`x`), &o)
-	assert.Error(t, err)
-	assert.IsType(t, &json.SyntaxError{}, err)
-
-	var swos structWithOptionalInts
-	err = json.Unmarshal([]byte(`{"n1":3,"n3":null}`), &swos)
-	assert.NoError(t, err)
-	assert.Equal(t, NewOptionalInt(3), swos.N1)
-	assert.Equal(t, OptionalInt{}, swos.N2)
-	assert.Equal(t, OptionalInt{}, swos.N3)
-}
-
-type structWithOptionalInts struct {
-	N1 OptionalInt `json:"n1"`
-	N2 OptionalInt `json:"n2"`
-	N3 OptionalInt `json:"n3"`
-}
-
-func TestOptionalIntTextMarshalling(t *testing.T) {
-	b, e := NewOptionalInt(3).MarshalText()
-	assert.NoError(t, e)
-	assert.Equal(t, []byte("3"), b)
-
-	b, e = OptionalInt{}.MarshalText()
-	assert.NoError(t, e)
-	assert.Len(t, b, 0)
-}
-
-func TestOptionalIntTextUnmarshalling(t *testing.T) {
-	var o1 OptionalInt
-	assert.NoError(t, o1.UnmarshalText([]byte("3")))
-	assert.Equal(t, NewOptionalInt(3), o1)
-
-	var o2 OptionalInt
-	assert.NoError(t, o2.UnmarshalText([]byte("")))
-	assert.Equal(t, OptionalInt{}, o2)
-
-	var o3 OptionalInt
-	assert.NoError(t, o3.UnmarshalText(nil))
-	assert.Equal(t, OptionalInt{}, o3)
-
-	var o4 OptionalInt
-	assert.Error(t, o4.UnmarshalText([]byte("x")))
-	assert.Equal(t, OptionalInt{}, o4)
 }

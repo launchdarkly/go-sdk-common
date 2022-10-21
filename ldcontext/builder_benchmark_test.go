@@ -20,14 +20,13 @@ func BenchmarkBuildFromLocalBuilderNoCustomAttrsNoAlloc(b *testing.B) {
 		var b Builder
 		b.Key("key")
 		b.Name("x")
-		b.Secondary("y")
 		benchmarkContext = b.Build()
 	}
 }
 
 func BenchmarkBuildWithNoCustomAttrs(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		benchmarkContext = NewBuilder("key").Name("x").Secondary("y").Build()
+		benchmarkContext = NewBuilder("key").Name("x").Build()
 	}
 }
 

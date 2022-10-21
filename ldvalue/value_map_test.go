@@ -1,13 +1,9 @@
 package ldvalue
 
 import (
-	"encoding/json"
 	"fmt"
 	"sort"
 	"testing"
-
-	"github.com/launchdarkly/go-jsonstream/v3/jreader"
-	"github.com/launchdarkly/go-jsonstream/v3/jwriter"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -306,49 +302,6 @@ func TestTransformValueMap(t *testing.T) {
 	}
 	assert.Equal(t, ValueMap{}, ValueMap{}.Transform(shouldNotCallThis))
 	assert.Equal(t, ValueMapBuild().Build(), ValueMapBuild().Build().Transform(shouldNotCallThis))
-}
-
-func TestValueMapJSONMarshalUnmarshal(t *testing.T) {
-	items := []struct {
-		valueMap ValueMap
-		json     string
-	}{
-		{ValueMap{}, nullAsJSON},
-		{ValueMapBuild().Build(), `{}`},
-		{ValueMapBuild().Set("a", Bool(true)).Build(), `{"a":true}`},
-	}
-	for _, item := range items {
-		t.Run(fmt.Sprintf("json %v", item.json), func(t *testing.T) {
-			j, err := json.Marshal(item.valueMap)
-			assert.NoError(t, err)
-			assert.Equal(t, item.json, string(j))
-
-			assert.Equal(t, item.json, item.valueMap.String())
-			assert.Equal(t, item.json, item.valueMap.JSONString())
-
-			var m ValueMap
-			err = json.Unmarshal([]byte(item.json), &m)
-			assert.NoError(t, err)
-			assert.Equal(t, item.valueMap, m)
-
-			r := jreader.NewReader([]byte(item.json))
-			m = ValueMap{}
-			m.ReadFromJSONReader(&r)
-			assert.NoError(t, r.Error())
-			assert.Equal(t, item.valueMap, m)
-
-			w := jwriter.NewWriter()
-			item.valueMap.WriteToJSONWriter(&w)
-			assert.NoError(t, w.Error())
-			assert.Equal(t, item.json, string(w.Bytes()))
-		})
-	}
-
-	for _, badJSON := range []string{"true", "1", `"x"`, "[]"} {
-		err := json.Unmarshal([]byte(badJSON), &ValueMap{})
-		assert.Error(t, err)
-		assert.IsType(t, &json.UnmarshalTypeError{}, err)
-	}
 }
 
 func shouldBeSameMap(t *testing.T, m0 map[string]Value, m1 map[string]Value) {

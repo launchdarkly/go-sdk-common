@@ -1,11 +1,6 @@
 package ldvalue
 
 import (
-	"encoding/json"
-
-	"github.com/launchdarkly/go-jsonstream/v3/jreader"
-	"github.com/launchdarkly/go-jsonstream/v3/jwriter"
-
 	"golang.org/x/exp/slices"
 )
 
@@ -126,16 +121,14 @@ func CopyValueArray(data []Value) ValueArray {
 	if len(data) == 0 {
 		return ValueArray{emptyArray}
 	}
-	a := make([]Value, len(data))
-	copy(a, data)
-	return ValueArray{data: a}
+	return ValueArray{data: slices.Clone(data)}
 }
 
-// CopyArbitraryValueArray copies an existing ordinary map of interface{} values to a ValueArray. The
-// behavior for each value is the same as CopyArbitraryValue.
+// CopyArbitraryValueArray copies an existing ordinary slice of values of any type to a ValueArray.
+// The behavior for each value is the same as CopyArbitraryValue.
 //
 // If the parameter is nil, an uninitialized ValueArray{} is returned instead of a zero-length map.
-func CopyArbitraryValueArray(data []interface{}) ValueArray {
+func CopyArbitraryValueArray(data []any) ValueArray {
 	if data == nil {
 		return ValueArray{}
 	}
@@ -193,14 +186,14 @@ func (a ValueArray) AsSlice() []Value {
 }
 
 // AsArbitraryValueSlice returns a copy of the wrapped data as a simple Go slice whose values are
-// of type interface{}. The behavior for each value is the same as Value.AsArbitraryValue().
+// of any type. The behavior for each value is the same as Value.AsArbitraryValue().
 //
 // For an uninitialized ValueArray{}, this returns nil.
-func (a ValueArray) AsArbitraryValueSlice() []interface{} {
+func (a ValueArray) AsArbitraryValueSlice() []any {
 	if a.data == nil {
 		return nil
 	}
-	ret := make([]interface{}, len(a.data))
+	ret := make([]any, len(a.data))
 	for i, v := range a.data {
 		ret[i] = v.AsArbitraryValue()
 	}
@@ -254,74 +247,4 @@ func (a ValueArray) Transform(fn func(index int, value Value) (Value, bool)) Val
 // representation.
 func (a ValueArray) String() string {
 	return a.JSONString()
-}
-
-// JSONString returns the JSON representation of the map.
-func (a ValueArray) JSONString() string {
-	bytes, _ := a.MarshalJSON()
-	// It shouldn't be possible for marshalling to fail, because Value can only contain
-	// JSON-compatible types. But if it somehow did fail, bytes will be nil and we'll return
-	// an empty tring.
-	return string(bytes)
-}
-
-// MarshalJSON converts the ValueArray to its JSON representation.
-//
-// Like a Go slice, a ValueArray in an uninitialized/nil state produces a JSON null rather than an empty [].
-func (a ValueArray) MarshalJSON() ([]byte, error) {
-	if a.data == nil {
-		return nullAsJSONBytes, nil
-	}
-	return json.Marshal(a.data)
-}
-
-// UnmarshalJSON parses a ValueArray from JSON.
-func (a *ValueArray) UnmarshalJSON(data []byte) error {
-	return jreader.UnmarshalJSONWithReader(data, a)
-}
-
-// ReadFromJSONReader provides JSON deserialization for use with the jsonstream API.
-//
-// This implementation is used by the SDK in cases where it is more efficient than JSON.Unmarshal.
-// See the jsonstream package for more details.
-func (a *ValueArray) ReadFromJSONReader(r *jreader.Reader) {
-	arr := r.ArrayOrNull()
-	a.readFromJSONArray(r, &arr)
-}
-
-// WriteToJSONWriter provides JSON serialization for use with the jsonstream API.
-//
-// The JSON output format is identical to what is produced by json.Marshal, but this implementation is
-// more efficient when building output with jsonstream. See the jsonstream package for more details.
-//
-// Like a Go slice, a ValueArray in an uninitialized/nil state produces a JSON null rather than an empty [].
-func (a ValueArray) WriteToJSONWriter(w *jwriter.Writer) {
-	if a.data == nil {
-		w.Null()
-		return
-	}
-	arr := w.Array()
-	for _, v := range a.data {
-		v.WriteToJSONWriter(w)
-	}
-	arr.End()
-}
-
-func (a *ValueArray) readFromJSONArray(r *jreader.Reader, arr *jreader.ArrayState) {
-	if r.Error() != nil {
-		return
-	}
-	if !arr.IsDefined() {
-		*a = ValueArray{}
-		return
-	}
-	var ab ValueArrayBuilder
-	for arr.Next() {
-		var vv Value
-		vv.ReadFromJSONReader(r)
-		ab.Add(vv)
-	}
-	if r.Error() == nil {
-		*a = ab.Build()
-	}
 }

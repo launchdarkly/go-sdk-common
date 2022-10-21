@@ -75,6 +75,12 @@ func TestArrayGetByIndex(t *testing.T) {
 	assert.Equal(t, Null(), item)
 }
 
+func TestArrayAsRawValue(t *testing.T) {
+	v := Raw(json.RawMessage(`["a"]`))
+	assert.Equal(t, 1, v.Count())
+	assert.Equal(t, String("a"), v.GetByIndex(0))
+}
+
 func TestUsingArrayMethodsForNonArrayValue(t *testing.T) {
 	values := []Value{
 		Null(),
@@ -154,6 +160,12 @@ func TestObjectGetByKey(t *testing.T) {
 	item, ok = value.TryGetByKey("bad-key")
 	assert.False(t, ok)
 	assert.Equal(t, Null(), item)
+}
+
+func TestObjectAsRawValue(t *testing.T) {
+	value := Raw([]byte(`{"item0": "a", "item1": 1}`))
+	assert.Equal(t, 2, value.Count())
+	assert.Equal(t, String("a"), value.GetByKey("item0"))
 }
 
 func TestUsingObjectMethodsForNonObjectValue(t *testing.T) {
@@ -290,9 +302,12 @@ func TestTransformArray(t *testing.T) {
 	fnAddOne := func(index int, key string, value Value) (Value, bool) {
 		return Int(value.IntValue() + 1), true
 	}
-	a1 := ArrayOf(Int(2), Int(4))
-	a1a := a1.Transform(fnAddOne)
-	assert.Equal(t, ArrayOf(Int(3), Int(5)), a1a)
+	a := ArrayOf(Int(2), Int(4))
+	expected := ArrayOf(Int(3), Int(5))
+	assert.Equal(t, expected, a.Transform(fnAddOne))
+
+	aRaw := Raw(json.RawMessage(a.JSONString()))
+	assert.Equal(t, expected, aRaw.Transform(fnAddOne))
 }
 
 func TestTransformObject(t *testing.T) {
@@ -301,16 +316,23 @@ func TestTransformObject(t *testing.T) {
 	fnAddOne := func(index int, key string, value Value) (Value, bool) {
 		return Int(value.IntValue() + 1), true
 	}
-	o1 := ObjectBuild().Set("a", Int(2)).Set("b", Int(4)).Build()
-	o1a := o1.Transform(fnAddOne)
-	assert.Equal(t, ObjectBuild().Set("a", Int(3)).Set("b", Int(5)).Build(), o1a)
+	o := ObjectBuild().Set("a", Int(2)).Set("b", Int(4)).Build()
+	expected := ObjectBuild().Set("a", Int(3)).Set("b", Int(5)).Build()
+	assert.Equal(t, expected, o.Transform(fnAddOne))
+
+	oRaw := Raw(json.RawMessage(o.JSONString()))
+	assert.Equal(t, expected, oRaw.Transform(fnAddOne))
 }
 
 func TestAsValueArray(t *testing.T) {
 	value := ArrayOf(String("a"))
 	a := value.AsValueArray()
-	assert.Equal(t, ValueArrayOf(String("a")), a)
+	expected := ValueArrayOf(String("a"))
+	assert.Equal(t, expected, a)
 	shouldBeSameSlice(t, a.data, value.arrayValue.data)
+
+	aRaw := Raw(json.RawMessage(a.JSONString()))
+	assert.Equal(t, expected, aRaw.AsValueArray())
 
 	assert.Equal(t, ValueArray{}, Null().AsValueArray())
 	assert.Equal(t, ValueArray{}, Bool(true).AsValueArray())
@@ -322,8 +344,12 @@ func TestAsValueArray(t *testing.T) {
 func TestAsValueMap(t *testing.T) {
 	value := ObjectBuild().Set("a", Int(1)).Build()
 	m := value.AsValueMap()
-	assert.Equal(t, ValueMapBuild().Set("a", Int(1)).Build(), m)
+	expected := ValueMapBuild().Set("a", Int(1)).Build()
+	assert.Equal(t, expected, m)
 	shouldBeSameMap(t, m.data, value.objectValue.data)
+
+	oRaw := Raw(json.RawMessage(m.JSONString()))
+	assert.Equal(t, expected, oRaw.AsValueMap())
 
 	assert.Equal(t, ValueMap{}, Null().AsValueMap())
 	assert.Equal(t, ValueMap{}, Bool(true).AsValueMap())

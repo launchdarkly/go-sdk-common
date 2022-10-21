@@ -28,7 +28,9 @@
 // Context will be invalid (as indicated by its Err() method returning an error) and the SDK will
 // refuse to use it for evaluations or events.
 //
-// 3. Previously, the Anonymous property had three states: true, false, or undefined/null.
+// 3. The SDK no longer supports setting the Secondary meta-attribute.
+//
+// 4. Previously, the Anonymous property had three states: true, false, or undefined/null.
 // Undefined/null and false were functionally the same in terms of the LaunchDarkly
 // dashboard/indexing behavior, but they were represented differently in JSON and could behave
 // differently if referenced in a flag rule (an undefined/null value would not match "anonymous is

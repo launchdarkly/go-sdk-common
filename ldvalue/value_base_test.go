@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	helpers "github.com/launchdarkly/go-test-helpers/v3"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestValueTypes(t *testing.T) {
@@ -169,29 +169,23 @@ func TestStringValue(t *testing.T) {
 }
 
 func TestRawValue(t *testing.T) {
-	rawJson := json.RawMessage([]byte("[1]"))
-	v := Raw(rawJson)
-
+	rawJSON := json.RawMessage(`[1]`)
+	v := Raw(rawJSON)
 	assert.Equal(t, RawType, v.Type())
-	assert.Equal(t, rawJson, v.AsRaw())
-	assert.True(t, v.IsDefined())
-	assert.False(t, v.IsNull())
-	assert.False(t, v.IsBool())
-	assert.False(t, v.IsNumber())
-	assert.False(t, v.IsInt())
-	assert.False(t, v.IsString())
+	assert.Equal(t, rawJSON, v.AsRaw())
+	assert.Equal(t, string(rawJSON), v.JSONString())
 
-	// conversion of other types to Raw is covered in value_serialization_test
-
-	// treating a Raw as a non-Raw produces empty values
-	assert.False(t, v.BoolValue())
-	assert.Equal(t, 0, v.IntValue())
-	assert.Equal(t, float64(0), v.Float64Value())
-	assert.Equal(t, "", v.StringValue())
-	assert.Equal(t, OptionalString{}, v.AsOptionalString())
-	assert.Equal(t, 0, v.Count())
-	assert.Equal(t, Null(), v.GetByIndex(0))
-	assert.Equal(t, Null(), v.GetByKey("x"))
+	// inspecting the value in any way causes it to be parsed and treated as a regular value
+	assert.True(t, Raw(json.RawMessage(`null`)).IsNull())
+	assert.True(t, Raw(json.RawMessage(`true`)).IsBool())
+	assert.True(t, Raw(json.RawMessage(`"a"`)).IsString())
+	assert.True(t, Raw(json.RawMessage(`1.5`)).IsNumber())
+	assert.True(t, Raw(json.RawMessage(`1`)).IsInt())
+	assert.True(t, Raw(json.RawMessage(`true`)).BoolValue())
+	assert.Equal(t, "a", Raw(json.RawMessage(`"a"`)).StringValue())
+	assert.Equal(t, NewOptionalString("a"), Raw(json.RawMessage(`"a"`)).AsOptionalString())
+	assert.Equal(t, 1.5, Raw(json.RawMessage(`1.5`)).Float64Value())
+	assert.Equal(t, 1, Raw(json.RawMessage(`1.5`)).IntValue())
 }
 
 func TestConvertPrimitivesFromArbitraryValue(t *testing.T) {
@@ -330,6 +324,14 @@ func TestConvertPrimitivesFromArbitraryValue(t *testing.T) {
 	})
 }
 
+func TestFromJSONMarshal(t *testing.T) {
+	s := struct {
+		X int `json:"x"`
+	}{X: 2}
+	v := FromJSONMarshal(s)
+	assert.Equal(t, ObjectBuild().Set("x", Int(2)).Build(), v)
+}
+
 func TestConvertPrimitivesToArbitraryValue(t *testing.T) {
 	assert.Nil(t, Null().AsArbitraryValue())
 	assert.Equal(t, true, Bool(true).AsArbitraryValue())
@@ -348,7 +350,6 @@ func TestEqualPrimitives(t *testing.T) {
 		func() Value { return Float64(2.5) },
 		func() Value { return String("") },
 		func() Value { return String("1") },
-		func() Value { return Raw(json.RawMessage("1")) },
 	}
 	for i, fn0 := range valueFns {
 		v0 := fn0()
@@ -363,12 +364,39 @@ func TestEqualPrimitives(t *testing.T) {
 	}
 }
 
+func TestEqualPrimitivesAndRawRepresentations(t *testing.T) {
+	valueFns := []func() Value{
+		func() Value { return Null() },
+		func() Value { return Bool(false) },
+		func() Value { return Bool(true) },
+		func() Value { return Int(1) },
+		func() Value { return Float64(2.5) },
+		func() Value { return String("") },
+		func() Value { return String("1") },
+	}
+	for i, fn0 := range valueFns {
+		v0 := fn0()
+		v0Raw := Raw([]byte(v0.JSONString()))
+		valuesShouldBeEqual(t, v0, v0Raw)
+		for j, fn1 := range valueFns {
+			if i != j {
+				v1 := fn1()
+				v1Raw := Raw([]byte(v1.JSONString()))
+				valuesShouldNotBeEqual(t, v0, v1Raw)
+				valuesShouldNotBeEqual(t, v1, v0Raw)
+			}
+		}
+	}
+}
+
 func valuesShouldBeEqual(t *testing.T, value0 Value, value1 Value) {
+	t.Helper()
 	assert.True(t, value0.Equal(value1), "%s should equal %s", value0, value1)
 	assert.True(t, value1.Equal(value0), "%s should equal %s conversely", value1, value0)
 }
 
 func valuesShouldNotBeEqual(t *testing.T, value0 Value, value1 Value) {
+	t.Helper()
 	assert.False(t, value0.Equal(value1), "%s should not equal %s", value0, value1)
 	assert.False(t, value1.Equal(value0), "%s should not equal %s", value1, value0)
 }
@@ -401,8 +429,8 @@ func TestValueAsPointer(t *testing.T) {
 }
 
 func TestConvertArbitraryValueThatFailsToSerialize(t *testing.T) {
-	v := CopyArbitraryValue(unserializableValue{})
-	assert.Equal(t, Null(), v)
+	assert.Equal(t, Null(), CopyArbitraryValue(unserializableValue{}))
+	assert.Equal(t, Null(), FromJSONMarshal(unserializableValue{}))
 }
 
 type unserializableValue struct{}

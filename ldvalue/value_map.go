@@ -1,9 +1,6 @@
 package ldvalue
 
 import (
-	"github.com/launchdarkly/go-jsonstream/v3/jreader"
-	"github.com/launchdarkly/go-jsonstream/v3/jwriter"
-
 	"golang.org/x/exp/maps"
 )
 
@@ -139,11 +136,11 @@ func CopyValueMap(data map[string]Value) ValueMap {
 	return ValueMap{maps.Clone(data)}
 }
 
-// CopyArbitraryValueMap copies an existing ordinary map of interface{} values to a ValueMap. The
+// CopyArbitraryValueMap copies an existing ordinary map of values of any type to a ValueMap. The
 // behavior for each value is the same as CopyArbitraryValue.
 //
 // If the parameter is nil, an uninitialized ValueMap{} is returned instead of a zero-length map.
-func CopyArbitraryValueMap(data map[string]interface{}) ValueMap {
+func CopyArbitraryValueMap(data map[string]any) ValueMap {
 	if data == nil {
 		return ValueMap{}
 	}
@@ -212,15 +209,15 @@ func (m ValueMap) AsMap() map[string]Value {
 	return maps.Clone(m.data)
 }
 
-// AsArbitraryValueMap returns a copy of the wrapped data as a simple Go map whose values are of type
-// interface{}. The behavior for each value is the same as Value.AsArbitraryValue().
+// AsArbitraryValueMap returns a copy of the wrapped data as a simple Go map whose values are of any
+// type. The behavior for each value is the same as Value.AsArbitraryValue().
 //
 // For an uninitialized ValueMap{}, this returns nil.
-func (m ValueMap) AsArbitraryValueMap() map[string]interface{} {
+func (m ValueMap) AsArbitraryValueMap() map[string]any {
 	if m.data == nil {
 		return nil
 	}
-	ret := make(map[string]interface{}, len(m.data))
+	ret := make(map[string]any, len(m.data))
 	for k, v := range m.data {
 		ret[k] = v.AsArbitraryValue()
 	}
@@ -270,81 +267,4 @@ func (m ValueMap) Transform(fn func(key string, value Value) (string, Value, boo
 		}
 	}
 	return ValueMap{ret}
-}
-
-// String converts the value to a map representation, equivalent to JSONString().
-//
-// This method is provided because it is common to use the Stringer interface as a quick way to
-// summarize the contents of a value. The simplest way to do so in this case is to use the JSON
-// representation.
-func (m ValueMap) String() string {
-	return m.JSONString()
-}
-
-// JSONString returns the JSON representation of the map.
-func (m ValueMap) JSONString() string {
-	bytes, _ := m.MarshalJSON()
-	// It shouldn't be possible for marshalling to fail, because Value can only contain
-	// JSON-compatible types. But if it somehow did fail, bytes will be nil and we'll return
-	// an empty tring.
-	return string(bytes)
-}
-
-// MarshalJSON converts the ValueMap to its JSON representation.
-//
-// Like a Go map, a ValueMap in an uninitialized/nil state produces a JSON null rather than an empty {}.
-func (m ValueMap) MarshalJSON() ([]byte, error) {
-	return jwriter.MarshalJSONWithWriter(m)
-}
-
-// UnmarshalJSON parses a ValueMap from JSON.
-func (m *ValueMap) UnmarshalJSON(data []byte) error {
-	return jreader.UnmarshalJSONWithReader(data, m)
-}
-
-// ReadFromJSONReader provides JSON deserialization for use with the jsonstream API.
-//
-// This implementation is used by the SDK in cases where it is more efficient than JSON.Unmarshal.
-// See the jsonstream package for more details.
-func (m *ValueMap) ReadFromJSONReader(r *jreader.Reader) {
-	obj := r.ObjectOrNull()
-	m.readFromJSONObject(r, &obj)
-}
-
-// WriteToJSONWriter provides JSON serialization for use with the jsonstream API.
-//
-// The JSON output format is identical to what is produced by json.Marshal, but this implementation is
-// more efficient when building output with JSONBuffer. See the jsonstream package for more details.
-//
-// Like a Go map, a ValueMap in an uninitialized/nil state produces a JSON null rather than an empty {}.
-func (m ValueMap) WriteToJSONWriter(w *jwriter.Writer) {
-	if m.data == nil {
-		w.Null()
-		return
-	}
-	obj := w.Object()
-	for k, vv := range m.data {
-		vv.WriteToJSONWriter(obj.Name(k))
-	}
-	obj.End()
-}
-
-func (m *ValueMap) readFromJSONObject(r *jreader.Reader, obj *jreader.ObjectState) {
-	if r.Error() != nil {
-		return
-	}
-	if !obj.IsDefined() {
-		*m = ValueMap{}
-		return
-	}
-	var mb ValueMapBuilder
-	for obj.Next() {
-		name := obj.Name()
-		var vv Value
-		vv.ReadFromJSONReader(r)
-		mb.Set(string(name), vv)
-	}
-	if r.Error() == nil {
-		*m = mb.Build()
-	}
 }

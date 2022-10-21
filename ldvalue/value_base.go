@@ -2,15 +2,29 @@ package ldvalue
 
 import (
 	"encoding/json"
+
+	"golang.org/x/exp/slices"
 )
 
 // Value represents any of the data types supported by JSON, all of which can be used for a LaunchDarkly
-// feature flag variation or a custom user attribute.
+// feature flag variation, or for an attribute in ldcontext.Context. Value instances are immutable.
 //
-// You cannot compare Value instances with the == operator, because the struct may contain a slice.
-// Value has an Equal method for this purpose; reflect.DeepEqual will also work.
+// The most efficient way to create a Value is with typed constructors such as Bool and String, or, for
+// complex data, the builders ArrayBuild and ObjectBuild. However, any value that can be represented in
+// JSON can be converted to a Value with CopyArbitraryValue, or you can parse a Value from JSON. The
+// following code examples all produce the same value:
 //
-// Value instances are immutable when used by code outside of this package.
+//	value := ldvalue.ObjectBuild().SetString("thing", "x").Build()
+//
+//	type MyStruct struct {
+//		Thing string `json:"thing"`
+//	}
+//	value := ldvalue.FromJSONMarshal(MyStruct{Thing: "x"})
+//
+//	value := ldvalue.Parse([]byte(`{"thing": "x"}`))
+//
+// You cannot compare Value instances with the == operator, because the struct may contain a slice. or a
+// map. Value has an Equal method for this purpose; reflect.DeepEqual will also work.
 type Value struct {
 	valueType ValueType
 	// Used when the value is a boolean.
@@ -19,10 +33,11 @@ type Value struct {
 	numberValue float64
 	// Used when the value is a string.
 	stringValue string
-	// Used when the value is an array, if it was not created from an interface{}.
+	// Used when the value is an array, zero-valued otherwise.
 	arrayValue ValueArray
-	// Used when the value is an object, if it was not created from an interface{}.
+	// Used when the value is an object, zero-valued otherwise.
 	objectValue ValueMap
+	rawValue    []byte
 }
 
 // ValueType indicates which JSON type is contained in a Value.
@@ -80,41 +95,71 @@ func String(value string) Value {
 
 // Raw creates an unparsed JSON Value.
 //
-// This constructor will store the json.RawMessage value as-is without syntax validation, and will set
-// the type of the Value to ldvalue.RawType. That means, for instance, that ldvalue.Raw(json.RawMessage("true"))
-// is not logically equivalent to ldvalue.Bool(true), even though they will produce the same result if
-// they are re-encoded to JSON.
+// This constructor stores a copy of the json.RawMessage value as-is without syntax validation, and
+// sets the type of the Value to ldvalue.RawType. The advantage of this is that if you have some
+// data that you do not expect to do any computations with, but simply want to include in JSON data
+// to be sent to LaunchDarkly, the original data will be output as-is and does not need to be parsed.
 //
-// That also means that if you pass malformed data that is not valid JSON, you will get malformed data if
-// it is re-encoded to JSON. It is the caller's responsibility to make sure the json.RawMessage really is
-// valid JSON. However, since it is easy to mistakenly write json.RawMessage(nil) (a zero-length value)
-// when what is really meant is a JSON null value, the ldvalue.Value JSON encoder will detect any use of
-// json.RawMessage(nil) or json.RawMessage("") and transparently convert it to "null" when it is
-// being encoded to JSON.
+// However, if you do anything that involves inspecting the value (such as comparing it to another
+// value, or evaluating a feature flag that references the value in a context attribute), the JSON
+// data will be parsed automatically each time that happens, so there will be no efficiency gain.
+// Therefore, if you expect any such operations to happen, it is better to use Parse() instead to
+// parse the JSON immediately, or use value builder methods such as ObjectBuild().
+//
+// If you pass malformed data that is not valid JSON, you will get malformed data if it is re-encoded
+// to JSON. It is the caller's responsibility to make sure the json.RawMessage really is valid JSON.
+// However, since it is easy to mistakenly write json.RawMessage(nil) (an invalid zero-length value)
+// when what is really meant is a JSON null value, this constructor transparently converts both
+// json.RawMessage(nil) and json.RawMessage([]byte("")) to Null().
 func Raw(value json.RawMessage) Value {
-	return Value{valueType: RawType, stringValue: string(value)}
+	if len(value) == 0 {
+		return Null()
+	}
+	return Value{valueType: RawType, rawValue: slices.Clone(value)}
 }
 
-// CopyArbitraryValue creates a Value from an arbitrary interface{} value of any type.
+// FromJSONMarshal creates a Value from the JSON representation of any Go value.
+//
+// This is based on json.Marshal, so it can be used with any value that can be passed to that
+// function, and follows the usual behavior of json.Marshal with regard to types and field names.
+// For instance, you could use it with a custom struct type:
+//
+//	type MyStruct struct {
+//		Thing string `json:"thing"`
+//	}
+//	value := ldvalue.FromJSONMarshal(MyStruct{Thing: "x"})
+//
+// It is equivalent to calling json.Marshal followed by ldvalue.Parse, so it incurs the same
+// overhead of first marshaling the value and then parsing the resulting JSON.
+func FromJSONMarshal(anyValue any) Value {
+	jsonBytes, err := json.Marshal(anyValue)
+	if err != nil {
+		return Null()
+	}
+	return Parse(jsonBytes)
+}
+
+// CopyArbitraryValue creates a Value from an arbitrary value of any type.
 //
 // If the value is nil, a boolean, an integer, a floating-point number, or a string, it becomes the
-// corresponding JSON primitive value type. If it is a slice of values ([]interface{} or
-// []Value), it is deep-copied to an array value. If it is a map of strings to values
-// (map[string]interface{} or map[string]Value), it is deep-copied to an object value.
+// corresponding JSON primitive value type. If it is a slice of values ([]any or []Value), it is
+// deep-copied to an array value. If it is a map of strings to values (map[string]any or
+// map[string]Value), it is deep-copied to an object value.
 //
 // If it is a pointer to any of the above types, then it is dereferenced and treated the same as above,
 // unless the pointer is nil, in which case it becomes Null().
 //
-// For all other types, the value is marshaled to JSON and then converted to the corresponding
-// Value type (unless marshalling returns an error, in which case it becomes Null()). This is
-// somewhat inefficient since it involves parsing the marshaled JSON.
-func CopyArbitraryValue(valueAsInterface interface{}) Value { //nolint:gocyclo // yes, we know it's a long function
-	if valueAsInterface == nil {
+// For all other types, the value is marshaled to JSON and then converted to the corresponding Value
+// type, just as if you had called FromJSONMarshal. The difference is only that CopyArbitraryValue is
+// more efficient for primitive types, slices, and maps, which it can copy without first marshaling
+// them to JSON.
+func CopyArbitraryValue(anyValue any) Value { //nolint:gocyclo // yes, we know it's a long function
+	if anyValue == nil {
 		return Null()
 		// Note that an interface value can be nil in two ways: nil with no type at all, which is this case,
 		// or a nil pointer of some specific pointer type, which we have to check for separately below.
 	}
-	switch o := valueAsInterface.(type) {
+	switch o := anyValue.(type) {
 	case Value:
 		return o
 	case *Value:
@@ -213,9 +258,9 @@ func CopyArbitraryValue(valueAsInterface interface{}) Value { //nolint:gocyclo /
 			return Null()
 		}
 		return String(*o)
-	case []interface{}:
+	case []any:
 		return copyArbitraryValueArray(o)
-	case *[]interface{}:
+	case *[]any:
 		if o == nil {
 			return Null()
 		}
@@ -227,9 +272,9 @@ func CopyArbitraryValue(valueAsInterface interface{}) Value { //nolint:gocyclo /
 			return Null()
 		}
 		return ArrayOf((*o)...)
-	case map[string]interface{}:
+	case map[string]any:
 		return copyArbitraryValueMap(o)
-	case *map[string]interface{}:
+	case *map[string]any:
 		if o == nil {
 			return Null()
 		}
@@ -249,23 +294,15 @@ func CopyArbitraryValue(valueAsInterface interface{}) Value { //nolint:gocyclo /
 		}
 		return Raw(*o)
 	default:
-		jsonBytes, err := json.Marshal(valueAsInterface)
-		if err == nil {
-			var ret Value
-			err = json.Unmarshal(jsonBytes, &ret)
-			if err == nil {
-				return ret
-			}
-		}
-		return Null()
+		return FromJSONMarshal(anyValue)
 	}
 }
 
-func copyArbitraryValueArray(o []interface{}) Value {
+func copyArbitraryValueArray(o []any) Value {
 	return Value{valueType: ArrayType, arrayValue: CopyArbitraryValueArray(o)}
 }
 
-func copyArbitraryValueMap(o map[string]interface{}) Value {
+func copyArbitraryValueMap(o map[string]any) Value {
 	return Value{valueType: ObjectType, objectValue: CopyArbitraryValueMap(o)}
 }
 
@@ -276,7 +313,7 @@ func (v Value) Type() ValueType {
 
 // IsNull returns true if the Value is a null.
 func (v Value) IsNull() bool {
-	return v.valueType == NullType
+	return v.valueType == NullType || (v.valueType == RawType && v.parseIfRaw().IsNull())
 }
 
 // IsDefined returns true if the Value is anything other than null.
@@ -289,12 +326,12 @@ func (v Value) IsDefined() bool {
 
 // IsBool returns true if the Value is a boolean.
 func (v Value) IsBool() bool {
-	return v.valueType == BoolType
+	return v.valueType == BoolType || (v.valueType == RawType && v.parseIfRaw().IsBool())
 }
 
 // IsNumber returns true if the Value is numeric.
 func (v Value) IsNumber() bool {
-	return v.valueType == NumberType
+	return v.valueType == NumberType || (v.valueType == RawType && v.parseIfRaw().IsNumber())
 }
 
 // IsInt returns true if the Value is an integer.
@@ -303,22 +340,27 @@ func (v Value) IsNumber() bool {
 // IsInt returns true if and only if the actual numeric value has no fractional component, so
 // Int(2).IsInt() and Float64(2.0).IsInt() are both true.
 func (v Value) IsInt() bool {
-	if v.valueType == NumberType {
-		return v.numberValue == float64(int(v.numberValue))
-	}
-	return false
+	return (v.valueType == NumberType && v.numberValue == float64(int(v.numberValue))) ||
+		(v.valueType == RawType && v.parseIfRaw().IsInt())
 }
 
 // IsString returns true if the Value is a string.
 func (v Value) IsString() bool {
-	return v.valueType == StringType
+	return v.valueType == StringType || (v.valueType == RawType && v.parseIfRaw().IsString())
 }
 
 // BoolValue returns the Value as a boolean.
 //
 // If the Value is not a boolean, it returns false.
 func (v Value) BoolValue() bool {
-	return v.valueType == BoolType && v.boolValue
+	switch v.valueType {
+	case BoolType:
+		return v.boolValue
+	case RawType:
+		return v.parseIfRaw().BoolValue()
+	default:
+		return false
+	}
 }
 
 // IntValue returns the value as an int.
@@ -326,20 +368,21 @@ func (v Value) BoolValue() bool {
 // If the Value is not numeric, it returns zero. If the value is a number but not an integer, it is
 // rounded toward zero (truncated).
 func (v Value) IntValue() int {
-	if v.valueType == NumberType {
-		return int(v.numberValue)
-	}
-	return 0
+	return int(v.Float64Value())
 }
 
 // Float64Value returns the value as a float64.
 //
 // If the Value is not numeric, it returns zero.
 func (v Value) Float64Value() float64 {
-	if v.valueType == NumberType {
+	switch v.valueType {
+	case NumberType:
 		return v.numberValue
+	case RawType:
+		return v.parseIfRaw().Float64Value()
+	default:
+		return 0
 	}
-	return 0
 }
 
 // StringValue returns the value as a string.
@@ -348,19 +391,27 @@ func (v Value) Float64Value() float64 {
 //
 // This is different from String(), which returns a concise string representation of any value type.
 func (v Value) StringValue() string {
-	if v.valueType == StringType {
+	switch v.valueType {
+	case StringType:
 		return v.stringValue
+	case RawType:
+		return v.parseIfRaw().StringValue()
+	default:
+		return ""
 	}
-	return ""
 }
 
 // AsOptionalString converts the value to the OptionalString type, which contains either a string
 // value or nothing if the original value was not a string.
 func (v Value) AsOptionalString() OptionalString {
-	if v.valueType == StringType {
+	switch v.valueType {
+	case StringType:
 		return NewOptionalString(v.stringValue)
+	case RawType:
+		return v.parseIfRaw().AsOptionalString()
+	default:
+		return OptionalString{}
 	}
-	return OptionalString{}
 }
 
 // AsRaw returns the value as a json.RawMessage.
@@ -373,7 +424,7 @@ func (v Value) AsOptionalString() OptionalString {
 // will get back the same string from AsRaw().
 func (v Value) AsRaw() json.RawMessage {
 	if v.valueType == RawType {
-		return json.RawMessage(v.stringValue)
+		return v.rawValue
 	}
 	bytes, err := json.Marshal(v)
 	if err == nil {
@@ -382,16 +433,17 @@ func (v Value) AsRaw() json.RawMessage {
 	return nil
 }
 
-// AsArbitraryValue returns the value in its simplest Go representation, typed as interface{}.
+// AsArbitraryValue returns the value in its simplest Go representation, typed as "any".
 //
 // This is nil for a null value; for primitive types, it is bool, float64, or string (all numbers
-// are represented as float64 because that is Go's default when parsing from JSON).
+// are represented as float64 because that is Go's default when parsing from JSON). For unparsed
+// JSON data created with Raw(), it returns a json.RawMessage.
 //
-// Arrays and objects are represented as []interface{} and map[string]interface{}. They are
-// deep-copied, which preserves immutability of the Value but may be an expensive operation.
-// To examine array and object values without copying the whole data structure, use getter
-// methods: Count, Keys, GetByIndex, TryGetByIndex, GetByKey, TryGetByKey.
-func (v Value) AsArbitraryValue() interface{} {
+// Arrays and objects are represented as []any and map[string]any. They are deep-copied, which
+// preserves immutability of the Value but may be an expensive operation. To example array and
+// object values without copying the whole data structure, use getter methods: Count, Keys,
+// GetByIndex, TryGetByIndex, GetByKey, TryGetByKey.
+func (v Value) AsArbitraryValue() any {
 	switch v.valueType {
 	case NullType:
 		return nil
@@ -407,8 +459,9 @@ func (v Value) AsArbitraryValue() interface{} {
 		return v.objectValue.AsArbitraryValueMap()
 	case RawType:
 		return v.AsRaw()
+	default:
+		return nil
 	}
-	return nil // should not be possible
 }
 
 // String converts the value to a string representation, equivalent to JSONString().
@@ -429,7 +482,12 @@ func (v Value) String() string {
 //
 // For arrays and objects, this is a deep equality test. This method behaves the same as
 // reflect.DeepEqual, but is slightly more efficient.
+//
+// Unparsed JSON values created with Raw() will be parsed in order to do this comparison.
 func (v Value) Equal(other Value) bool {
+	if v.valueType == RawType || other.valueType == RawType {
+		return v.parseIfRaw().Equal(other.parseIfRaw())
+	}
 	if v.valueType == other.valueType {
 		switch v.valueType {
 		case NullType:
@@ -464,4 +522,11 @@ func (v Value) AsPointer() *Value {
 		return nil
 	}
 	return &v
+}
+
+func (v Value) parseIfRaw() Value {
+	if v.valueType != RawType {
+		return v
+	}
+	return Parse(v.rawValue)
 }
