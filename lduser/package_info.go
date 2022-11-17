@@ -13,11 +13,18 @@
 // attributes were considered "custom" attributes, and were enclosed in a "custom" object in JSON
 // representations.
 //
+// # The User type
+//
+// The SDK now operates only on Contexts, but the former [User] type is now an alias for
+// [ldcontext.Context], so that some code written for the older SDK that referenced the User type
+// can still work-- as long as it is treating the user as an opaque value and not trying to call
+// methods of the old User type on it. For instance, the old User type had attribute accessors like
+// GetEmail() which do not exist in [ldcontext.Context].
+//
 // # Updating code while still using UserBuilder
 //
-// The former lduser.User type has been removed; the SDK now operates only on Contexts. However,
-// the [UserBuilder] type has been retained and modified to be a wrapper for [ldcontext.Builder].
-// This allows code that used the older model to still work with minor adjustments.
+// The [UserBuilder] type has been retained and modified to be a wrapper for [ldcontext.Builder],
+// allowing code that used the older model for building users to still work with minor adjustments.
 //
 // For any code that still uses UserBuilder, the significant differences from older SDK versions are:
 //
@@ -37,10 +44,10 @@
 // false"). Now, the property is a simple boolean defaulting to false, and the undefined state is
 // the same as false.
 //
-// # Migrating from UserBuilder to the ldcontext API
+// # Migrating from User/UserBuilder to the ldcontext API
 //
-// It is preferable to update existing code to use the ldcontext package directly, rather than
-// the [UserBuilder] wrapper. Here are the kinds of changes you may need to make:
+// It is preferable to update existing code to use the ldcontext package directly, rather than the
+// [User] type alias and the [UserBuilder] wrapper. Here are the kinds of changes you may need to make:
 //
 // - Code that previously created a simple User with only a key should now use [ldcontext.New].
 //
