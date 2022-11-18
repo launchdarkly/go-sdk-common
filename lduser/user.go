@@ -1,9 +1,21 @@
 package lduser
 
+import (
+	"github.com/launchdarkly/go-sdk-common/v3/ldcontext"
+)
+
+// User is an alias for the type [ldcontext.Context], representing an evaluation context.
+//
+// This is provided as a compatibility helper for application code written for older SDK versions,
+// which used users instead of contexts. See package comments for [lduser].
+type User = ldcontext.Context
+
 // UserAttribute is a string type representing the name of a user attribute.
 //
-// Constants like KeyAttribute describe all of the built-in attributes; you may also cast any string to
-// UserAttribute when referencing a custom attribute name.
+// Constants like KeyAttribute describe all of the built-in attributes that existed in the older
+// user model; you may also cast any string to UserAttribute when referencing a custom attribute
+// name. In the newer context model, none of these attribute names except for "key", "name", and
+// "anonymous" have any special significance.
 type UserAttribute string
 
 const (
