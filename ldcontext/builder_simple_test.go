@@ -189,6 +189,14 @@ func TestBuilderSetCustomAttributes(t *testing.T) {
 			makeBasicBuilder().SetString("attr1", "value1").SetString("attr2", "value2").SetString("attr3", "value3").
 				SetValue("attr2", ldvalue.Null()))
 	})
+
+	t.Run("cannot add attribute with empty name", func(t *testing.T) {
+		assert.Equal(t, makeBasicBuilder().Build(), makeBasicBuilder().SetBool("", true).Build())
+		assert.Equal(t, makeBasicBuilder().Build(), makeBasicBuilder().SetInt("", 1).Build())
+		assert.Equal(t, makeBasicBuilder().Build(), makeBasicBuilder().SetFloat64("", 1).Build())
+		assert.Equal(t, makeBasicBuilder().Build(), makeBasicBuilder().SetString("", "x").Build())
+		assert.Equal(t, makeBasicBuilder().Build(), makeBasicBuilder().SetValue("", ldvalue.ArrayOf()).Build())
+	})
 }
 
 func TestBuilderSetBuiltInAttributesByName(t *testing.T) {
