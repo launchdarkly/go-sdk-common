@@ -62,7 +62,7 @@ func TestGetOptionalAttributeNames(t *testing.T) {
 		assert.Equal(t, []string{"email", "happy"}, an)
 	})
 
-	t.Run("none for multi-kind context", func(t *testing.T) {
+	t.Run("none for multi-context", func(t *testing.T) {
 		c := NewMulti(NewWithKind("kind1", "key1"), NewWithKind("otherkind", "otherkey"))
 		an := c.GetOptionalAttributeNames(nil)
 		assert.Len(t, an, 0)

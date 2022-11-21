@@ -3,16 +3,29 @@ package ldvalue
 // This file contains types and methods that are only used for complex data structures (array and
 // object), in the fully immutable model where no slices, maps, or interface{} values are exposed.
 
-// ArrayBuilder is a builder created by ArrayBuild(), for creating immutable JSON arrays.
+// ArrayBuilder is a builder created by [ArrayBuild], for creating immutable JSON arrays.
 //
 // An ArrayBuilder should not be accessed by multiple goroutines at once.
+//
+// Other ways to create a JSON array include:
+//
+//   - Specifying all of its elements at once with [ArrayOf].
+//   - Copying it from a Go slice with [CopyArbitraryValue].
+//   - Creating it from the JSON serialization of an arbitrary type with [FromJSONMarshal].
+//   - Parsing it from JSON data with [Parse].
 type ArrayBuilder struct {
 	builder ValueArrayBuilder
 }
 
-// ObjectBuilder is a builder created by ObjectBuild(), for creating immutable JSON objects.
+// ObjectBuilder is a builder created by [ObjectBuild], for creating immutable JSON objects.
 //
 // An ObjectBuilder should not be accessed by multiple goroutines at once.
+//
+// Other ways to create a JSON object include:
+//
+//   - Copying it from a Go map with [CopyArbitraryValue].
+//   - Creating it from the JSON serialization of an arbitrary type with [FromJSONMarshal].
+//   - Parsing it from JSON data with [Parse].
 type ObjectBuilder struct {
 	builder ValueMapBuilder
 }
@@ -26,7 +39,7 @@ func (b *ArrayBuilder) Add(value Value) *ArrayBuilder {
 }
 
 // Build creates a Value containing the previously added array elements. Continuing to modify the
-// same builder by calling Add after that point does not affect the returned array.
+// same builder by calling [ArrayBuilder.Add] after that point does not affect the returned array.
 func (b *ArrayBuilder) Build() Value {
 	if b == nil {
 		return Null()
@@ -43,17 +56,15 @@ func ArrayOf(items ...Value) Value {
 	return Value{valueType: ArrayType, arrayValue: ValueArrayOf(items...)}
 }
 
-// ArrayBuild creates a builder for constructing an immutable array Value.
+// ArrayBuild creates a builder for constructing an immutable array [Value].
 //
 //	arrayValue := ldvalue.ArrayBuild().Add(ldvalue.Int(100)).Add(ldvalue.Int(200)).Build()
 func ArrayBuild() *ArrayBuilder {
 	return ArrayBuildWithCapacity(1)
 }
 
-// ArrayBuildWithCapacity creates a builder for constructing an immutable array Value.
-//
-// The capacity parameter is the same as the capacity of a slice, allowing you to preallocate space
-// if you know the number of elements; otherwise you can pass zero.
+// ArrayBuildWithCapacity creates a builder for constructing an immutable array [Value]. This is
+// the same as [ArrayBuild], but preallocates capacity for the underlying slice.
 //
 //	arrayValue := ldvalue.ArrayBuildWithCapacity(2).Add(ldvalue.Int(100)).Add(ldvalue.Int(200)).Build()
 func ArrayBuildWithCapacity(capacity int) *ArrayBuilder {
@@ -62,22 +73,20 @@ func ArrayBuildWithCapacity(capacity int) *ArrayBuilder {
 
 // CopyObject creates a Value by copying an existing map[string]Value.
 //
-// If you want to copy a map[string]interface{} instead, use CopyArbitraryValue.
+// If you want to copy a map[string]interface{} instead, use [CopyArbitraryValue].
 func CopyObject(m map[string]Value) Value {
 	return Value{valueType: ObjectType, objectValue: CopyValueMap(m)}
 }
 
-// ObjectBuild creates a builder for constructing an immutable JSON object Value.
+// ObjectBuild creates a builder for constructing an immutable JSON object [Value].
 //
 //	objValue := ldvalue.ObjectBuild().Set("a", ldvalue.Int(100)).Set("b", ldvalue.Int(200)).Build()
 func ObjectBuild() *ObjectBuilder {
 	return ObjectBuildWithCapacity(1)
 }
 
-// ObjectBuildWithCapacity creates a builder for constructing an immutable JSON object Value.
-//
-// The capacity parameter is the same as the capacity of a map, allowing you to preallocate space
-// if you know the number of elements; otherwise you can pass zero.
+// ObjectBuildWithCapacity creates a builder for constructing an immutable JSON object [Value].
+// This is the same as [ObjectBuild], but preallocates capacity for the underlying map.
 //
 //	objValue := ldvalue.ObjectBuildWithCapacity(2).Set("a", ldvalue.Int(100)).Set("b", ldvalue.Int(200)).Build()
 func ObjectBuildWithCapacity(capacity int) *ObjectBuilder {
@@ -129,7 +138,7 @@ func (b *ObjectBuilder) Remove(key string) *ObjectBuilder {
 }
 
 // Build creates a Value containing the previously specified key-value pairs. Continuing to modify
-// the same builder by calling Set after that point does not affect the returned object.
+// the same builder by calling [ObjectBuilder.Set] after that point does not affect the returned object.
 func (b *ObjectBuilder) Build() Value {
 	if b == nil {
 		return Null()
@@ -141,8 +150,8 @@ func (b *ObjectBuilder) Build() Value {
 //
 // For values of any other type, it returns zero.
 //
-// If the value is a JSON array or object created from unparsed JSON with Raw(), this method
-// first parses the JSON, which can be inefficient. See Raw().
+// If the value is a JSON array or object created from unparsed JSON with [Raw], this method
+// first parses the JSON, which can be inefficient.
 func (v Value) Count() int {
 	switch v.valueType {
 	case ArrayType:
@@ -157,10 +166,10 @@ func (v Value) Count() int {
 
 // GetByIndex gets an element of an array by index.
 //
-// If the value is not an array, or if the index is out of range, it returns Null().
+// If the value is not an array, or if the index is out of range, it returns [Null]().
 //
-// If the value is a JSON array object created from unparsed JSON with Raw(), this method
-// first parses the JSON, which can be inefficient. See Raw().
+// If the value is a JSON array or object created from unparsed JSON with [Raw], this method
+// first parses the JSON, which can be inefficient.
 func (v Value) GetByIndex(index int) Value {
 	ret, _ := v.TryGetByIndex(index)
 	return ret
@@ -169,10 +178,10 @@ func (v Value) GetByIndex(index int) Value {
 // TryGetByIndex gets an element of an array by index, with a second return value of true if
 // successful.
 //
-// If the value is not an array, or if the index is out of range, it returns (Null(), false).
+// If the value is not an array, or if the index is out of range, it returns ([Null](), false).
 //
-// If the value is a JSON array object created from unparsed JSON with Raw(), this method
-// first parses the JSON, which can be inefficient. See Raw().
+// If the value is a JSON array or object created from unparsed JSON with [Raw], this method
+// first parses the JSON, which can be inefficient.
 func (v Value) TryGetByIndex(index int) (Value, bool) {
 	if v.valueType == RawType {
 		return v.parseIfRaw().TryGetByIndex(index)
@@ -189,8 +198,8 @@ func (v Value) TryGetByIndex(index int) (Value, bool) {
 //
 // The ordering of the keys is undefined.
 //
-// If the value is a JSON array object created from unparsed JSON with Raw(), this method
-// first parses the JSON, which can be inefficient. See Raw().
+// If the value is a JSON array or object created from unparsed JSON with [Raw], this method
+// first parses the JSON, which can be inefficient.
 func (v Value) Keys(sliceIn []string) []string {
 	if v.Type() == RawType {
 		return Parse(v.rawValue).Keys(sliceIn)
@@ -203,10 +212,10 @@ func (v Value) Keys(sliceIn []string) []string {
 
 // GetByKey gets a value from a JSON object by key.
 //
-// If the value is not an object, or if the key is not found, it returns Null().
+// If the value is not an object, or if the key is not found, it returns [Null]().
 //
-// If the value is a JSON array object created from unparsed JSON with Raw(), this method
-// first parses the JSON, which can be inefficient. See Raw().
+// If the value is a JSON array or object created from unparsed JSON with [Raw], this method
+// first parses the JSON, which can be inefficient.
 func (v Value) GetByKey(name string) Value {
 	ret, _ := v.TryGetByKey(name)
 	return ret
@@ -217,10 +226,10 @@ func (v Value) GetByKey(name string) Value {
 // TryGetByKey gets a value from a JSON object by key, with a second return value of true if
 // successful.
 //
-// If the value is not an object, or if the key is not found, it returns (Null(), false).
+// If the value is not an object, or if the key is not found, it returns ([Null](), false).
 //
-// If the value is a JSON array object created from unparsed JSON with Raw(), this method
-// first parses the JSON, which can be inefficient. See Raw().
+// If the value is a JSON array or object created from unparsed JSON with [Raw], this method
+// first parses the JSON, which can be inefficient.
 func (v Value) TryGetByKey(name string) (Value, bool) {
 	if v.Type() == RawType {
 		return Parse(v.rawValue).TryGetByKey(name)
@@ -232,7 +241,7 @@ func (v Value) TryGetByKey(name string) (Value, bool) {
 //
 // The behavior is as follows:
 //
-// If the input value is Null(), the return value is always Null() and the function is not called.
+// If the input value is [Null](), the return value is always Null() and the function is not called.
 //
 // If the input value is an array, fn is called for each element, with the element's index in the
 // first parameter, "" in the second, and the element value in the third. The return values of fn
@@ -271,8 +280,8 @@ func (v Value) TryGetByKey(name string) (Value, bool) {
 // For array and object values, if the function does not modify or drop any values, the exact
 // same instance is returned without allocating a new slice or map.
 //
-// If the value is a JSON array object created from unparsed JSON with Raw(), this method
-// first parses the JSON, which can be inefficient. See Raw().
+// If the value is a JSON array or object created from unparsed JSON with [Raw], this method
+// first parses the JSON, which can be inefficient.
 func (v Value) Transform(fn func(index int, key string, value Value) (Value, bool)) Value {
 	switch v.valueType {
 	case NullType:
@@ -304,8 +313,8 @@ func (v Value) Transform(fn func(index int, key string, value Value) (Value, boo
 // Otherwise it returns a ValueArray in an uninitialized (nil) state. This is an efficient operation
 // that does not allocate a new slice.
 //
-// If the value is a JSON array object created from unparsed JSON with Raw(), this method
-// first parses the JSON, which can be inefficient. See Raw().
+// If the value is a JSON array or object created from unparsed JSON with [Raw], this method
+// first parses the JSON, which can be inefficient.
 func (v Value) AsValueArray() ValueArray {
 	return v.parseIfRaw().arrayValue
 }
@@ -314,8 +323,8 @@ func (v Value) AsValueArray() ValueArray {
 // it returns a ValueMap in an uninitialized (nil) state. This is an efficient operation that does
 // not allocate a new map.
 //
-// If the value is a JSON array object created from unparsed JSON with Raw(), this method
-// first parses the JSON, which can be inefficient. See Raw().
+// If the value is a JSON array or object created from unparsed JSON with [Raw], this method
+// first parses the JSON, which can be inefficient.
 func (v Value) AsValueMap() ValueMap {
 	return v.parseIfRaw().objectValue
 }

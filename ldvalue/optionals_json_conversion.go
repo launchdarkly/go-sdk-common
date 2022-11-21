@@ -10,7 +10,7 @@ import (
 )
 
 // JSONString returns the JSON representation of the value as a string. This is
-// guaranteed to be logically equivalent to calling json.Marshal() and converting the
+// guaranteed to be logically equivalent to calling [json.Marshal] and converting the
 // first return value to a string.
 //
 // Since types that support this method are by definition always convertible to JSON,
@@ -21,7 +21,7 @@ func (o OptionalBool) JSONString() string {
 }
 
 // JSONString returns the JSON representation of the value as a string. This is
-// guaranteed to be logically equivalent to calling json.Marshal() and converting the
+// guaranteed to be logically equivalent to calling [json.Marshal] and converting the
 // first return value to a string.
 //
 // Since types that support this method are by definition always convertible to JSON,
@@ -32,7 +32,7 @@ func (o OptionalInt) JSONString() string {
 }
 
 // JSONString returns the JSON representation of the value as a string. This is
-// guaranteed to be logically equivalent to calling json.Marshal() and converting the
+// guaranteed to be logically equivalent to calling [json.Marshal] and converting the
 // first return value to a string.
 //
 // Since types that support this method are by definition always convertible to JSON,
@@ -47,7 +47,7 @@ func (o OptionalString) JSONString() string {
 // The output will be either a JSON boolean or null. Note that the "omitempty" tag for a struct
 // field will not cause an empty OptionalBool field to be omitted; it will be output as null.
 // If you want to completely omit a JSON property when there is no value, it must be a bool
-// pointer instead of an OptionalBool; use the AsPointer() method to get a pointer.
+// pointer instead of an OptionalBool; use [OptionalBool.AsPointer] to get a pointer.
 func (o OptionalBool) MarshalJSON() ([]byte, error) {
 	return o.AsValue().MarshalJSON()
 }
@@ -57,7 +57,7 @@ func (o OptionalBool) MarshalJSON() ([]byte, error) {
 // The output will be either a JSON number or null. Note that the "omitempty" tag for a struct
 // field will not cause an empty OptionalInt field to be omitted; it will be output as null.
 // If you want to completely omit a JSON property when there is no value, it must be an int
-// pointer instead of an OptionalInt; use the AsPointer() method to get a pointer.
+// pointer instead of an OptionalInt; use [OptionalInt.AsPointer] method to get a pointer.
 func (o OptionalInt) MarshalJSON() ([]byte, error) {
 	return o.AsValue().MarshalJSON()
 }
@@ -67,14 +67,14 @@ func (o OptionalInt) MarshalJSON() ([]byte, error) {
 // The output will be either a JSON string or null. Note that the "omitempty" tag for a struct
 // field will not cause an empty OptionalString field to be omitted; it will be output as null.
 // If you want to completely omit a JSON property when there is no value, it must be a string
-// pointer instead of an OptionalString; use the AsPointer() method to get a pointer.
+// pointer instead of an OptionalString; use [OptionalString.AsPointer] method to get a pointer.
 func (o OptionalString) MarshalJSON() ([]byte, error) {
 	return o.AsValue().MarshalJSON()
 }
 
 // UnmarshalJSON parses an OptionalBool from JSON.
 //
-// The input must be either a JSON number that is a boolean or null.
+// The input must be either a JSON boolean or null.
 func (o *OptionalBool) UnmarshalJSON(data []byte) error {
 	if bytes.Equal(data, []byte("null")) {
 		*o = OptionalBool{}
@@ -107,8 +107,8 @@ func (o *OptionalString) UnmarshalJSON(data []byte) error {
 
 // ReadFromJSONReader provides JSON deserialization for use with the jsonstream API.
 //
-// This implementation is used by the SDK in cases where it is more efficient than JSON.Unmarshal.
-// See https://github.com/launchdarkly/go-jsonstream for more details.
+// This implementation is used by the SDK in cases where it is more efficient than [json.Unmarshal].
+// See [github.com/launchdarkly/go-jsonstream/v3] for more details.
 func (o *OptionalBool) ReadFromJSONReader(r *jreader.Reader) {
 	val, nonNull := r.BoolOrNull()
 	if r.Error() == nil {
@@ -122,8 +122,8 @@ func (o *OptionalBool) ReadFromJSONReader(r *jreader.Reader) {
 
 // ReadFromJSONReader provides JSON deserialization for use with the jsonstream API.
 //
-// This implementation is used by the SDK in cases where it is more efficient than JSON.Unmarshal.
-// See https://github.com/launchdarkly/go-jsonstream for more details.
+// This implementation is used by the SDK in cases where it is more efficient than [json.Unmarshal].
+// See [github.com/launchdarkly/go-jsonstream/v3] for more details.
 func (o *OptionalInt) ReadFromJSONReader(r *jreader.Reader) {
 	val, nonNull := r.IntOrNull()
 	if r.Error() == nil {
@@ -137,8 +137,8 @@ func (o *OptionalInt) ReadFromJSONReader(r *jreader.Reader) {
 
 // ReadFromJSONReader provides JSON deserialization for use with the jsonstream API.
 //
-// This implementation is used by the SDK in cases where it is more efficient than JSON.Unmarshal.
-// See https://github.com/launchdarkly/go-jsonstream for more details.
+// This implementation is used by the SDK in cases where it is more efficient than [json.Unmarshal].
+// See [github.com/launchdarkly/go-jsonstream/v3] for more details.
 func (o *OptionalString) ReadFromJSONReader(r *jreader.Reader) {
 	val, nonNull := r.StringOrNull()
 	if r.Error() == nil {
@@ -152,24 +152,24 @@ func (o *OptionalString) ReadFromJSONReader(r *jreader.Reader) {
 
 // WriteToJSONWriter provides JSON serialization for use with the jsonstream API.
 //
-// This implementation is used by the SDK in cases where it is more efficient than JSON.Marshal.
-// See https://github.com/launchdarkly/go-jsonstream for more details.
+// This implementation is used by the SDK in cases where it is more efficient than [json.Marshal].
+// See [github.com/launchdarkly/go-jsonstream/v3] for more details.
 func (o OptionalBool) WriteToJSONWriter(w *jwriter.Writer) {
 	o.AsValue().WriteToJSONWriter(w)
 }
 
 // WriteToJSONWriter provides JSON serialization for use with the jsonstream API.
 //
-// This implementation is used by the SDK in cases where it is more efficient than JSON.Marshal.
-// See https://github.com/launchdarkly/go-jsonstream for more details.
+// This implementation is used by the SDK in cases where it is more efficient than [json.Marshal].
+// See [github.com/launchdarkly/go-jsonstream/v3] for more details.
 func (o OptionalInt) WriteToJSONWriter(w *jwriter.Writer) {
 	o.AsValue().WriteToJSONWriter(w)
 }
 
 // WriteToJSONWriter provides JSON serialization for use with the jsonstream API.
 //
-// This implementation is used by the SDK in cases where it is more efficient than JSON.Marshal.
-// See https://github.com/launchdarkly/go-jsonstream for more details.
+// This implementation is used by the SDK in cases where it is more efficient than [json.Marshal].
+// See [github.com/launchdarkly/go-jsonstream/v3] for more details.
 func (o OptionalString) WriteToJSONWriter(w *jwriter.Writer) {
 	o.AsValue().WriteToJSONWriter(w)
 }

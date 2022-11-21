@@ -30,7 +30,7 @@ func TestMultiBuilder(t *testing.T) {
 		// other accessors are tested in context_test.go
 	})
 
-	t.Run("nested multi-kind contexts are flattened", func(t *testing.T) {
+	t.Run("nested multi-contexts are flattened", func(t *testing.T) {
 		sub1 := NewWithKind("kind1", "key1")
 		sub2 := NewWithKind("kind2", "key2")
 		sub3 := NewWithKind("kind3", "key3")

@@ -7,12 +7,34 @@ import (
 )
 
 // Value represents any of the data types supported by JSON, all of which can be used for a LaunchDarkly
-// feature flag variation, or for an attribute in ldcontext.Context. Value instances are immutable.
+// feature flag variation, or for an attribute in an evaluation context. Value instances are immutable.
 //
-// The most efficient way to create a Value is with typed constructors such as Bool and String, or, for
-// complex data, the builders ArrayBuild and ObjectBuild. However, any value that can be represented in
-// JSON can be converted to a Value with CopyArbitraryValue, or you can parse a Value from JSON. The
-// following code examples all produce the same value:
+// # Uses of JSON types in LaunchDarkly
+//
+// LaunchDarkly feature flags can have variations of any JSON type other than null. If you want to
+// evaluate a feature flag in a general way that does not have expectations about the variation type,
+// or if the variation value is a complex data structure such as an array or object, you can use the
+// SDK method [github.com/launchdarkly/go-server-sdk/v6/LDClient.JSONVariationDetail] to get the value
+// and then use Value methods to examine it.
+//
+// Similarly, attributes of an evaluation context ([github.com/launchdarkly/go-sdk-common/v3/ldcontext.Context])
+// can have variations of any JSON type other than null. If you want to set a context attribute in a general
+// way that will accept any type, or set the attribute value to a complex data structure such as an array
+// or object, you can use the builder method [github.com/launchdarkly/go-sdk-common/v3/ldcontext.Builder.SetValue].
+//
+// Arrays and objects have special meanings in LaunchDarkly flag evaluation:
+//   - An array of values means "try to match any of these values to the targeting rule."
+//   - An object allows you to match a property within the object to the targeting rule. For instance,
+//     in the example above, a targeting rule could reference /objectAttr1/color to match the value
+//     "green". Nested property references like /objectAttr1/address/street are allowed if a property
+//     contains another JSON object.
+//
+// # Constructors and builders
+//
+// The most efficient way to create a Value is with typed constructors such as [Bool] and [String], or, for
+// complex data, the builders [ArrayBuild] and [ObjectBuild]. However, any value that can be represented in
+// JSON can be converted to a Value with [CopyArbitraryValue] or [FromJSONMarshal], or you can parse a
+// Value from JSON. The following code examples all produce the same value:
 //
 //	value := ldvalue.ObjectBuild().SetString("thing", "x").Build()
 //
@@ -23,8 +45,10 @@ import (
 //
 //	value := ldvalue.Parse([]byte(`{"thing": "x"}`))
 //
+// # Comparisons
+//
 // You cannot compare Value instances with the == operator, because the struct may contain a slice. or a
-// map. Value has an Equal method for this purpose; reflect.DeepEqual will also work.
+// map. Value has the [Value.Equal] method for this purpose; [reflect.DeepEqual] will also work.
 type Value struct {
 	valueType ValueType
 	// Used when the value is a boolean.
@@ -40,7 +64,7 @@ type Value struct {
 	rawValue    []byte
 }
 
-// ValueType indicates which JSON type is contained in a Value.
+// ValueType indicates which JSON type is contained in a [Value].
 type ValueType int
 
 // String returns the name of the value type.
@@ -95,16 +119,16 @@ func String(value string) Value {
 
 // Raw creates an unparsed JSON Value.
 //
-// This constructor stores a copy of the json.RawMessage value as-is without syntax validation, and
-// sets the type of the Value to ldvalue.RawType. The advantage of this is that if you have some
+// This constructor stores a copy of the [json.RawMessage] value as-is without syntax validation, and
+// sets the type of the Value to [RawType]. The advantage of this is that if you have some
 // data that you do not expect to do any computations with, but simply want to include in JSON data
 // to be sent to LaunchDarkly, the original data will be output as-is and does not need to be parsed.
 //
 // However, if you do anything that involves inspecting the value (such as comparing it to another
 // value, or evaluating a feature flag that references the value in a context attribute), the JSON
 // data will be parsed automatically each time that happens, so there will be no efficiency gain.
-// Therefore, if you expect any such operations to happen, it is better to use Parse() instead to
-// parse the JSON immediately, or use value builder methods such as ObjectBuild().
+// Therefore, if you expect any such operations to happen, it is better to use [Parse] instead to
+// parse the JSON immediately, or use value builder methods such as [ObjectBuild].
 //
 // If you pass malformed data that is not valid JSON, you will get malformed data if it is re-encoded
 // to JSON. It is the caller's responsibility to make sure the json.RawMessage really is valid JSON.
@@ -120,7 +144,7 @@ func Raw(value json.RawMessage) Value {
 
 // FromJSONMarshal creates a Value from the JSON representation of any Go value.
 //
-// This is based on json.Marshal, so it can be used with any value that can be passed to that
+// This is based on [encoding/json.Marshal], so it can be used with any value that can be passed to that
 // function, and follows the usual behavior of json.Marshal with regard to types and field names.
 // For instance, you could use it with a custom struct type:
 //
@@ -129,8 +153,8 @@ func Raw(value json.RawMessage) Value {
 //	}
 //	value := ldvalue.FromJSONMarshal(MyStruct{Thing: "x"})
 //
-// It is equivalent to calling json.Marshal followed by ldvalue.Parse, so it incurs the same
-// overhead of first marshaling the value and then parsing the resulting JSON.
+// It is equivalent to calling json.Marshal followed by [Parse], so it incurs the same overhead of
+// first marshaling the value and then parsing the resulting JSON.
 func FromJSONMarshal(anyValue any) Value {
 	jsonBytes, err := json.Marshal(anyValue)
 	if err != nil {
@@ -147,10 +171,10 @@ func FromJSONMarshal(anyValue any) Value {
 // map[string]Value), it is deep-copied to an object value.
 //
 // If it is a pointer to any of the above types, then it is dereferenced and treated the same as above,
-// unless the pointer is nil, in which case it becomes Null().
+// unless the pointer is nil, in which case it becomes [Null]().
 //
 // For all other types, the value is marshaled to JSON and then converted to the corresponding Value
-// type, just as if you had called FromJSONMarshal. The difference is only that CopyArbitraryValue is
+// type, just as if you had called [FromJSONMarshal]. The difference is only that CopyArbitraryValue is
 // more efficient for primitive types, slices, and maps, which it can copy without first marshaling
 // them to JSON.
 func CopyArbitraryValue(anyValue any) Value { //nolint:gocyclo // yes, we know it's a long function
@@ -389,7 +413,8 @@ func (v Value) Float64Value() float64 {
 //
 // If the value is not a string, it returns an empty string.
 //
-// This is different from String(), which returns a concise string representation of any value type.
+// This is different from [String], which returns a string representation of any value type,
+// including any necessary JSON delimiters.
 func (v Value) StringValue() string {
 	switch v.valueType {
 	case StringType:
@@ -414,14 +439,14 @@ func (v Value) AsOptionalString() OptionalString {
 	}
 }
 
-// AsRaw returns the value as a json.RawMessage.
+// AsRaw returns the value as a [json.RawMessage].
 //
-// If the value was originally created from a RawMessage, it returns the same value. For all other
-// values, it converts the value to its JSON representation and returns that representation.
+// If the value was originally created with [Raw], it returns a copy of the original value. For all
+// other values, it converts the value to its JSON representation and returns that representation.
 //
-// Note that the ldvalue.Raw(json.RawMessage) constructor does not do any syntax validation, so
-// if you create a Value from a malformed string such as ldvalue.Raw(json.RawMessage("{{{")), you
-// will get back the same string from AsRaw().
+// Note that the [Raw] constructor does not do any syntax validation, so if you create a Value from
+// a malformed string such as ldvalue.Raw(json.RawMessage("{{{")), you will get back the same string
+// from AsRaw().
 func (v Value) AsRaw() json.RawMessage {
 	if v.valueType == RawType {
 		return v.rawValue
@@ -437,12 +462,12 @@ func (v Value) AsRaw() json.RawMessage {
 //
 // This is nil for a null value; for primitive types, it is bool, float64, or string (all numbers
 // are represented as float64 because that is Go's default when parsing from JSON). For unparsed
-// JSON data created with Raw(), it returns a json.RawMessage.
+// JSON data created with [Raw], it returns a [json.RawMessage].
 //
 // Arrays and objects are represented as []any and map[string]any. They are deep-copied, which
-// preserves immutability of the Value but may be an expensive operation. To example array and
-// object values without copying the whole data structure, use getter methods: Count, Keys,
-// GetByIndex, TryGetByIndex, GetByKey, TryGetByKey.
+// preserves immutability of the Value but may be an expensive operation. To examine array and
+// object values without copying the whole data structure, use getter methods: [Value.Count],
+// [Value.Keys], [Value.GetByIndex], [Value.TryGetByIndex], [Value.GetByKey], [Value.TryGetByKey].
 func (v Value) AsArbitraryValue() any {
 	switch v.valueType {
 	case NullType:
@@ -464,14 +489,14 @@ func (v Value) AsArbitraryValue() any {
 	}
 }
 
-// String converts the value to a string representation, equivalent to JSONString().
+// String converts the value to a string representation, equivalent to [Value.JSONString].
 //
-// This is different from StringValue, which returns the actual string for a string value or an empty
+// This is different from [Value.StringValue], which returns the actual string for a string value or an empty
 // string for anything else. For instance, Int(2).StringValue() returns "2" and String("x").StringValue()
 // returns "\"x\"", whereas Int(2).AsString() returns "" and String("x").AsString() returns
 // "x".
 //
-// This method is provided because it is common to use the Stringer interface as a quick way to
+// This method is provided because it is common to use the [fmt.Stringer] interface as a quick way to
 // summarize the contents of a value. The simplest way to do so in this case is to use the JSON
 // representation.
 func (v Value) String() string {
@@ -481,9 +506,9 @@ func (v Value) String() string {
 // Equal tests whether this Value is equal to another, in both type and value.
 //
 // For arrays and objects, this is a deep equality test. This method behaves the same as
-// reflect.DeepEqual, but is slightly more efficient.
+// [reflect.DeepEqual], but is slightly more efficient.
 //
-// Unparsed JSON values created with Raw() will be parsed in order to do this comparison.
+// Unparsed JSON values created with [Raw] will be parsed in order to do this comparison.
 func (v Value) Equal(other Value) bool {
 	if v.valueType == RawType || other.valueType == RawType {
 		return v.parseIfRaw().Equal(other.parseIfRaw())

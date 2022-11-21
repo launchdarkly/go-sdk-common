@@ -8,7 +8,7 @@ import (
 
 // NewUser creates a new user context identified by the given key.
 //
-// This is exactly equivalent to ldcontext.New(key). It is provided to ease migration of code
+// This is exactly equivalent to [ldcontext.New](key). It is provided to ease migration of code
 // that previously used lduser instead of ldcontext.
 func NewUser(key string) ldcontext.Context {
 	return ldcontext.New(key)
@@ -16,7 +16,7 @@ func NewUser(key string) ldcontext.Context {
 
 // NewAnonymousUser creates a new anonymous user context identified by the given key.
 //
-// This is exactly equivalent to ldcontext.NewBuilder(key).Anonymous(true).Build(). It is provided
+// This is exactly equivalent to [ldcontext.NewBuilder](key).Anonymous(true).Build(). It is provided
 // to ease migration of code that previously used lduser instead of ldcontext.
 func NewAnonymousUser(key string) ldcontext.Context {
 	return ldcontext.NewBuilder(key).Anonymous(true).Build()
@@ -29,14 +29,15 @@ func NewAnonymousUser(key string) ldcontext.Context {
 // "user" model to the newer "context" model. See the package description of lduser for more
 // about this.
 //
-// After obtaining an instance of UserBuilder by calling NewUserBuilder, call setter methods such as
-// Name to specify any additional user properties. Then, call Build() to construct the Context. All
-// of the UserBuilder setters return a reference the same builder, so they can be chained together:
+// After obtaining an instance of UserBuilder by calling [NewUserBuilder], call setter methods such as
+// [UserBuilder.Name] to specify any additional user properties. Then, call [UserBuilder.Build] to
+// construct the [ldcontext.Context]. All of the UserBuilder setters return a reference the same builder,
+// so they can be chained together:
 //
 //	context := NewUserBuilder("user-key").Name("Bob").Email("test@example.com").Build()
 //
 // Setters for attributes that can be designated private return the type
-// UserBuilderCanMakeAttributePrivate, so you can chain the AsPrivateAttribute method:
+// [UserBuilderCanMakeAttributePrivate], so you can chain the AsPrivateAttribute method:
 //
 //	context := NewUserBuilder("user-key").Name("Bob").AsPrivateAttribute().Build() // Name is now private
 //
@@ -91,7 +92,7 @@ type UserBuilder interface {
 	CustomAll(ldvalue.ValueMap) UserBuilderCanMakeAttributePrivate
 
 	// SetAttribute sets any attribute of the user being built, specified as a UserAttribute, to a value
-	// of type ldvalue.Value.
+	// of type [ldvalue.Value].
 	//
 	// This method corresponds to the GetAttribute method of User. It is intended for cases where user
 	// properties are being constructed generically, such as from a list of key-value pairs. Since not
@@ -119,11 +120,11 @@ type UserBuilder interface {
 }
 
 // UserBuilderCanMakeAttributePrivate is an extension of UserBuilder that allows attributes to be
-// made private via the AsPrivateAttribute() method. All UserBuilderCanMakeAttributePrivate setter
+// made private via [UserBuilder.AsPrivateAttribute]. All UserBuilderCanMakeAttributePrivate setter
 // methods are the same as UserBuilder, and apply to the original builder.
 //
 // UserBuilder setter methods for attributes that can be made private always return this interface.
-// See AsPrivateAttribute for details.
+// See [UserBuilder.AsPrivateAttribute] for details.
 type UserBuilderCanMakeAttributePrivate interface {
 	UserBuilder
 

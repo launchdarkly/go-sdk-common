@@ -13,13 +13,14 @@ import (
 
 // Context is a collection of attributes that can be referenced in flag evaluations and analytics events.
 //
-// To create a Context of a single kind, such as a user, you may use the New() or NewWithKind()
-// constructors. Or, to specify other attributes, use NewBuilder().
+// To create a Context of a single kind, such as a user, you may use the [New] or [NewWithKind]
+// constructors. Or, to specify other attributes, use [NewBuilder]. See the [Builder] type for more
+// information about how to set attributes.
 //
-// To create a Context with multiple kinds, use NewMultiBuilder().
+// To create a multi-context, use [NewMultiBuilder].
 //
 // An uninitialized Context struct is not valid for use in any SDK operations. Also, a Context can
-// be in an error state if it was built with invalid attributes. See Context.Err().
+// be in an error state if it was built with invalid attributes. See [Context.Err].
 type Context struct {
 	defined           bool
 	err               error
@@ -47,10 +48,9 @@ func (c Context) IsDefined() bool {
 
 // Err returns nil for a valid Context, or a non-nil error value for an invalid Context.
 //
-// A valid Context is one that can be used in SDK operations. An invalid Context is one that is
+// A valid [Context] is one that can be used in SDK operations. An invalid Context is one that is
 // missing necessary attributes or has invalid attributes, indicating an incorrect usage of the
-// SDK API. For a complete list of the ways a Context can be invalid, see the ErrContext___
-// types in the lderrors package.
+// SDK API. For a complete list of the ways a Context can be invalid, see the [lderrors] package.
 //
 // Since in normal usage it is easy for applications to be sure they are using context kinds
 // correctly (so that having to constantly check error return values would be needlessly
@@ -69,34 +69,37 @@ func (c Context) Err() error {
 
 // Kind returns the Context's kind attribute.
 //
-// Every valid Context has a non-empty kind. For multi-kind contexts, this value is "multi" and the
-// kinds within the Context can be inspected with IndividualContextCount(), IndividualContextByIndex(),
-// IndividualContextByKind(), or GetAllIndividualContexts().
+// Every valid Context has a non-empty kind. For multi-contexts, this value is [MultiKind] and the
+// kinds within the Context can be inspected with [Context.IndividualContextCount],
+// [Context.IndividualContextByIndex], [Context.IndividualContextByKind], or
+// [Context.GetAllIndividualContexts].
 //
-// For rules regarding the kind value, see Builder.Kind().
+// For rules regarding the kind value, see [Builder.Kind].
 func (c Context) Kind() Kind {
 	return c.kind
 }
 
-// Multiple returns true for a multi-kind Context, or false for a single-kind Context.
+// Multiple returns true for a multi-context, or false for a single context.
 //
-// If this value is true, then Kind() is guaranteed to return "multi", and you can inspect the
-// individual Contexts for each kind by calling IndividualContextCount(), IndividualContextByIndex(),
-// IndividualContextByKind() or GetAllIndividualContexts().
+// If this value is true, then [Context.Kind] is guaranteed to return [MultiKind], and you can
+// inspect the individual Contexts for each kind by calling [Context.IndividualContextCount],
+// [Context.IndividualContextByIndex], [Context.IndividualContextByKind], or
+// [Context.GetAllIndividualContexts].
 //
-// If this value is false, then Kind() is guaranteed to return a value that is not "multi", and
-// IndividualContextCount() is guaranteed to return 1.
+// If this value is false, then [Context.Kind] is guaranteed to return a value that is not [MultiKind],
+// and [Context.IndividualContextCount] is guaranteed to return 1.
 func (c Context) Multiple() bool {
 	return len(c.multiContexts) != 0
 }
 
 // Key returns the Context's key attribute.
 //
-// For a single-kind context, this value is set by the Context constructors or the Builder methods.
+// For a single context, this value is set by the [Context] constructors or the [Builder] methods.
 //
-// For a multi-kind context, there is no single value, so Key() returns an empty name; use
-// IndividualContextByIndex(), IndividualContextByName(), or GetAllIndividualContexts() to inspect
-// a Context for a particular kind and call Key() on it.
+// For a multi-context, there is no single value, so Key() returns an empty name; use
+// [Context.IndividualContextByIndex], [Context.IndividualContextByKind], or
+// [Context.GetAllIndividualContexts] to get the Context for a particular kind and then call
+// Key() on it.
 func (c Context) Key() string {
 	return c.key
 }
@@ -111,14 +114,15 @@ func (c Context) FullyQualifiedKey() string {
 
 // Name returns the Context's optional name attribute.
 //
-// For a single-kind context, this value is set by Builder.Name() or Builder.OptName(). If no value was
-// specified, it returns the empty value ldvalue.OptionalString{}. The name attribute is treated
+// For a single context, this value is set by [Builder.Name] or [Builder.OptName]. If no value was
+// specified, it returns the empty value [ldvalue.OptionalString]{}. The name attribute is treated
 // differently from other user attributes in that its value, if specified, can only be a string, and
 // it is used as the display name for the Context on the LaunchDarkly dashboard.
 //
-// For a multi-kind context, there is no single value, so Name() returns an empty string; use
-// IndividualContextByIndex(), IndividualContextByName(), or GetAllIndividualContexts() to inspect
-// a Context for a particular kind and call Name() on it.
+// For a multi-context, there is no single value, so Name() returns an empty string; use
+// [Context.IndividualContextByIndex], [Context.IndividualContextByKind], or
+// [Context.GetAllIndividualContexts] to get the Context for a particular kind and then call
+// Name() on it.
 func (c Context) Name() ldvalue.OptionalString {
 	return c.name
 }
@@ -144,48 +148,52 @@ func (c Context) GetOptionalAttributeNames(sliceIn []string) []string {
 	return ret
 }
 
-// GetValue looks up the value of any attribute of the Context by name. This includes only attributes
-// that are addressable in evaluations-- not metadata such as Secondary() or Private().
+// GetValue looks up the value of any attribute of the Context by name.
 //
-// For a single-kind context, the attribute name can be any custom attribute that was set by methods
-// like Builder.SetString(). It can also be one of the built-in ones like "kind", "key", or "name"; in
-// such cases, it is equivalent to calling Kind(), Key(), or Name(), except that the value is returned
-// using the general-purpose ldvalue.Value type.
+// This includes only attributes that are addressable in evaluations, not metadata such as
+// [Context.PrivateAttributeByIndex].
 //
-// For a multi-kind context, the only supported attribute name is "kind". Use
-// IndividualContextByIndex(), IndividualContextByName(), or GetAllIndividualContexts() to inspect
-// a Context for a particular kind and then get its attributes.
+// For a single context, the attribute name can be any custom attribute that was set by methods
+// like [Builder.SetString]. It can also be one of the built-in ones like "kind", "key", or "name"; in
+// such cases, it is equivalent to calling [Context.Kind], [Context.Key], or [Context.Name], except that
+// the value is returned using the general-purpose [ldvalue.Value] type.
+//
+// For a multi-context, the only supported attribute name is "kind". Use
+// [Context.IndividualContextByIndex], [Context.IndividualContextByKind], or
+// [Context.GetAllIndividualContexts] to get the Context for a particular kind and then get its attributes.
 //
 // This method does not support complex expressions for getting individual values out of JSON objects
-// or arrays, such as "/address/street". Use GetValueForRef() for that purpose.
+// or arrays, such as "/address/street". Use [Context.GetValueForRef] for that purpose.
 //
-// If the value is found, the return value is the attribute value, using the type ldvalue.Value to
-// represent a value of any JSON type).
+// If the value is found, the return value is the attribute value, using the type [ldvalue.Value] to
+// represent a value of any JSON type.
 //
-// If there is no such attribute, the return value is ldvalue.Null(). An attribute that actually
+// If there is no such attribute, the return value is [ldvalue.Null](). An attribute that actually
 // exists cannot have a null value.
 func (c Context) GetValue(attrName string) ldvalue.Value {
 	return c.GetValueForRef(ldattr.NewLiteralRef(attrName))
 }
 
 // GetValueForRef looks up the value of any attribute of the Context, or a value contained within an
-// attribute, based on an ldattr.Ref. This includes only attributes that are addressable in evaluations--
-// not metadata such as Secondary() or Private().
+// attribute, based on an [ldattr.Ref].
+//
+// This includes only attributes that are addressable in evaluations, not metadata such as
+// [Context.PrivateAttributeByIndex].
 //
 // This implements the same behavior that the SDK uses to resolve attribute references during a flag
-// evaluation. In a single-kind context, the ldattr.Ref can represent a simple attribute name-- either a
+// evaluation. In a single context, the [ldattr.Ref] can represent a simple attribute name-- either a
 // built-in one like "name" or "key", or a custom attribute that was set by methods like
-// Builder.SetString()-- or, it can be a slash-delimited path using a JSON-Pointer-like syntax. See
-// ldattr.Ref for more details.
+// [Builder.SetString]-- or, it can be a slash-delimited path using a JSON-Pointer-like syntax. See
+// [ldattr.Ref] for more details.
 //
-// For a multi-kind context, the only supported attribute name is "kind". Use
-// IndividualContextByIndex(), IndividualContextByName(), or GetAllIndividualContexts() to inspect
-// a Context for a particular kind and then get its attributes.
+// For a multi-context, the only supported attribute name is "kind". Use
+// [Context.IndividualContextByIndex], [Context.IndividualContextByKind], or
+// [Context.GetAllIndividualContexts] to get the Context for a particular kind and then get its attributes.
 //
-// If the value is found, the return value is the attribute value, using the type ldvalue.Value to
+// If the value is found, the return value is the attribute value, using the type [ldvalue.Value] to
 // represent a value of any JSON type).
 //
-// If there is no such attribute, or if the ldattr.Ref is invalid, the return value is ldvalue.Null().
+// If there is no such attribute, or if the [ldattr.Ref] is invalid, the return value is [ldvalue.Null]().
 // An attribute that actually exists cannot have a null value.
 func (c Context) GetValueForRef(ref ldattr.Ref) ldvalue.Value {
 	if ref.Err() != nil {
@@ -198,20 +206,24 @@ func (c Context) GetValueForRef(ref ldattr.Ref) ldvalue.Value {
 		if ref.Depth() == 1 && firstPathComponent == ldattr.KindAttr {
 			return ldvalue.String(string(c.kind))
 		}
-		return ldvalue.Null() // multi-kind context has no other addressable attributes
+		return ldvalue.Null() // multi-context has no other addressable attributes
 	}
 
-	// Look up attribute in single-kind context
+	// Look up attribute in single context
 	value, ok := c.getTopLevelAddressableAttributeSingleKind(firstPathComponent)
 	if !ok {
 		return ldvalue.Null()
 	}
 	for i := 1; i < ref.Depth(); i++ {
 		name := ref.Component(i)
-		value, ok = value.TryGetByKey(name)
-		if !ok { // ok is false if either the name is not found or the value was not an object
-			return ldvalue.Null()
+		if value.Type() == ldvalue.RawType {
+			// The "raw" type in ldvalue.Value is for unparsed JSON data, but we do need to parse it if
+			// we're going to look for a property within it.
+			value = ldvalue.Parse(value.AsRaw())
 		}
+		value = value.GetByKey(name)
+		// The defined behavior of GetByKey is that it sets value to ldvalue.Null() if the key was not
+		// found, or if the value was not an object.
 	}
 	return value
 }
@@ -219,35 +231,36 @@ func (c Context) GetValueForRef(ref ldattr.Ref) ldvalue.Value {
 // Anonymous returns true if this Context is only intended for flag evaluations and will not be indexed by
 // LaunchDarkly.
 //
-// For a single-kind context, this value can be set by Builder.Anonymous(), and is false if not specified.
+// For a single context, this value can be set by [Builder.Anonymous], and is false if not specified.
 //
-// For a multi-kind context, there is no single value, so Anonymous() always returns false; use
-// IndividualContextByIndex(), IndividualContextByName(), or GetAllIndividualContexts() to inspect
-// a Context for a particular kind and then call Anonymous() on it.
+// For a multi-context, there is no single value, so Anonymous() always returns false; use
+// [Context.IndividualContextByIndex], [Context.IndividualContextByKind], or
+// [Context.GetAllIndividualContexts] to get the Context for a particular kind and then call
+// Anonymous() on it.
 func (c Context) Anonymous() bool {
 	return c.anonymous
 }
 
 // Secondary returns the deprecated secondary key meta-attribute for the Context, if any.
 //
-// This corresponds to the "secondary" attribute in the older LaunchDarkly user schema. Since LaunchDarkly
-// still supports evaluating feature flags for old-style users, this attribute is still available to the
-// evaluation logic if it was present in user JSON, but it cannot be set via the Context or Builder APIs.
+// This corresponds to the "secondary" attribute in the older LaunchDarkly user schema. This attribute
+// is no longer supported for flag evaluations with the LaunchDarkly Go SDK, and cannot be set via the
+// context builder. This method only exists to allow other LaunchDarkly code to detect the presence of
+// the attribute in JSON data produced by older LaunchDarkly SDKs.
 //
-// Deprecated: Application code should not rely on the availability of this value. It is likely to be
-// removed from the product in the future.
+// Deprecated: this method will be removed in the future and application code should not rely on it.
 func (c Context) Secondary() ldvalue.OptionalString {
 	return c.secondary
 }
 
 // PrivateAttributeCount returns the number of attributes that were marked as private for this Context
-// with Builder.Private().
+// with [Builder.Private] or [Builder.PrivateRef].
 func (c Context) PrivateAttributeCount() int {
 	return len(c.privateAttrs)
 }
 
 // PrivateAttributeByIndex returns one of the attributes that were marked as private for thie Context
-// with Builder.Private().
+// with [Builder.Private] or [Builder.PrivateRef].
 func (c Context) PrivateAttributeByIndex(index int) (ldattr.Ref, bool) {
 	if index < 0 || index >= len(c.privateAttrs) {
 		return ldattr.Ref{}, false
@@ -255,9 +268,10 @@ func (c Context) PrivateAttributeByIndex(index int) (ldattr.Ref, bool) {
 	return c.privateAttrs[index], true
 }
 
-// IndividualContextCount returns the number of Kinds in the context. If this is a single-kind
-// context, the return value is 1. If it is a multi-kind context, it is the number of individual
-// Kinds within.
+// IndividualContextCount returns the number of Kinds in the context.
+//
+// For a single context, the return value is always 1. For a multi-context, it is the number of
+// individual contexts within. For an invalid context, it is zero.
 func (c Context) IndividualContextCount() int {
 	if n := len(c.multiContexts); n != 0 {
 		return n
@@ -265,16 +279,16 @@ func (c Context) IndividualContextCount() int {
 	return 1
 }
 
-// IndividualContextByIndex returns the single-kind context corresponding to one of the Kinds in
-// this context. If the method is called on a single-kind context, then the only allowable value
+// IndividualContextByIndex returns the single context corresponding to one of the Kinds in
+// this context. If the method is called on a single context, then the only allowable value
 // for index is zero, and the return value on success is the same context. If the method is called
-// on a multi-kind context, then index must be >= zero and < the number of kinds, and the return
+// on a multi-context, then index must be >= zero and < the number of kinds, and the return
 // value on success is one of the individual contexts within.
 //
 // If the index is out of range, then the return value is an uninitialized Context{}. You can
-// detect this condition because its IsDefined() method will return false.
+// detect this condition because [Context.IsDefined] will return false.
 //
-// In a multi-kind context, the ordering of the individual contexts is not guaranteed to be the
+// In a multi-context, the ordering of the individual contexts is not guaranteed to be the
 // same order that was passed into the builder or constructor.
 func (c Context) IndividualContextByIndex(index int) Context {
 	if n := len(c.multiContexts); n != 0 {
@@ -289,15 +303,15 @@ func (c Context) IndividualContextByIndex(index int) Context {
 	return c
 }
 
-// IndividualContextByKind returns the single-kind context, if any, whose Kind matches the
-// specified value exactly. If the method is called on a single-kind context, then the specified
-// Kind must match the kind of that context. If the method is called on a multi-kind context,
+// IndividualContextByKind returns the single context, if any, whose Kind matches the
+// specified value exactly. If the method is called on a single context, then the specified
+// Kind must match the kind of that context. If the method is called on a multi-context,
 // then the Kind can match any of the individual contexts within.
 //
-// If the kind parameter is an empty string, ldcontext.DefaultKind is used instead.
+// If the kind parameter is an empty string, [DefaultKind] is used instead.
 //
 // If no matching Kind is found, then the return value is an uninitialized Context{}. You can
-// detect this condition because its IsDefined() method will return false.
+// detect this condition because [Context.IsDefined] will return false.
 func (c Context) IndividualContextByKind(kind Kind) Context {
 	if kind == "" {
 		kind = DefaultKind
@@ -316,17 +330,18 @@ func (c Context) IndividualContextByKind(kind Kind) Context {
 	return Context{}
 }
 
-// IndividualContextKeyByKind returns the Key of the single-kind context, if any, whose Kind
-// matches the specified value exactly. If the method is called on a single-kind context, then
-// the specified Kind must match the Kind of that context. If the method is called on a multi-kind
-// context, then the Kind can match any of the individual contexts within.
+// IndividualContextKeyByKind returns the Key of the single context, if any, whose Kind
+// matches the specified value exactly. If the method is called on a single context, then
+// the specified Kind must match the Kind of that context. If the method is called on a
+// multi-context, then the Kind can match any of the individual contexts within.
 //
-// If the kind parameter is an empty string, ldcontext.DefaultKind is used instead.
+// If the kind parameter is an empty string, [DefaultKind] is used instead.
 //
 // If no matching Kind is found, the return value is an empty string.
 //
-// This method is equivalent to calling IndividualContextByKind and then Key, but is slightly
-// more efficient (since it does not require copying an entire Context struct by value).
+// This method is equivalent to calling [Context.IndividualContextByKind] and then Key, but
+// is slightly more efficient (since it does not require copying an entire Context struct by
+// value).
 func (c Context) IndividualContextKeyByKind(kind Kind) string {
 	if kind == "" {
 		kind = DefaultKind
@@ -346,9 +361,9 @@ func (c Context) IndividualContextKeyByKind(kind Kind) string {
 }
 
 // GetAllIndividualContexts converts this context to a slice of individual contexts. If the method
-// is called on a single-kind context, then the resulting slice has exactly one element, which
-// is the same context. If the method is called on a multi-kind context, then the resulting
-// slice contains each individual context within.
+// is called on a single context, then the resulting slice has exactly one element, which
+// is the same context. If the method is called on a multi-context, then the resulting slice
+// contains each individual context within.
 //
 // If a non-nil slice is passed in, it will be reused to hold the return values if it has enough
 // capacity. For instance, in the following example, no heap allocations will happen unless there
@@ -368,12 +383,13 @@ func (c Context) GetAllIndividualContexts(sliceIn []Context) []Context {
 // String returns a string representation of the Context.
 //
 // This is currently defined as being the same as the JSON representation, since that is the simplest
-// way to represent all of the Context properties. However, Go's fmt.Stringer interface is deliberately
+// way to represent all of the Context properties. However, Go's [fmt.Stringer] interface is deliberately
 // nonspecific about what format a type may use for its string representation, and application code
 // should not rely on String() always being the same as the JSON representation. If you specifically
-// want the latter, use json.Marshal. However, if you do use String() for convenience in debugging or
-// logging, you should assume that the output may contain any and all properties of the Context, so if
-// there is anything you do not want to be visible, you should write your own formatting logic.
+// want the latter, use [Context.JSONString] or [json.Marshal]. However, if you do use String() for
+// convenience in debugging or logging, you should assume that the output may contain any and all
+// properties of the Context, so if there is anything you do not want to be visible, you should write
+// your own formatting logic.
 func (c Context) String() string {
 	data, _ := json.Marshal(c)
 	return string(data)
@@ -396,9 +412,9 @@ func (c Context) getTopLevelAddressableAttributeSingleKind(name string) (ldvalue
 
 // Equal tests whether two contexts are logically equal.
 //
-// Two single-kind contexts are logically equal if they have the same attribute names and values.
-// Two multi-kind contexts are logically equal if they contain the same kinds (in any order) and
-// the individual contexts are equal. A single-kind context is never equal to a multi-kind context.
+// Two single contexts are logically equal if they have the same attribute names and values.
+// Two multi-contexts are logically equal if they contain the same kinds (in any order) and
+// the individual contexts are equal. A single context is never equal to a multi-context.
 func (c Context) Equal(other Context) bool {
 	if !c.defined || !other.defined {
 		return c.defined == other.defined
