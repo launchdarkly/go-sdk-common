@@ -411,7 +411,7 @@ func (b *Builder) SetValue(attributeName string, value ldvalue.Value) *Builder {
 // parameters violated one of the restrictions described for SetValue (for instance,
 // attempting to set "key" to a value that was not a string).
 func (b *Builder) TrySetValue(attributeName string, value ldvalue.Value) bool {
-	if b == nil {
+	if b == nil || attributeName == "" {
 		return false
 	}
 	switch attributeName {
