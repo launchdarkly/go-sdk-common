@@ -93,8 +93,8 @@ type EvaluationReason struct {
 	bigSegmentsStatus BigSegmentsStatus
 }
 
-// IsDefined returns true if this EvaluationReason has a non-empty [GetKind]. It is false for a
-// zero value of EvaluationReason{}.
+// IsDefined returns true if this EvaluationReason has a non-empty [EvaluationReason.GetKind]. It is
+// false for a zero value of EvaluationReason{}.
 func (r EvaluationReason) IsDefined() bool {
 	return r.kind != ""
 }
@@ -234,7 +234,7 @@ func (r *EvaluationReason) UnmarshalJSON(data []byte) error {
 
 // ReadFromJSONReader provides JSON deserialization for use with the jsonstream API.
 //
-// This implementation is used by the SDK in cases where it is more efficient than [json.Unmarshal].
+// This implementation is used by the SDK in cases where it is more efficient than [encoding/json.Unmarshal].
 // See [github.com/launchdarkly/go-jsonstream/v3] for more details.
 func (r *EvaluationReason) ReadFromJSONReader(reader *jreader.Reader) {
 	var ret EvaluationReason
@@ -263,7 +263,7 @@ func (r *EvaluationReason) ReadFromJSONReader(reader *jreader.Reader) {
 
 // WriteToJSONWriter provides JSON serialization for use with the jsonstream API.
 //
-// This implementation is used by the SDK in cases where it is more efficient than [json.Marshal].
+// This implementation is used by the SDK in cases where it is more efficient than [encoding/json.Marshal].
 // See [github.com/launchdarkly/go-jsonstream/v3] for more details.
 func (r EvaluationReason) WriteToJSONWriter(w *jwriter.Writer) {
 	if r.kind == "" {

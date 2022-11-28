@@ -30,7 +30,7 @@ func NewAnonymousUser(key string) ldcontext.Context {
 // about this.
 //
 // After obtaining an instance of UserBuilder by calling [NewUserBuilder], call setter methods such as
-// [UserBuilder.Name] to specify any additional user properties. Then, call [UserBuilder.Build] to
+// UserBuilder.Name to specify any additional user properties. Then, call UserBuilder.Build to
 // construct the [ldcontext.Context]. All of the UserBuilder setters return a reference the same builder,
 // so they can be chained together:
 //
@@ -44,7 +44,7 @@ func NewAnonymousUser(key string) ldcontext.Context {
 // A UserBuilder should not be accessed by multiple goroutines at once.
 //
 // This is defined as an interface rather than a concrete type only for syntactic convenience (see
-// UserBuilderCanMakeAttributePrivate). Applications should not implement this interface.
+// [UserBuilderCanMakeAttributePrivate]). Applications should not implement this interface.
 type UserBuilder interface {
 	// Key changes the unique key for the user being built.
 	Key(value string) UserBuilder
@@ -92,7 +92,7 @@ type UserBuilder interface {
 	CustomAll(ldvalue.ValueMap) UserBuilderCanMakeAttributePrivate
 
 	// SetAttribute sets any attribute of the user being built, specified as a UserAttribute, to a value
-	// of type [ldvalue.Value].
+	// of type ldvalue.Value.
 	//
 	// This method corresponds to the GetAttribute method of User. It is intended for cases where user
 	// properties are being constructed generically, such as from a list of key-value pairs. Since not
@@ -119,12 +119,12 @@ type UserBuilder interface {
 	Build() ldcontext.Context
 }
 
-// UserBuilderCanMakeAttributePrivate is an extension of UserBuilder that allows attributes to be
-// made private via [UserBuilder.AsPrivateAttribute]. All UserBuilderCanMakeAttributePrivate setter
+// UserBuilderCanMakeAttributePrivate is an extension of [UserBuilder] that allows attributes to be
+// made private via UserBuilder.AsPrivateAttribute. All UserBuilderCanMakeAttributePrivate setter
 // methods are the same as UserBuilder, and apply to the original builder.
 //
 // UserBuilder setter methods for attributes that can be made private always return this interface.
-// See [UserBuilder.AsPrivateAttribute] for details.
+// See UserBuilder.AsPrivateAttribute for details.
 type UserBuilderCanMakeAttributePrivate interface {
 	UserBuilder
 

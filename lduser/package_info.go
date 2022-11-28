@@ -4,14 +4,12 @@
 // represent a user, or some other kind of entity, or multiple kinds. But in older SDK versions,
 // this was limited to one kind and was represented by the type lduser.User. This differed from
 // [ldcontext.Context] in several ways:
-//
-// - There was always a single implicit context kind of "user" ([ldcontext.DefaultKind]).
-//
-// - Unlike Context where only a few attributes such as Key and Name have special behavior, the
-// user model defined many other built-in attributes such as Email which, like Name, were constrained
-// to only allow string values. These had specific setter methods in [UserBuilder]. Non-built-in
-// attributes were considered "custom" attributes, and were enclosed in a "custom" object in JSON
-// representations.
+//   - There was always a single implicit context kind of "user" ([ldcontext.DefaultKind]).
+//   - Unlike Context where only a few attributes such as Key and Name have special behavior, the
+//     user model defined many other built-in attributes such as Email which, like Name, were constrained
+//     to only allow string values. These had specific setter methods in [UserBuilder]. Non-built-in
+//     attributes were considered "custom" attributes, and were enclosed in a "custom" object in JSON
+//     representations.
 //
 // # The User type
 //
@@ -27,22 +25,18 @@
 // allowing code that used the older model for building users to still work with minor adjustments.
 //
 // For any code that still uses UserBuilder, the significant differences from older SDK versions are:
-//
-// 1. The [UserBuilder.Build] method now returns an [ldcontext.Context], so you will need to update
-// any part of your code that referred to the lduser.User type by name.
-//
-// 2. The SDK no longer supports setting the key to an empty string. If you do this, the returned
-// Context will be invalid (as indicated by its [Context.Err] method returning an error) and the
-// SDK will refuse to use it for evaluations or events.
-//
-// 3. The SDK no longer supports setting the Secondary meta-attribute.
-//
-// 4. Previously, the [UserBuilder.Anonymous] property had three states: true, false, or undefined/null.
-// Undefined/null and false were functionally the same in terms of the LaunchDarkly
-// dashboard/indexing behavior, but they were represented differently in JSON and could behave
-// differently if referenced in a flag rule (an undefined/null value would not match "anonymous is
-// false"). Now, the property is a simple boolean defaulting to false, and the undefined state is
-// the same as false.
+//  1. The Build method of UserBuilder now returns an [ldcontext.Context], so you will need to update
+//     any part of your code that referred to the lduser.User type by name.
+//  2. The SDK no longer supports setting the key to an empty string. If you do this, the returned
+//     Context will be invalid (as indicated by its [ldcontext.Context.Err] method returning an error) and the
+//     SDK will refuse to use it for evaluations or events.
+//  3. The SDK no longer supports setting the Secondary meta-attribute.
+//  4. Previously, the Anonymous attribute of a user had three states: true, false, or undefined/null.
+//     Undefined/null and false were functionally the same in terms of the LaunchDarkly
+//     dashboard/indexing behavior, but they were represented differently in JSON and could behave
+//     differently if referenced in a flag rule (an undefined/null value would not match "anonymous is
+//     false"). Now, the prattributeoperty is a simple boolean defaulting to false, and the undefined state is
+//     the same as false.
 //
 // # Migrating from User/UserBuilder to the ldcontext API
 //
@@ -59,7 +53,7 @@
 //
 // - Code that previously created a User with an empty string key ("") must be changed to use a
 // non-empty key instead. If you do not care about the value of the key, use an arbitrary value.
-// If you do not want the key to appear on your LaunchDarkly dashboard, use [UserBuilder.Anonymous].
+// If you do not want the key to appear on your LaunchDarkly dashboard, set the Anonymous attribute.
 //
 // - Code that previously used UserBuilder should now use [ldcontext.NewBuilder].
 //

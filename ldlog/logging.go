@@ -12,9 +12,9 @@ import (
 // This is identical to the Logger interface in the main SDK package. It is redefined here so
 // the ldlog package does not have to refer back to the main package.
 type BaseLogger interface {
-	// Logs a message on a single line. This is equivalent to [log.Logger.Println].
+	// Logs a message on a single line. This is equivalent to log.Logger.Println.
 	Println(values ...interface{})
-	// Logs a message on a single line, applying a format string. This is equivalent to [log.Logger.Printf].
+	// Logs a message on a single line, applying a format string. This is equivalent to log.Logger.Printf.
 	Printf(format string, values ...interface{})
 }
 

@@ -19,24 +19,24 @@ type User = ldcontext.Context
 type UserAttribute string
 
 const (
-	// KeyAttribute is the standard attribute name corresponding to [UserBuilder.Key].
+	// KeyAttribute is the standard attribute name corresponding to UserBuilder.Key.
 	KeyAttribute UserAttribute = "key"
 	// SecondaryKeyAttribute is the standard attribute name corresponding to User.GetSecondaryKey().
 	SecondaryKeyAttribute UserAttribute = "secondary"
-	// IPAttribute is the standard attribute name corresponding to [UserBuilder.IP].
+	// IPAttribute is the standard attribute name corresponding to UserBuilder.IP.
 	IPAttribute UserAttribute = "ip"
-	// CountryAttribute is the standard attribute name corresponding to [UserBuilder.Country].
+	// CountryAttribute is the standard attribute name corresponding to UserBuilder.Country.
 	CountryAttribute UserAttribute = "country"
-	// EmailAttribute is the standard attribute name corresponding to [UserBuilder.Email].
+	// EmailAttribute is the standard attribute name corresponding to UserBuilder.Email.
 	EmailAttribute UserAttribute = "email"
-	// FirstNameAttribute is the standard attribute name corresponding to [UserBuilder.FirstName]
+	// FirstNameAttribute is the standard attribute name corresponding to UserBuilder.FirstName.
 	FirstNameAttribute UserAttribute = "firstName"
-	// LastNameAttribute is the standard attribute name corresponding to [UserBuilder.LastName].
+	// LastNameAttribute is the standard attribute name corresponding to UserBuilder.LastName.
 	LastNameAttribute UserAttribute = "lastName"
-	// AvatarAttribute is the standard attribute name corresponding to [UserBuilder.Avatar].
+	// AvatarAttribute is the standard attribute name corresponding to UserBuilder.Avatar.
 	AvatarAttribute UserAttribute = "avatar"
-	// NameAttribute is the standard attribute name corresponding to [UserBuilder.Name].
+	// NameAttribute is the standard attribute name corresponding to UserBuilder.Name.
 	NameAttribute UserAttribute = "name"
-	// AnonymousAttribute is the standard attribute name corresponding to [UserBuilder.Anonymous].
+	// AnonymousAttribute is the standard attribute name corresponding to UserBuilder.Anonymous.
 	AnonymousAttribute UserAttribute = "anonymous"
 )
