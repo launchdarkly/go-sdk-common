@@ -6,6 +6,8 @@
 
 This repository contains packages and types that are shared between the [LaunchDarkly Go SDK](https://github.com/launchdarkly/go-server-sdk) and other LaunchDarkly Go components.
 
+Version 3.x of `go-sdk-common` is used by version 6.x of the LaunchDarkly Go SDK. It is not usable with earlier SDK versions.
+
 Applications using the LaunchDarkly Go SDK will generally use the `ldcontext` subpackage, which contains the `Context` type, and may also use the `ldvalue` package, which contains the `Value` type that represents arbitrary JSON values. Other packages are less frequently used.
 
 ## Supported Go versions
