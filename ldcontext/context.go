@@ -21,6 +21,8 @@ import (
 //
 // An uninitialized Context struct is not valid for use in any SDK operations. Also, a Context can
 // be in an error state if it was built with invalid attributes. See [Context.Err].
+//
+// To learn more, read: https://docs.launchdarkly.com/home/contexts
 type Context struct {
 	defined           bool
 	err               error
