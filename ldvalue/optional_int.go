@@ -4,7 +4,7 @@ package ldvalue
 // int pointer to distinguish between a zero value and nil, but it is safer because it does not
 // expose a pointer to any mutable value.
 //
-// To create an instance with an int value, use NewOptionalInt. There is no corresponding method
+// To create an instance with an int value, use [NewOptionalInt]. There is no corresponding method
 // for creating an instance with no value; simply use the empty literal OptionalInt{}.
 //
 //	oi1 := NewOptionalInt(1)
@@ -69,7 +69,7 @@ func (o OptionalInt) AsPointer() *int {
 	return o.optValue.getAsPointer()
 }
 
-// AsValue converts the OptionalInt to a Value, which is either Null() or a number value.
+// AsValue converts the OptionalInt to a [Value], which is either [Null]() or a number value.
 func (o OptionalInt) AsValue() Value {
 	if value, ok := o.optValue.get(); ok {
 		return Int(value)

@@ -7,7 +7,7 @@ import (
 )
 
 // BaseLogger is a generic logger interface with no level mechanism. Since its methods are a
-// subset of Go's log.Logger, you may use log.New() to create a BaseLogger.
+// subset of Go's [log.Logger], you may use [log.New] to create a BaseLogger.
 //
 // This is identical to the Logger interface in the main SDK package. It is redefined here so
 // the ldlog package does not have to refer back to the main package.
@@ -38,7 +38,7 @@ func (level LogLevel) Name() string {
 	return "?"
 }
 
-// String is the default string representation of LogLevel, which is the same as Name().
+// String is the default string representation of LogLevel, which is the same as [LogLevel.Name].
 func (level LogLevel) String() string {
 	return level.Name()
 }
@@ -63,7 +63,7 @@ const (
 
 // Loggers is a configurable logging component with a level filter.
 //
-// By default, Loggers sends output to standard error and enables all levels except Debug.
+// By default, Loggers sends output to standard error and enables all levels except [Debug].
 // You may call any of its Set methods to change this configuration.
 type Loggers struct {
 	debugLog   levelLogger
@@ -140,8 +140,8 @@ func (l Loggers) Errorf(format string, values ...interface{}) {
 // NewDefaultLoggers returns a new Loggers instance with default properties.
 //
 // This is different from an empty Loggers{} instance in that the latter will not produce any output
-// until you call either SetBaseLogger, SetMinLevel, or Init on it. Calling NewDefaultLoggers() ensures
-// that the default minimum level of Info is enabled.
+// until you call either [Loggers.SetBaseLogger], [Loggers.SetMinLevel], or [Loggers.Init] on it.
+// Calling NewDefaultLoggers() ensures that the default minimum level of [Info] is enabled.
 func NewDefaultLoggers() Loggers {
 	ret := Loggers{}
 	ret.SetMinLevel(Info)
@@ -150,15 +150,15 @@ func NewDefaultLoggers() Loggers {
 
 // Init ensures that the Loggers instance is ready to use.
 //
-// This is necessary only if you have a Loggers instance that was not produced by NewDefaultLoggers
-// and that may not have had SetBaseLogger or SetMinLevel called on it. It ensures that the default
-// properties have been set. If you have already set any properties, Init does nothing.
+// This is necessary only if you have a Loggers instance that was not produced by [NewDefaultLoggers]
+// and that may not have had [Loggers.SetBaseLogger] or [Loggers.SetMinLevel] called on it. It ensures
+// that the default properties have been set. If you have already set any properties, Init does nothing.
 func (l *Loggers) Init() {
 	l.ensureInited()
 }
 
 // SetBaseLogger specifies the default destination for output at all log levels. This does not apply
-// to any levels whose BaseLogger has been overridden with SetBaseLoggerForLevel. All messages
+// to any levels whose BaseLogger has been overridden with [Loggers.SetBaseLoggerForLevel]. All messages
 // written to this logger will be prefixed with "NAME: " where NAME is DEBUG, INFO, etc.
 //
 // If baseLogger is nil, nothing is changed.
@@ -178,7 +178,7 @@ func (l *Loggers) SetBaseLogger(baseLogger BaseLogger) {
 // SetBaseLoggerForLevel specifies the default destination for output at the given log level. All
 // messages written to this logger will be prefixed with "NAME: " where NAME is DEBUG, INFO, etc.
 //
-// If baseLogger is nil, this level will use the default from SetBaseLogger.
+// If baseLogger is nil, this level will use the default from [Loggers.SetBaseLogger].
 func (l *Loggers) SetBaseLoggerForLevel(level LogLevel, baseLogger BaseLogger) {
 	l.ensureInited()
 	levelLogger := l.levelLogger(level)
@@ -209,16 +209,16 @@ func (l Loggers) ForLevel(level LogLevel) BaseLogger {
 	return nullLog
 }
 
-// SetMinLevel specifies the minimum level for log output, where Debug is the lowest and Error
+// SetMinLevel specifies the minimum level for log output, where [Debug] is the lowest and [Error]
 // is the highest. Log messages at a level lower than this will be suppressed. The default is
-// Info.
+// [Info].
 func (l *Loggers) SetMinLevel(minLevel LogLevel) {
 	l.ensureInited()
 	l.minLevel = minLevel
 	l.configureLevels()
 }
 
-// GetMinLevel returns the minimum level that has been specified for log output. The default is Info.
+// GetMinLevel returns the minimum level that has been specified for log output. The default is [Info].
 func (l Loggers) GetMinLevel() LogLevel {
 	if l.minLevel == 0 {
 		return Info // this instance hasn't been initialized, use the default
@@ -226,12 +226,13 @@ func (l Loggers) GetMinLevel() LogLevel {
 	return l.minLevel
 }
 
-// IsDebugEnabled returns true if the minimum log level is Debug, or false if it is higher.
+// IsDebugEnabled returns true if the minimum log level is [Debug], or false if it is higher.
 //
 // This allows for greater efficiency in code that can produce verbose debug output. When the Debug
-// level is disabled, calling Debug or Debugf does not produce any output but they can still cause
-// unwanted overhead due to having to convert their parameters to interface{} values. To avoid that
-// overhead, you can choose to not bother calling Debug or Debugf at all if IsDebugEnabled returns false.
+// level is disabled, calling [Loggers.Debug] or [Loggers.Debugf] does not produce any output but they
+// can still cause unwanted overhead due to having to convert their parameters to interface{} values. To
+// avoid that overhead, you can choose to not bother calling Debug or Debugf at all if IsDebugEnabled
+// returns false.
 func (l Loggers) IsDebugEnabled() bool {
 	return l.GetMinLevel() == Debug
 }

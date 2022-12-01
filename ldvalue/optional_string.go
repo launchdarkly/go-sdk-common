@@ -4,8 +4,8 @@ package ldvalue
 // string pointer to distinguish between an empty string and nil, but it is safer because it does
 // not expose a pointer to any mutable value.
 //
-// Unlike Value, which can contain a value of any JSON-compatible type, OptionalString either
-// contains a string or nothing. To create an instance with a string value, use NewOptionalString.
+// Unlike [Value], which can contain a value of any JSON-compatible type, OptionalString either
+// contains a string or nothing. To create an instance with a string value, use [NewOptionalString].
 // There is no corresponding method for creating an instance with no value; simply use the empty
 // literal OptionalString{}.
 //
@@ -77,7 +77,7 @@ func (o OptionalString) AsPointer() *string {
 	return o.optValue.getAsPointer()
 }
 
-// AsValue converts the OptionalString to a Value, which is either Null() or a string value.
+// AsValue converts the OptionalString to a [Value], which is either [Null]() or a string value.
 func (o OptionalString) AsValue() Value {
 	if value, ok := o.optValue.get(); ok {
 		return String(value)

@@ -19,22 +19,19 @@ func makeInternCommonAttributeNamesMap() map[string]string {
 	return ret
 }
 
-// UnmarshalJSON provides JSON deserialization for Context when using json.UnmarshalJSON.
+// UnmarshalJSON provides JSON deserialization for Context when using [encoding/json.UnmarshalJSON].
 //
 // LaunchDarkly's JSON schema for contexts is standardized across SDKs. For unmarshaling, there are
 // three supported formats:
 //
-// 1. A single-kind context, identified by a top-level "kind" property that is not "multi".
+//  1. A single context, identified by a top-level "kind" property that is not "multi".
+//  2. A multi-context, identified by a top-level "kind" property of "multi".
+//  3. A user context in the format used by older LaunchDarkly SDKs. This has no top-level "kind";
+//     its kind is assumed to be [DefaultKind]. It follows a different layout in which some predefined
+//     attribute names are top-level properties, while others are within a "custom" property. Also,
+//     unlike new Contexts, old-style users were allowed to have an empty string "" as a key.
 //
-// 2. A multi-kind context, identified by a top-level "kind" property of "multi".
-//
-// 3. A user context in the format used by older LaunchDarkly SDKs. This has no top-level "kind";
-// its kind is assumed to be "user". It follows a different layout in which some predefined
-// attribute names are top-level properties, while others are within a "custom" property (or, for
-// meta-attributes such as "secondary", are within a "_meta" property). Also, unlike new Contexts,
-// old-style users were allowed to have an empty string "" as a key.
-//
-// Trying to unmarshal any non-struct value, including a JSON null, into a Context will return a
+// Trying to unmarshal any non-struct value, including a JSON null, into a [Context] will return a
 // json.UnmarshalTypeError. If you want to unmarshal optional context data that might be null, pass
 // a **Context rather than a *Context to json.Unmarshal.
 func (c *Context) UnmarshalJSON(data []byte) error {

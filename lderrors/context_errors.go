@@ -15,9 +15,9 @@ const (
 	msgContextKeyMissing             = `"key" property not found in JSON context object`
 	msgContextKindEmpty              = "context kind cannot be empty"
 	msgContextKindCannotBeKind       = `"kind" is not a valid context kind`
-	msgContextKindMultiForSingleKind = `single-kind context cannot have the kind "multi"`
-	msgContextKindMultiWithNoKinds   = "multi-kind context must contain at least one kind"
-	msgContextKindMultiDuplicates    = "multi-kind context cannot have same kind more than once"
+	msgContextKindMultiForSingleKind = `single context cannot have the kind "multi"`
+	msgContextKindMultiWithNoKinds   = "multi-context must contain at least one kind"
+	msgContextKindMultiDuplicates    = "multi-context cannot have same kind more than once"
 	msgContextKindInvalidChars       = "context kind contains disallowed characters"
 )
 
@@ -47,15 +47,15 @@ type ErrContextKindEmpty struct{}
 type ErrContextKindCannotBeKind struct{}
 
 // ErrContextKindMultiForSingleKind means that you have tried to set the ldcontext.Context Kind
-// field to the string "multi" for a single-kind context. The Context schema does not allow this.
+// field to the string "multi" for a single context. The Context schema does not allow this.
 type ErrContextKindMultiForSingleKind struct{}
 
 // ErrContextKindMultiWithNoKinds means that you have used an ldcontext constructor or builder
-// for a multi-kind Context but you did not specify any individual Contexts in it.
+// for a multi-context but you did not specify any individual Contexts in it.
 type ErrContextKindMultiWithNoKinds struct{}
 
 // ErrContextKindMultiDuplicates means that you have used an ldcontext constructor or builder
-// for a multi-kind Context and you specified more than one individual Context in it with the
+// for a multi-context and you specified more than one individual Context in it with the
 // same kind.
 type ErrContextKindMultiDuplicates struct{}
 
@@ -63,7 +63,7 @@ type ErrContextKindMultiDuplicates struct{}
 // a string that contained disallowed characters.
 type ErrContextKindInvalidChars struct{}
 
-// ErrContextPerKindErrors means that a multi-kind Context contained at least one kind where the
+// ErrContextPerKindErrors means that a multi-context contained at least one kind where the
 // individual Context was invalid. There may be a separate validation error for each kind.
 type ErrContextPerKindErrors struct {
 	// Errors is a map where each key is the context kind (as a string) and the value is the

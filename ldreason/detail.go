@@ -4,11 +4,12 @@ import (
 	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
 )
 
-// EvaluationDetail is an object returned by LDClient.VariationDetail, combining the result of a
+// EvaluationDetail is an object returned by the SDK's "detail" evaluation methods, such as
+// [github.com/launchdarkly/go-server-sdk/v6.LDClient.BoolVariationDetail], combining the result of a
 // flag evaluation with an explanation of how it was calculated.
 type EvaluationDetail struct {
 	// Value is the result of the flag evaluation. This will be either one of the flag's variations or
-	// the default value that was passed to the Variation method.
+	// the default value that was passed to the evaluation method.
 	Value ldvalue.Value
 	// VariationIndex is the index of the returned value within the flag's list of variations, e.g.
 	// 0 for the first variation. This is an ldvalue.OptionalInt rather than an int, because it is
@@ -29,7 +30,7 @@ func (d EvaluationDetail) IsDefaultValue() bool {
 }
 
 // NewEvaluationDetail constructs an EvaluationDetail, specifying all fields. This assumes that there
-// is a defined value for variationIndex; if variationIndex is undefined, use NewEvaluationDetailForError
+// is a defined value for variationIndex; if variationIndex is undefined, use [NewEvaluationDetailForError]
 // or set the struct fields directly.
 func NewEvaluationDetail(
 	value ldvalue.Value,

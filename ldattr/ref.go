@@ -15,13 +15,13 @@ import (
 // efficiency is a major concern so it's desirable to do any parsing or preprocessing just once.
 // Applications are unlikely to need to use the Ref type directly.
 //
-// It can be used to retrieve a value with Context.GetValueForRef(), or to identify an attribute or
-// nested value that should be considered private with Builder.Private() (the SDK configuration can also
-// have a list of private attribute references).
+// It can be used to retrieve a value with Context.GetValueForRef, or to identify an attribute or
+// nested value that should be considered private with Builder.PrivateRef (the SDK configuration
+// can also have a list of private attribute references).
 //
-// Parsing and validation are done at the time that the NewRef or NewLiteralRef constructor is called.
+// Parsing and validation are done at the time that the [NewRef] or [NewLiteralRef] constructor is called.
 // If a Ref instance was created from an invalid string, or if it is an uninitialized Ref{}, it is
-// considered invalid and its Err() method will return a non-nil error.
+// considered invalid and its [Ref.Err] method will return a non-nil error.
 //
 // # Syntax
 //
@@ -66,11 +66,11 @@ type Ref struct {
 	components          []string
 }
 
-// NewRef creates a Ref from a string. For the supported syntax and examples, see comments on the Ref type.
+// NewRef creates a Ref from a string. For the supported syntax and examples, see [Ref].
 //
 // This constructor always returns a Ref that preserves the original string, even if validation fails,
-// so that calling String() (or serializing the Ref to JSON) will produce the original string. If
-// validation fails, Err() will return a non-nil error and any SDK method that takes this Ref as a
+// so that calling [Ref.String] (or serializing the Ref to JSON) will produce the original string. If
+// validation fails, [Ref.Err] will return a non-nil error and any SDK method that takes this Ref as a
 // parameter will consider it invalid.
 func NewRef(referenceString string) Ref {
 	if referenceString == "" || referenceString == "/" {
@@ -105,7 +105,7 @@ func NewRef(referenceString string) Ref {
 	return ret
 }
 
-// NewLiteralRef is similar to NewRef except that it always interprets the string as a literal
+// NewLiteralRef is similar to [NewRef] except that it always interprets the string as a literal
 // attribute name, never as a slash-delimited path expression. There is no escaping or unescaping,
 // even if the name contains literal '/' or '~' characters. Since an attribute name can contain
 // any characters, this method always returns a valid Ref unless the name is empty.
@@ -129,7 +129,7 @@ func NewLiteralRef(attrName string) Ref {
 }
 
 // IsDefined returns true if the Ref has a value, meaning that it is not an uninitialized Ref{}.
-// That does not guarantee that the value is valid; use Err() to test that.
+// That does not guarantee that the value is valid; use [Ref.Err] to test that.
 func (a Ref) IsDefined() bool {
 	return a.rawPath != "" || a.err != nil
 }
@@ -137,7 +137,7 @@ func (a Ref) IsDefined() bool {
 // Equal returns true if the two Ref instances have the same value.
 //
 // You cannot compare Ref instances with the == operator, because the struct may contain a slice;
-// reflect.DeepEqual will work, but is less efficient.
+// [reflect.DeepEqual] will work, but is less efficient.
 func (a Ref) Equal(other Ref) bool {
 	if a.err != other.err || a.rawPath != other.rawPath || a.singlePathComponent != other.singlePathComponent {
 		return false
@@ -151,7 +151,7 @@ func (a Ref) Equal(other Ref) bool {
 //
 // A Ref is invalid if the input string is empty, or starts with a slash but is not a valid
 // slash-delimited path, or starts with a slash and contains an invalid escape sequence. For a list of
-// the possible validation errors, see the ErrAttribute___ types in the lderrors package.
+// the possible validation errors, see the [lderrors] package.
 //
 // Otherwise, the Ref is valid, but that does not guarantee that such an attribute exists in any
 // given Context. For instance, NewRef("name") is a valid Ref, but a specific Context might or might
@@ -204,15 +204,15 @@ func (a Ref) Component(index int) string {
 }
 
 // String returns the attribute reference as a string, in the same format used by NewRef().
-// If the Ref was created with NewRef(), this value is identical to the original string. If it
-// was created with NewRefForName(), the value may be different due to unescaping (for instance,
+// If the Ref was created with [NewRef], this value is identical to the original string. If it
+// was created with [NewLiteralRef], the value may be different due to unescaping (for instance,
 // an attribute whose name is "/a" would be represented as "~1a".
 func (a Ref) String() string {
 	return a.rawPath
 }
 
 // MarshalJSON produces a JSON representation of the Ref. If it is an uninitialized Ref{}, this
-// is a JSON null token. Otherwise, it is a JSON string using the same value returned by String().
+// is a JSON null token. Otherwise, it is a JSON string using the same value returned by [Ref.String].
 func (a Ref) MarshalJSON() ([]byte, error) {
 	if !a.IsDefined() {
 		return []byte(`null`), nil
@@ -221,12 +221,12 @@ func (a Ref) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON parses a Ref from a JSON value. If the value is null, the result is an
-// uninitialized Ref(). If the value is a string, it is passed to NewRef(). Any other type
+// uninitialized Ref(). If the value is a string, it is passed to [NewRef]. Any other type
 // causes an error.
 //
 // A valid JSON string that is not valid as a Ref path (such as "" or "///") does not cause
 // UnmarshalJSON to return an error; instead, it stores the string in the Ref and the error
-// can be obtained from Ref.Err(). This is deliberate, so that the LaunchDarkly SDK will be
+// can be obtained from [Ref.Err]. This is deliberate, so that the LaunchDarkly SDK will be
 // able to parse a set of feature flag data even if one of the flags contains an invalid Ref.
 func (a *Ref) UnmarshalJSON(data []byte) error {
 	r := jreader.NewReader(data)
@@ -244,9 +244,9 @@ func (a *Ref) UnmarshalJSON(data []byte) error {
 
 // Performs unescaping of attribute reference path components:
 //
-// "~1" becomes "/"
-// "~0" becomes "~"
-// "~" followed by any character other than "0" or "1" is invalid
+//   - "~1" becomes "/"
+//   - "~0" becomes "~"
+//   - "~" followed by any character other than "0" or "1" is invalid
 //
 // The second return value is true if successful, or false if there was an invalid escape sequence.
 func unescapePath(path string) (string, bool) {

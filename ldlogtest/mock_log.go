@@ -22,7 +22,7 @@ type MockLogItem struct {
 
 // MockLog provides the ability to capture log output.
 //
-// It contains a Loggers instance which can be used like any other Loggers, but all of the output is
+// It contains an [ldlog.Loggers] instance which can be used like any other Loggers, but all of the output is
 // captured by the enclosing MockLog and can be retrieved with the MockLog methods.
 //
 //	mockLog := ldlogtest.NewMockLog()
@@ -74,8 +74,8 @@ func (ml *MockLog) HasMessageMatch(level ldlog.LogLevel, pattern string) bool {
 }
 
 // AssertMessageMatch asserts whether there is a log message of this level that matches this regex.
-// This is equivalent to using assert.True or assert.False with HasMessageMatch, except that if the
-// test fails, it includes the actual log messages in the failure message.
+// This is equivalent to using [assert.True] or [assert.False] with [MockLog.HasMessageMatch], except that
+// if the test fails, it includes the actual log messages in the failure message.
 func (ml *MockLog) AssertMessageMatch(t *testing.T, shouldMatch bool, level ldlog.LogLevel, pattern string) {
 	line, hasMatch := ml.findMessageMatching(level, pattern)
 	if hasMatch != shouldMatch {

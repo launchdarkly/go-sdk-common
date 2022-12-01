@@ -189,6 +189,14 @@ func TestBuilderSetCustomAttributes(t *testing.T) {
 			makeBasicBuilder().SetString("attr1", "value1").SetString("attr2", "value2").SetString("attr3", "value3").
 				SetValue("attr2", ldvalue.Null()))
 	})
+
+	t.Run("cannot add attribute with empty name", func(t *testing.T) {
+		assert.Equal(t, makeBasicBuilder().Build(), makeBasicBuilder().SetBool("", true).Build())
+		assert.Equal(t, makeBasicBuilder().Build(), makeBasicBuilder().SetInt("", 1).Build())
+		assert.Equal(t, makeBasicBuilder().Build(), makeBasicBuilder().SetFloat64("", 1).Build())
+		assert.Equal(t, makeBasicBuilder().Build(), makeBasicBuilder().SetString("", "x").Build())
+		assert.Equal(t, makeBasicBuilder().Build(), makeBasicBuilder().SetValue("", ldvalue.ArrayOf()).Build())
+	})
 }
 
 func TestBuilderSetBuiltInAttributesByName(t *testing.T) {
@@ -427,7 +435,7 @@ func TestNewBuilderFromContext(t *testing.T) {
 	multi := NewMulti(NewWithKind("kind1", "key1"), NewWithKind("kind2", "key2"))
 	assert.NoError(t, multi.Err())
 	c4 := NewBuilderFromContext(multi).Build()
-	assert.Error(t, c4.Err()) // can't copy Builder from multi-kind context
+	assert.Error(t, c4.Err()) // can't copy Builder from multi-context
 }
 
 func TestBuilderSafety(t *testing.T) {

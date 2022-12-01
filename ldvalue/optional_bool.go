@@ -4,7 +4,7 @@ package ldvalue
 // bool pointer to distinguish between a false value and nil, but it is safer because it does not
 // expose a pointer to any mutable value.
 //
-// To create an instance with a bool value, use NewOptionalBool. There is no corresponding method
+// To create an instance with a bool value, use [NewOptionalBool]. There is no corresponding method
 // for creating an instance with no value; simply use the empty literal OptionalBool{}.
 //
 //	ob1 := NewOptionalBool(1)
@@ -66,7 +66,7 @@ func (o OptionalBool) AsPointer() *bool {
 	return o.optValue.getAsPointer()
 }
 
-// AsValue converts the OptionalBool to a Value, which is either Null() or a boolean value.
+// AsValue converts the OptionalBool to a [Value], which is either [Null]() or a boolean value.
 func (o OptionalBool) AsValue() Value {
 	if value, ok := o.optValue.get(); ok {
 		return Bool(value)
