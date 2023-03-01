@@ -2,6 +2,10 @@
 
 All notable changes to the project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [3.0.1] - 2023-03-01
+### Fixed:
+- Fixed unmarshaling bug in easyJSON implementation when `privateAttributes` or `redactedAttributes` were encountered in Context `_meta` attribute, but not expected.
+
 ## [3.0.0] - 2022-11-30
 This major version release of `go-sdk-common` corresponds to the upcoming v6.0.0 release of the LaunchDarkly Go SDK (`go-server-sdk`), and cannot be used with earlier SDK versions.
 
