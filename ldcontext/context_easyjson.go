@@ -169,18 +169,10 @@ func unmarshalSingleKindEasyJSON(c *Context, in *jlexer.Lexer, knownKind Kind, u
 			for !in.IsDelim('}') {
 				key := in.UnsafeBytes() // see comment above
 				in.WantColon()
-				switch string(key) {
-				case jsonPropPrivate:
-					if usingEventFormat {
-						in.SkipRecursive()
-						continue
-					}
+				switch {
+				case string(key) == jsonPropPrivate && !usingEventFormat:
 					readPrivateAttributesEasyJSON(in, c, false)
-				case jsonPropRedacted:
-					if !usingEventFormat {
-						in.SkipRecursive()
-						continue
-					}
+				case string(key) == jsonPropRedacted && usingEventFormat:
 					readPrivateAttributesEasyJSON(in, c, false)
 				default:
 					// Unrecognized property names within _meta are ignored. Calling SkipRecursive makes the Lexer
