@@ -52,6 +52,13 @@ func makeContextUnmarshalUnimportantVariantsParams() []contextSerializationParam
 		// redactedAttributes is only a thing in the event output format, not the regular format
 		{NewBuilder("my-key").Build(),
 			`{"kind": "user", "key": "my-key", "_meta": {"redactedAttributes": ["name"]}}`},
+
+		// redactedAttributes and privateAttributes should not break deserialization
+		// These test cases were added due to an issue where having both would break deserialization depending on which came first.
+		{NewBuilder("my-key").Private("name").Build(),
+			`{"kind": "user", "key": "my-key", "_meta": {"privateAttributes": ["name"], "redactedAttributes": ["name"]}}`},
+		{NewBuilder("my-key").Private("name").Build(),
+			`{"kind": "user", "key": "my-key", "_meta": {"redactedAttributes": ["name"], "privateAttributes": ["name"]}}`},
 	}
 }
 
