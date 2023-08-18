@@ -2,6 +2,21 @@ package ldmigration
 
 import "fmt"
 
+// ExecutionOrder represents the various execution modes this SDK can operate
+// under while performing migration-assisted reads.
+type ExecutionOrder uint8
+
+const (
+	// Serial execution ensures the authoritative read will always complete execution before executing the
+	// non-authoritative read.
+	Serial ExecutionOrder = iota
+	// Random execution randomly decides if the authoritative read should execute first or second.
+	Random
+	// Concurrent executes both reads in separate go routines, and waits until both calls have finished before
+	// proceeding.
+	Concurrent
+)
+
 // MigrationOp represents a type of migration operation; namely, read or write.
 type MigrationOp uint8
 
