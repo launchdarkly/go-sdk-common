@@ -4,39 +4,28 @@ import "fmt"
 
 // ExecutionOrder represents the various execution modes this SDK can operate
 // under while performing migration-assisted reads.
-type ExecutionOrder uint8
+type ExecutionOrder string
 
 const (
 	// Serial execution ensures the authoritative read will always complete execution before executing the
 	// non-authoritative read.
-	Serial ExecutionOrder = iota
+	Serial ExecutionOrder = "serial"
 	// Random execution randomly decides if the authoritative read should execute first or second.
-	Random
+	Random = "random"
 	// Concurrent executes both reads in separate go routines, and waits until both calls have finished before
 	// proceeding.
-	Concurrent
+	Concurrent = "concurrent"
 )
 
-// MigrationOp represents a type of migration operation; namely, read or write.
-type MigrationOp uint8
+// Operation represents a type of migration operation; namely, read or write.
+type Operation string
 
 const (
 	// Read denotes a read-related migration operation.
-	Read MigrationOp = iota
+	Read Operation = "read"
 	// Write denotes a write-related migration operation.
-	Write
+	Write = "write"
 )
-
-func (o MigrationOp) String() string {
-	switch o {
-	case Read:
-		return "read"
-	case Write:
-		return "write"
-	default:
-		return fmt.Sprintf("%d", int(o))
-	}
-}
 
 // ConsistencyCheck records the results of a consistency check and the ratio at
 // which the check was sampled.
@@ -66,72 +55,44 @@ func (c ConsistencyCheck) SamplingRatio() int {
 	return c.samplingRatio
 }
 
-// MigrationOrigin represents the source of origin for a migration-related operation.
-type MigrationOrigin int
+// Origin represents the source of origin for a migration-related operation.
+type Origin string
 
 const (
 	// Old represents the technology source we are migrating away from.
-	Old MigrationOrigin = iota
+	Old Origin = "old"
 	// New represents the technology source we are migrating towards.
-	New
+	New = "new"
 )
 
-func (o MigrationOrigin) String() string {
-	switch o {
-	case Old:
-		return "old"
-	case New:
-		return "new"
-	default:
-		return fmt.Sprintf("%d", int(o))
-	}
-}
-
-// MigrationStage denotes one of six possible stages a technology migration could be a part of.
-type MigrationStage int
+// Stage denotes one of six possible stages a technology migration could be a
+// part of, progressing through the following order.
+//
+// Off -> DualWrite -> Shadow -> Live -> RampDown -> Complete
+type Stage string
 
 const (
-	// Off Stage 1 - migration hasn't started, "old" is authoritative for reads and writes
-	Off MigrationStage = iota
+	// Off - migration hasn't started, "old" is authoritative for reads and writes
+	Off Stage = "off"
 
-	// DualWrite Stage 2 - write to both "old" and "new", "old" is authoritative for reads
-	DualWrite
+	// DualWrite - write to both "old" and "new", "old" is authoritative for reads
+	DualWrite = "dualwrite"
 
-	// Shadow Stage 3 - both "new" and "old" versions run with a preference for "old"
-	Shadow
+	// Shadow - both "new" and "old" versions run with a preference for "old"
+	Shadow = "shadow"
 
-	// Live Stage 4 - both "new" and "old" versions run with a preference for "new"
-	Live
+	// Live - both "new" and "old" versions run with a preference for "new"
+	Live = "live"
 
-	// RampDown Stage 5 only read from "new", write to "old" and "new"
-	RampDown
+	// RampDown - only read from "new", write to "old" and "new"
+	RampDown = "rampdown"
 
-	// Complete Stage 6 - migration is done
-	Complete
+	// Complete - migration is done
+	Complete = "complete"
 )
 
-// String converts a MigrationStage into its string representation.
-func (s MigrationStage) String() string {
-	switch s {
-	case Off:
-		return "off" //nolint:goconst
-	case DualWrite:
-		return "dualwrite"
-	case Shadow:
-		return "shadow"
-	case Live:
-		return "live"
-	case RampDown:
-		return "rampdown"
-	case Complete:
-		return "complete"
-	default:
-		return "off"
-	}
-}
-
-// NewMigrationStageFromString is a convenience method for creating a migration stage enum from a simple string.
-func NewMigrationStageFromString(val string) (MigrationStage, error) {
+// ParseStage parses a MigrationStage from a string, or returns an error if the stage is unrecognized.
+func ParseStage(val string) (Stage, error) {
 	switch val {
 	case "off":
 		return Off, nil
