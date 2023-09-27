@@ -11,10 +11,10 @@ const (
 	// non-authoritative read.
 	Serial ExecutionOrder = "serial"
 	// Random execution randomly decides if the authoritative read should execute first or second.
-	Random = "random"
+	Random ExecutionOrder = "random"
 	// Concurrent executes both reads in separate go routines, and waits until both calls have finished before
 	// proceeding.
-	Concurrent = "concurrent"
+	Concurrent ExecutionOrder = "concurrent"
 )
 
 // Operation represents a type of migration operation; namely, read or write.
@@ -24,7 +24,7 @@ const (
 	// Read denotes a read-related migration operation.
 	Read Operation = "read"
 	// Write denotes a write-related migration operation.
-	Write = "write"
+	Write Operation = "write"
 )
 
 // ConsistencyCheck records the results of a consistency check and the ratio at
@@ -62,7 +62,7 @@ const (
 	// Old represents the technology source we are migrating away from.
 	Old Origin = "old"
 	// New represents the technology source we are migrating towards.
-	New = "new"
+	New Origin = "new"
 )
 
 // Stage denotes one of six possible stages a technology migration could be a
@@ -76,19 +76,19 @@ const (
 	Off Stage = "off"
 
 	// DualWrite - write to both "old" and "new", "old" is authoritative for reads
-	DualWrite = "dualwrite"
+	DualWrite Stage = "dualwrite"
 
 	// Shadow - both "new" and "old" versions run with a preference for "old"
-	Shadow = "shadow"
+	Shadow Stage = "shadow"
 
 	// Live - both "new" and "old" versions run with a preference for "new"
-	Live = "live"
+	Live Stage = "live"
 
 	// RampDown - only read from "new", write to "old" and "new"
-	RampDown = "rampdown"
+	RampDown Stage = "rampdown"
 
 	// Complete - migration is done
-	Complete = "complete"
+	Complete Stage = "complete"
 )
 
 // ParseStage parses a MigrationStage from a string, or returns an error if the stage is unrecognized.
