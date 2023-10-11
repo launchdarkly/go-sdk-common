@@ -2,6 +2,10 @@
 
 All notable changes to the project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [3.1.0] - 2023-10-11
+### Added:
+- Introduced ldmigration and ldsampling utility packages to support technology migration use cases.
+
 ## [3.0.1] - 2023-03-01
 ### Fixed:
 - Fixed unmarshaling bug in easyJSON implementation when `privateAttributes` or `redactedAttributes` were encountered in Context `_meta` attribute, but not expected.
