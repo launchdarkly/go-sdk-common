@@ -34,4 +34,4 @@ jobs:
           aws-region: us-east-1
       - name: Upload scan results to S3
         run: |
-          aws s3 cp ./gosec-results.json s3://launchdarkly-org-security-inventory/scan-results/gosec/${{ steps.date.outputs.date }}/$GITHUB_REPOSITORY.json
+          aws s3 cp ./gosec-results.json "s3://launchdarkly-org-security-inventory/scan-results/gosec/${{ steps.date.outputs.date }}/$GITHUB_REPOSITORY.json"
