@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func BenchmarkReflectCopyMapStringSmall(b *testing.B) {
+func BenchmarkCollectionCopyMapStringSmall(b *testing.B) {
 	input := generateRandomMap(10)
 
 	for i := 0; i < b.N; i++ {
@@ -13,7 +13,7 @@ func BenchmarkReflectCopyMapStringSmall(b *testing.B) {
 	}
 }
 
-func BenchmarkReflectCopyMapStringLarge(b *testing.B) {
+func BenchmarkCollectionCopyMapStringLarge(b *testing.B) {
 	input := generateRandomMap(1_000)
 
 	for i := 0; i < b.N; i++ {
@@ -31,7 +31,7 @@ func generateRandomMap(i int) map[string]string {
 	return m
 }
 
-func BenchmarkReflectCopySliceStringSmall(b *testing.B) {
+func BenchmarkCollectionCopySliceStringSmall(b *testing.B) {
 	input := generateStringSlice(10)
 
 	for i := 0; i < b.N; i++ {
@@ -39,7 +39,7 @@ func BenchmarkReflectCopySliceStringSmall(b *testing.B) {
 	}
 }
 
-func BenchmarkReflectCopySliceStringMedium(b *testing.B) {
+func BenchmarkCollectionCopySliceStringMedium(b *testing.B) {
 	input := generateStringSlice(100)
 
 	for i := 0; i < b.N; i++ {
@@ -47,7 +47,7 @@ func BenchmarkReflectCopySliceStringMedium(b *testing.B) {
 	}
 }
 
-func BenchmarkReflectCopySliceStringLarge(b *testing.B) {
+func BenchmarkCollectionCopySliceStringLarge(b *testing.B) {
 	input := generateStringSlice(1_000)
 
 	for i := 0; i < b.N; i++ {
@@ -55,7 +55,7 @@ func BenchmarkReflectCopySliceStringLarge(b *testing.B) {
 	}
 }
 
-func BenchmarkReflectCopySliceIntSmall(b *testing.B) {
+func BenchmarkCollectionCopySliceIntSmall(b *testing.B) {
 	input := generateIntSlice(10)
 
 	for i := 0; i < b.N; i++ {
@@ -63,7 +63,7 @@ func BenchmarkReflectCopySliceIntSmall(b *testing.B) {
 	}
 }
 
-func BenchmarkReflectCopySliceIntMedium(b *testing.B) {
+func BenchmarkCollectionCopySliceIntMedium(b *testing.B) {
 	input := generateIntSlice(100)
 
 	for i := 0; i < b.N; i++ {
@@ -71,7 +71,7 @@ func BenchmarkReflectCopySliceIntMedium(b *testing.B) {
 	}
 }
 
-func BenchmarkReflectCopySliceIntLarge(b *testing.B) {
+func BenchmarkCollectionCopySliceIntLarge(b *testing.B) {
 	input := generateIntSlice(1_000)
 
 	for i := 0; i < b.N; i++ {

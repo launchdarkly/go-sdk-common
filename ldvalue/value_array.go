@@ -249,113 +249,126 @@ func (a ValueArray) String() string {
 	return a.JSONString()
 }
 
-func copyArbitraryArrayString(o []string) Value {
-	a := make([]Value, len(o))
-	for i, v := range o {
+func copyArbitraryArrayString(data []string) Value {
+	a := make([]Value, len(data))
+	for i, v := range data {
 		a[i] = String(v)
 	}
 
 	return Value{valueType: ArrayType, arrayValue: ValueArray{data: a}}
 }
-func copyArbitraryArrayBool(o []bool) Value {
-	a := make([]Value, len(o))
-	for i, v := range o {
+
+func copyArbitraryArrayBool(data []bool) Value {
+	a := make([]Value, len(data))
+	for i, v := range data {
 		a[i] = Bool(v)
 	}
 
 	return Value{valueType: ArrayType, arrayValue: ValueArray{data: a}}
 }
-func copyArbitraryArrayInt(o []int) Value {
-	a := make([]Value, len(o))
-	for i, v := range o {
+
+func copyArbitraryArrayInt(data []int) Value {
+	a := make([]Value, len(data))
+	for i, v := range data {
 		a[i] = Float64(float64(v))
 	}
 
 	return Value{valueType: ArrayType, arrayValue: ValueArray{data: a}}
 }
-func copyArbitraryArrayInt8(o []int8) Value {
-	a := make([]Value, len(o))
-	for i, v := range o {
+
+func copyArbitraryArrayInt8(data []int8) Value {
+	a := make([]Value, len(data))
+	for i, v := range data {
 		a[i] = Float64(float64(v))
 	}
 
 	return Value{valueType: ArrayType, arrayValue: ValueArray{data: a}}
 }
-func copyArbitraryArrayInt16(o []int16) Value {
-	a := make([]Value, len(o))
-	for i, v := range o {
+
+func copyArbitraryArrayInt16(data []int16) Value {
+	a := make([]Value, len(data))
+	for i, v := range data {
 		a[i] = Float64(float64(v))
 	}
 
 	return Value{valueType: ArrayType, arrayValue: ValueArray{data: a}}
 }
-func copyArbitraryArrayInt32(o []int32) Value {
-	a := make([]Value, len(o))
-	for i, v := range o {
+
+func copyArbitraryArrayInt32(data []int32) Value {
+	a := make([]Value, len(data))
+	for i, v := range data {
 		a[i] = Float64(float64(v))
 	}
 
 	return Value{valueType: ArrayType, arrayValue: ValueArray{data: a}}
 }
-func copyArbitraryArrayInt64(o []int64) Value {
-	a := make([]Value, len(o))
-	for i, v := range o {
+
+func copyArbitraryArrayInt64(data []int64) Value {
+	a := make([]Value, len(data))
+	for i, v := range data {
 		a[i] = Float64(float64(v))
 	}
 
 	return Value{valueType: ArrayType, arrayValue: ValueArray{data: a}}
 }
-func copyArbitraryArrayUint(o []uint) Value {
-	a := make([]Value, len(o))
-	for i, v := range o {
+
+func copyArbitraryArrayUint(data []uint) Value {
+	a := make([]Value, len(data))
+	for i, v := range data {
 		a[i] = Float64(float64(v))
 	}
 
 	return Value{valueType: ArrayType, arrayValue: ValueArray{data: a}}
 }
-func copyArbitraryArrayUint8(o []uint8) Value {
-	a := make([]Value, len(o))
-	for i, v := range o {
+
+func copyArbitraryArrayUint8(data []uint8) Value {
+	a := make([]Value, len(data))
+	for i, v := range data {
 		a[i] = Float64(float64(v))
 	}
 
 	return Value{valueType: ArrayType, arrayValue: ValueArray{data: a}}
 }
-func copyArbitraryArrayUint16(o []uint16) Value {
-	a := make([]Value, len(o))
-	for i, v := range o {
+
+func copyArbitraryArrayUint16(data []uint16) Value {
+	a := make([]Value, len(data))
+	for i, v := range data {
 		a[i] = Float64(float64(v))
 	}
 
 	return Value{valueType: ArrayType, arrayValue: ValueArray{data: a}}
 }
-func copyArbitraryArrayUint32(o []uint32) Value {
-	a := make([]Value, len(o))
-	for i, v := range o {
+
+func copyArbitraryArrayUint32(data []uint32) Value {
+	a := make([]Value, len(data))
+	for i, v := range data {
 		a[i] = Float64(float64(v))
 	}
 
 	return Value{valueType: ArrayType, arrayValue: ValueArray{data: a}}
 }
-func copyArbitraryArrayUint64(o []uint64) Value {
-	a := make([]Value, len(o))
-	for i, v := range o {
+
+func copyArbitraryArrayUint64(data []uint64) Value {
+	a := make([]Value, len(data))
+	for i, v := range data {
 		a[i] = Float64(float64(v))
 	}
 
 	return Value{valueType: ArrayType, arrayValue: ValueArray{data: a}}
 }
-func copyArbitraryArrayFloat32(o []float32) Value {
-	a := make([]Value, len(o))
-	for i, v := range o {
+
+func copyArbitraryArrayFloat32(data []float32) Value {
+	a := make([]Value, len(data))
+	for i, v := range data {
 		a[i] = Float64(float64(v))
 	}
 
 	return Value{valueType: ArrayType, arrayValue: ValueArray{data: a}}
 }
-func copyArbitraryArrayFloat64(o []float64) Value {
-	a := make([]Value, len(o))
-	for i, v := range o {
+
+func copyArbitraryArrayFloat64(data []float64) Value {
+	a := make([]Value, len(data))
+	for i, v := range data {
 		a[i] = Float64(v)
 	}
 
