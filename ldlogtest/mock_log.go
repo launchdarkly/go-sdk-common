@@ -103,7 +103,7 @@ func (ml *MockLog) AssertMessageMatch(t *testing.T, shouldMatch bool, level ldlo
 // Dump is a shortcut for writing all captured log lines to a Writer.
 func (ml *MockLog) Dump(w io.Writer) {
 	for _, line := range ml.GetAllOutput() {
-		fmt.Fprintln(w, line.Level.Name()+": "+line.Message)
+		fmt.Fprintln(w, line.Level.Name()+": "+line.Message) //nolint:errcheck // Don't care about if the print fails.
 	}
 }
 

@@ -1,5 +1,5 @@
 
-GOLANGCI_LINT_VERSION=v1.48.0
+GOLANGCI_LINT_VERSION=v1.60.1
 
 LINTER=./bin/golangci-lint
 LINTER_VERSION_FILE=./bin/.golangci-lint-version-$(GOLANGCI_LINT_VERSION)
@@ -63,6 +63,7 @@ benchmarks-easyjson: build
 #    count per run, possibly because the first run
 benchmark-allocs:
 	@if [ -z "$$BENCHMARK" ]; then echo "must specify BENCHMARK=" && exit 1; fi
+	@if [ -z "$$BENCHMARK_PACKAGE" ]; then echo "must specify BENCHMARK_PACKAGE=" && exit 1; fi
 	@mkdir -p ./build
 	@echo Precompiling test code to $(TEST_BINARY)
 	@go test -c -o $(TEST_BINARY) $(BENCHMARK_PACKAGE) >/dev/null 2>&1
