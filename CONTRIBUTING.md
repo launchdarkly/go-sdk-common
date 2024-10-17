@@ -67,3 +67,15 @@ Go's memory model uses a mix of stack and heap allocations, with the compiler tr
 Allocations are counted in the benchmark output: "5 allocs/op" means that a total of 5 heap objects were allocated during each run of the benchmark. This does not mean that the objects were retained, only that they were allocated at some point.
 
 For methods that should be guaranteed _not_ to do any heap allocations, such as the `ldvalue.Value` constructors, the corresponding benchmarks should have names ending in `NoAlloc`. The `make benchmarks` target will automatically fail if allocations are detected in any benchmarks that have this name suffix.
+
+
+For a much (MUCH) more detailed breakdown of this behavior, you may use the option `GODEBUG=allocfreetrace=1` while running a unit test or benchmark. This provides the type and code location of literally every heap allocation during the run. The output is extremely verbose, so it is recommended that you:
+
+1. use the Makefile helper `benchmark-allocs` (see below) to reduce the number of benchmark runs and avoid capturing allocations from the Go tools themselves;
+2. search the stacktrace output to find the method you are actually testing (such as `BoolVariation`) rather than the benchmark function name, so you are not looking at actions that are just part of the benchmark setup;
+3. consider writing a smaller temporary benchmark specifically for this purpose, since most of the existing benchmarks will iterate over a series of parameters.
+
+```bash
+# Run all benchmarks in ldcontext package. 
+BENCHMARK='.*' BENCHMARK_PACKAGE=./ldcontext make benchmark-allocs
+```

@@ -5,8 +5,6 @@ run:
 linters:
   enable:
     - bodyclose
-    - deadcode
-    - depguard
     - dupl
     - errcheck
     - goconst
@@ -23,7 +21,6 @@ linters:
     - govet
     - ineffassign
     - lll
-    - megacheck
     - misspell
     - nakedret
     - nolintlint
@@ -35,7 +32,6 @@ linters:
     - unconvert
     - unparam
     - unused
-    - varcheck
     - whitespace
   fast: false
 
@@ -44,7 +40,7 @@ linters-settings:
     simplify: false
   goimports:
     local-prefixes: github.com/launchdarkly
-  
+
 issues:
   exclude-rules:
     - path: ldvalue/optional_.*.go
