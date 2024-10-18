@@ -376,7 +376,7 @@ func copyArbitraryMapFloat32(data map[string]float32) Value {
 func copyArbitraryMapFloat64(data map[string]float64) Value {
 	m := make(map[string]Value, len(data))
 	for k, v := range data {
-		m[k] = Float64(float64(v))
+		m[k] = Float64(v)
 	}
 	return Value{valueType: ObjectType, objectValue: ValueMap{data: m}}
 }
