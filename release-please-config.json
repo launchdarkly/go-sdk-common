@@ -1,0 +1,9 @@
+{
+  "packages" : {
+    "." : {
+      "release-type" : "go",
+      "versioning" : "default",
+      "bootstrap-sha" : "e12fc411b5101866b93c9ebb306483a48438c6dc"
+    }
+  }
+}
