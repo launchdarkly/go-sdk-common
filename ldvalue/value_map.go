@@ -268,3 +268,129 @@ func (m ValueMap) Transform(fn func(key string, value Value) (string, Value, boo
 	}
 	return ValueMap{ret}
 }
+
+func copyArbitraryMapString(data map[string]string) Value {
+	m := make(map[string]Value, len(data))
+	for k, v := range data {
+		m[k] = String(v)
+	}
+
+	return Value{valueType: ObjectType, objectValue: ValueMap{data: m}}
+}
+
+func copyArbitraryMapBool(data map[string]bool) Value {
+	m := make(map[string]Value, len(data))
+	for k, v := range data {
+		m[k] = Bool(v)
+	}
+
+	return Value{valueType: ObjectType, objectValue: ValueMap{data: m}}
+}
+
+func copyArbitraryMapInt(data map[string]int) Value {
+	m := make(map[string]Value, len(data))
+	for k, v := range data {
+		m[k] = Float64(float64(v))
+	}
+
+	return Value{valueType: ObjectType, objectValue: ValueMap{data: m}}
+}
+
+func copyArbitraryMapInt8(data map[string]int8) Value {
+	m := make(map[string]Value, len(data))
+	for k, v := range data {
+		m[k] = Float64(float64(v))
+	}
+
+	return Value{valueType: ObjectType, objectValue: ValueMap{data: m}}
+}
+
+func copyArbitraryMapInt16(data map[string]int16) Value {
+	m := make(map[string]Value, len(data))
+	for k, v := range data {
+		m[k] = Float64(float64(v))
+	}
+
+	return Value{valueType: ObjectType, objectValue: ValueMap{data: m}}
+}
+
+func copyArbitraryMapInt32(data map[string]int32) Value {
+	m := make(map[string]Value, len(data))
+	for k, v := range data {
+		m[k] = Float64(float64(v))
+	}
+
+	return Value{valueType: ObjectType, objectValue: ValueMap{data: m}}
+}
+
+func copyArbitraryMapInt64(data map[string]int64) Value {
+	m := make(map[string]Value, len(data))
+	for k, v := range data {
+		m[k] = Float64(float64(v))
+	}
+
+	return Value{valueType: ObjectType, objectValue: ValueMap{data: m}}
+}
+
+func copyArbitraryMapUint(data map[string]uint) Value {
+	m := make(map[string]Value, len(data))
+	for k, v := range data {
+		m[k] = Float64(float64(v))
+	}
+
+	return Value{valueType: ObjectType, objectValue: ValueMap{data: m}}
+}
+
+func copyArbitraryMapUint8(data map[string]uint8) Value {
+	m := make(map[string]Value, len(data))
+	for k, v := range data {
+		m[k] = Float64(float64(v))
+	}
+
+	return Value{valueType: ObjectType, objectValue: ValueMap{data: m}}
+}
+
+func copyArbitraryMapUint16(data map[string]uint16) Value {
+	m := make(map[string]Value, len(data))
+	for k, v := range data {
+		m[k] = Float64(float64(v))
+	}
+
+	return Value{valueType: ObjectType, objectValue: ValueMap{data: m}}
+}
+
+func copyArbitraryMapUint32(data map[string]uint32) Value {
+	m := make(map[string]Value, len(data))
+	for k, v := range data {
+		m[k] = Float64(float64(v))
+	}
+
+	return Value{valueType: ObjectType, objectValue: ValueMap{data: m}}
+}
+
+func copyArbitraryMapUint64(data map[string]uint64) Value {
+	m := make(map[string]Value, len(data))
+	for k, v := range data {
+		m[k] = Float64(float64(v))
+	}
+
+	return Value{valueType: ObjectType, objectValue: ValueMap{data: m}}
+}
+
+func copyArbitraryMapFloat32(data map[string]float32) Value {
+	m := make(map[string]Value, len(data))
+	for k, v := range data {
+		m[k] = Float64(float64(v))
+	}
+
+	return Value{valueType: ObjectType, objectValue: ValueMap{data: m}}
+}
+
+func copyArbitraryMapFloat64(data map[string]float64) Value {
+	m := make(map[string]Value, len(data))
+	for k, v := range data {
+		m[k] = Float64(v)
+	}
+
+	return Value{valueType: ObjectType, objectValue: ValueMap{data: m}}
+}

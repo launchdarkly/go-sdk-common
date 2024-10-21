@@ -255,6 +255,87 @@ func TestValueArrayTransform(t *testing.T) {
 	assert.Equal(t, ValueArrayOf(), ValueArrayOf().Transform(shouldNotCallThis))
 }
 
+func TestCopyArbitrarySliceOfType(t *testing.T) {
+	var sNil []string
+	vm := CopyArbitraryValue(sNil)
+	assert.Equal(t, ArrayType, vm.Type())
+
+	sEmpty := []string{}
+	vm = CopyArbitraryValue(sEmpty)
+	assert.Equal(t, ArrayType, vm.Type())
+	assert.Equal(t, []Value{}, vm.arrayValue.data)
+
+	sStr := []string{"a", "b", "c"}
+	vm = CopyArbitraryValue(sStr)
+	assert.Equal(t, ArrayType, vm.Type())
+	assert.Equal(t, []Value{String("a"), String("b"), String("c")}, vm.arrayValue.data)
+
+	sBool := []bool{true, false}
+	vm = CopyArbitraryValue(sBool)
+	assert.Equal(t, ArrayType, vm.Type())
+	assert.Equal(t, []Value{Bool(true), Bool(false)}, vm.arrayValue.data)
+
+	sInt := []int{1, 2, 3}
+	vm = CopyArbitraryValue(sInt)
+	assert.Equal(t, ArrayType, vm.Type())
+	assert.Equal(t, []Value{Int(1), Int(2), Int(3)}, vm.arrayValue.data)
+
+	sInt8 := []int8{1, 2, 3}
+	vm = CopyArbitraryValue(sInt8)
+	assert.Equal(t, ArrayType, vm.Type())
+	assert.Equal(t, []Value{Int(1), Int(2), Int(3)}, vm.arrayValue.data)
+
+	sInt16 := []int16{1, 2, 3}
+	vm = CopyArbitraryValue(sInt16)
+	assert.Equal(t, ArrayType, vm.Type())
+	assert.Equal(t, []Value{Int(1), Int(2), Int(3)}, vm.arrayValue.data)
+
+	sInt32 := []int32{1, 2, 3}
+	vm = CopyArbitraryValue(sInt32)
+	assert.Equal(t, ArrayType, vm.Type())
+	assert.Equal(t, []Value{Int(1), Int(2), Int(3)}, vm.arrayValue.data)
+
+	sInt64 := []int64{1, 2, 3}
+	vm = CopyArbitraryValue(sInt64)
+	assert.Equal(t, ArrayType, vm.Type())
+	assert.Equal(t, []Value{Int(1), Int(2), Int(3)}, vm.arrayValue.data)
+
+	sUint := []uint{1, 2, 3}
+	vm = CopyArbitraryValue(sUint)
+	assert.Equal(t, ArrayType, vm.Type())
+	assert.Equal(t, []Value{Int(1), Int(2), Int(3)}, vm.arrayValue.data)
+
+	sUint8 := []uint8{1, 2, 3}
+	vm = CopyArbitraryValue(sUint8)
+	assert.Equal(t, ArrayType, vm.Type())
+	assert.Equal(t, []Value{Int(1), Int(2), Int(3)}, vm.arrayValue.data)
+
+	sUint16 := []uint16{1, 2, 3}
+	vm = CopyArbitraryValue(sUint16)
+	assert.Equal(t, ArrayType, vm.Type())
+	assert.Equal(t, []Value{Int(1), Int(2), Int(3)}, vm.arrayValue.data)
+
+	sUint32 := []uint32{1, 2, 3}
+	vm = CopyArbitraryValue(sUint32)
+	assert.Equal(t, ArrayType, vm.Type())
+	assert.Equal(t, []Value{Int(1), Int(2), Int(3)}, vm.arrayValue.data)
+
+	sUint64 := []uint64{1, 2, 3}
+	vm = CopyArbitraryValue(sUint64)
+	assert.Equal(t, ArrayType, vm.Type())
+	assert.Equal(t, []Value{Int(1), Int(2), Int(3)}, vm.arrayValue.data)
+
+	sFloat32 := []float32{1.0, 2.0, 3.0}
+	vm = CopyArbitraryValue(sFloat32)
+	assert.Equal(t, ArrayType, vm.Type())
+	assert.Equal(t, []Value{Float64(1.0), Float64(2.0), Float64(3.0)}, vm.arrayValue.data)
+
+	sFloat64 := []float64{1.1, 2.2, 3.3}
+	vm = CopyArbitraryValue(sFloat64)
+	assert.Equal(t, ArrayType, vm.Type())
+	assert.Equal(t, []Value{Float64(1.1), Float64(2.2), Float64(3.3)}, vm.arrayValue.data)
+}
+
 func shouldBeSameSlice(t *testing.T, s0 []Value, s1 []Value) {
 	old := s0[0]
 	s0[0] = String("temp-value")

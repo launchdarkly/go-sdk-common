@@ -296,6 +296,34 @@ func CopyArbitraryValue(anyValue any) Value { //nolint:gocyclo // yes, we know i
 			return Null()
 		}
 		return ArrayOf((*o)...)
+	case []string:
+		return copyArbitraryArrayString(o)
+	case []bool:
+		return copyArbitraryArrayBool(o)
+	case []int:
+		return copyArbitraryArrayInt(o)
+	case []int8:
+		return copyArbitraryArrayInt8(o)
+	case []int16:
+		return copyArbitraryArrayInt16(o)
+	case []int32:
+		return copyArbitraryArrayInt32(o)
+	case []int64:
+		return copyArbitraryArrayInt64(o)
+	case []uint:
+		return copyArbitraryArrayUint(o)
+	case []uint8:
+		return copyArbitraryArrayUint8(o)
+	case []uint16:
+		return copyArbitraryArrayUint16(o)
+	case []uint32:
+		return copyArbitraryArrayUint32(o)
+	case []uint64:
+		return copyArbitraryArrayUint64(o)
+	case []float32:
+		return copyArbitraryArrayFloat32(o)
+	case []float64:
+		return copyArbitraryArrayFloat64(o)
 	case map[string]any:
 		return copyArbitraryValueMap(o)
 	case *map[string]any:
@@ -310,6 +338,34 @@ func CopyArbitraryValue(anyValue any) Value { //nolint:gocyclo // yes, we know i
 			return Null()
 		}
 		return CopyObject(*o)
+	case map[string]string:
+		return copyArbitraryMapString(o)
+	case map[string]bool:
+		return copyArbitraryMapBool(o)
+	case map[string]int:
+		return copyArbitraryMapInt(o)
+	case map[string]int8:
+		return copyArbitraryMapInt8(o)
+	case map[string]int16:
+		return copyArbitraryMapInt16(o)
+	case map[string]int32:
+		return copyArbitraryMapInt32(o)
+	case map[string]int64:
+		return copyArbitraryMapInt64(o)
+	case map[string]uint:
+		return copyArbitraryMapUint(o)
+	case map[string]uint8:
+		return copyArbitraryMapUint8(o)
+	case map[string]uint16:
+		return copyArbitraryMapUint16(o)
+	case map[string]uint32:
+		return copyArbitraryMapUint32(o)
+	case map[string]uint64:
+		return copyArbitraryMapUint64(o)
+	case map[string]float32:
+		return copyArbitraryMapFloat32(o)
+	case map[string]float64:
+		return copyArbitraryMapFloat64(o)
 	case json.RawMessage:
 		return Raw(o)
 	case *json.RawMessage:

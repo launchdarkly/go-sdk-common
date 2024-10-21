@@ -315,3 +315,84 @@ func shouldNotBeSameMap(t *testing.T, m0 map[string]Value, m1 map[string]Value) 
 	assert.NotEqual(t, m0, m1, "ValueMaps should not be sharing same map but they are")
 	delete(m0, "temp-property")
 }
+
+func TestCopyArbitraryMapOfType(t *testing.T) {
+	var mNil map[string]string
+	vm := CopyArbitraryValue(mNil)
+	assert.Equal(t, ObjectType, vm.Type())
+
+	mEmpty := map[string]string{}
+	vm = CopyArbitraryValue(mEmpty)
+	assert.Equal(t, ObjectType, vm.Type())
+	assert.Equal(t, map[string]Value{}, vm.objectValue.data)
+
+	mStr := map[string]string{"a": "1", "b": "2", "c": "3"}
+	vm = CopyArbitraryValue(mStr)
+	assert.Equal(t, ObjectType, vm.Type())
+	assert.Equal(t, map[string]Value{"a": String("1"), "b": String("2"), "c": String("3")}, vm.objectValue.data)
+
+	mBool := map[string]bool{"a": true, "b": false, "c": true}
+	vm = CopyArbitraryValue(mBool)
+	assert.Equal(t, ObjectType, vm.Type())
+	assert.Equal(t, map[string]Value{"a": Bool(true), "b": Bool(false), "c": Bool(true)}, vm.objectValue.data)
+
+	mInt := map[string]int{"a": 1, "b": 2, "c": 3}
+	vm = CopyArbitraryValue(mInt)
+	assert.Equal(t, ObjectType, vm.Type())
+	assert.Equal(t, map[string]Value{"a": Int(1), "b": Int(2), "c": Int(3)}, vm.objectValue.data)
+
+	mInt8 := map[string]int8{"a": 1, "b": 2, "c": 3}
+	vm = CopyArbitraryValue(mInt8)
+	assert.Equal(t, ObjectType, vm.Type())
+	assert.Equal(t, map[string]Value{"a": Int(1), "b": Int(2), "c": Int(3)}, vm.objectValue.data)
+
+	mInt16 := map[string]int16{"a": 1, "b": 2, "c": 3}
+	vm = CopyArbitraryValue(mInt16)
+	assert.Equal(t, ObjectType, vm.Type())
+	assert.Equal(t, map[string]Value{"a": Int(1), "b": Int(2), "c": Int(3)}, vm.objectValue.data)
+
+	mInt32 := map[string]int32{"a": 1, "b": 2, "c": 3}
+	vm = CopyArbitraryValue(mInt32)
+	assert.Equal(t, ObjectType, vm.Type())
+	assert.Equal(t, map[string]Value{"a": Int(1), "b": Int(2), "c": Int(3)}, vm.objectValue.data)
+
+	mInt64 := map[string]int64{"a": 1, "b": 2, "c": 3}
+	vm = CopyArbitraryValue(mInt64)
+	assert.Equal(t, ObjectType, vm.Type())
+	assert.Equal(t, map[string]Value{"a": Int(1), "b": Int(2), "c": Int(3)}, vm.objectValue.data)
+
+	mUint := map[string]uint{"a": 1, "b": 2, "c": 3}
+	vm = CopyArbitraryValue(mUint)
+	assert.Equal(t, ObjectType, vm.Type())
+	assert.Equal(t, map[string]Value{"a": Int(1), "b": Int(2), "c": Int(3)}, vm.objectValue.data)
+
+	mUint8 := map[string]uint8{"a": 1, "b": 2, "c": 3}
+	vm = CopyArbitraryValue(mUint8)
+	assert.Equal(t, ObjectType, vm.Type())
+	assert.Equal(t, map[string]Value{"a": Int(1), "b": Int(2), "c": Int(3)}, vm.objectValue.data)
+
+	mUint16 := map[string]uint16{"a": 1, "b": 2, "c": 3}
+	vm = CopyArbitraryValue(mUint16)
+	assert.Equal(t, ObjectType, vm.Type())
+	assert.Equal(t, map[string]Value{"a": Int(1), "b": Int(2), "c": Int(3)}, vm.objectValue.data)
+
+	mUint32 := map[string]uint32{"a": 1, "b": 2, "c": 3}
+	vm = CopyArbitraryValue(mUint32)
+	assert.Equal(t, ObjectType, vm.Type())
+	assert.Equal(t, map[string]Value{"a": Int(1), "b": Int(2), "c": Int(3)}, vm.objectValue.data)
+
+	mUint64 := map[string]uint64{"a": 1, "b": 2, "c": 3}
+	vm = CopyArbitraryValue(mUint64)
+	assert.Equal(t, ObjectType, vm.Type())
+	assert.Equal(t, map[string]Value{"a": Int(1), "b": Int(2), "c": Int(3)}, vm.objectValue.data)
+
+	mFloat32 := map[string]float32{"a": 1.0, "b": 2.0, "c": 3.0}
+	vm = CopyArbitraryValue(mFloat32)
+	assert.Equal(t, ObjectType, vm.Type())
+	assert.Equal(t, map[string]Value{"a": Float64(1.0), "b": Float64(2.0), "c": Float64(3.0)}, vm.objectValue.data)
+
+	mFloat64 := map[string]float64{"a": 1.1, "b": 2.2, "c": 3.3}
+	vm = CopyArbitraryValue(mFloat64)
+	assert.Equal(t, ObjectType, vm.Type())
+	assert.Equal(t, map[string]Value{"a": Float64(1.1), "b": Float64(2.2), "c": Float64(3.3)}, vm.objectValue.data)
+}
