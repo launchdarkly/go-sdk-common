@@ -2,6 +2,13 @@
 
 All notable changes to the project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [3.2.0](https://github.com/launchdarkly/go-sdk-common/compare/v3.1.0...v3.2.0) (2024-10-21)
+
+
+### Features
+
+* reduce memory allocation for common slice and map types ([#30](https://github.com/launchdarkly/go-sdk-common/issues/30)) ([ab9387c](https://github.com/launchdarkly/go-sdk-common/commit/ab9387cbe802aa3027ecc155607c92bd7f224bdd))
+
 ## [3.1.0] - 2023-10-11
 ### Added:
 - Introduced ldmigration and ldsampling utility packages to support technology migration use cases.
