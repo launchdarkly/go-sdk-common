@@ -41,6 +41,18 @@ func TestOptionMap(t *testing.T) {
 	assert.Equal(t, "Value: 42", mappedSome.Unwrap())
 }
 
+func TestOptionAsPtr(t *testing.T) {
+	someOpt := Some(42)
+	noneOpt := None[int]()
+
+	somePtr := someOpt.AsPtr()
+	nonePtr := noneOpt.AsPtr()
+
+	assert.NotNil(t, somePtr)
+	assert.Equal(t, 42, *somePtr)
+	assert.Nil(t, nonePtr)
+}
+
 func TestOptionOrElse(t *testing.T) {
 	someOpt := Some(42)
 	noneOpt := None[int]()
