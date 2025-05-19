@@ -42,6 +42,14 @@ func (o Option[T]) UnwrapOr(defaultValue T) T {
 	return o.value
 }
 
+// AsPtr returns a pointer to the contained value, or nil if the Option is None.
+func (o Option[T]) AsPtr() *T {
+	if o.IsNone() {
+		return nil
+	}
+	return &o.value
+}
+
 // Map applies a function to the contained value (if any), and returns a new Option containing the result.
 func Map[T any, U any](o Option[T], f func(T) U) Option[U] {
 	if o.IsNone() {
