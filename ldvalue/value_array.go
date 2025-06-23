@@ -1,7 +1,7 @@
 package ldvalue
 
 import (
-	"golang.org/x/exp/slices"
+	"slices"
 )
 
 // we reuse this for all non-nil zero-length ValueArray instances

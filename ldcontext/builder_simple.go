@@ -8,7 +8,7 @@ import (
 	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
 	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
 
-	"golang.org/x/exp/slices"
+	"slices"
 )
 
 // Builder is a mutable object that uses the builder pattern to specify properties for a Context.

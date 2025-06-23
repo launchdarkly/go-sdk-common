@@ -7,7 +7,6 @@ require (
 	github.com/launchdarkly/go-test-helpers/v3 v3.0.1
 	github.com/mailru/easyjson v0.7.6
 	github.com/stretchr/testify v1.7.0
-	golang.org/x/exp v0.0.0-20220823124025-807a23277127
 )
 
 require (

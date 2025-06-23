@@ -2,10 +2,10 @@ package lderrors
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 
-	"golang.org/x/exp/maps"
+	"maps"
 )
 
 const (
@@ -83,8 +83,8 @@ func (e ErrContextKindMultiDuplicates) Error() string    { return msgContextKind
 func (e ErrContextKindInvalidChars) Error() string       { return msgContextKindInvalidChars }
 
 func (e ErrContextPerKindErrors) Error() string {
-	sortedKeys := maps.Keys(e.Errors)
-	sort.Strings(sortedKeys)
+	sortedKeys := slices.Sorted(maps.Keys(e.Errors))
+
 	messages := make([]string, 0, len(e.Errors))
 	for _, kind := range sortedKeys {
 		messages = append(messages, fmt.Sprintf("(%s) %s", kind, e.Errors[kind]))

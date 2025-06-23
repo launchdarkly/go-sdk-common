@@ -5,7 +5,7 @@ import (
 
 	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
 
-	"golang.org/x/exp/slices"
+	"slices"
 )
 
 const defaultMultiBuilderCapacity = 3 // arbitrary value based on presumed likely use cases
