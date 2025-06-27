@@ -1,6 +1,6 @@
 module github.com/launchdarkly/go-sdk-common/v3
 
-go 1.24
+go 1.23
 
 require (
 	github.com/launchdarkly/go-jsonstream/v3 v3.0.0
