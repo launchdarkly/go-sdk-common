@@ -3,7 +3,7 @@ package ldvalue
 import (
 	"encoding/json"
 
-	"golang.org/x/exp/slices"
+	"slices"
 )
 
 // Value represents any of the data types supported by JSON, all of which can be used for a LaunchDarkly

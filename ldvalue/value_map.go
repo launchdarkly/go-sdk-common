@@ -1,7 +1,7 @@
 package ldvalue
 
 import (
-	"golang.org/x/exp/maps"
+	"maps"
 )
 
 // we reuse this for all non-nil zero-length ValueMap instances

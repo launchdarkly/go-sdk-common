@@ -8,7 +8,7 @@ import (
 	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
 	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
 
-	"golang.org/x/exp/slices"
+	"slices"
 )
 
 // Context is a collection of attributes that can be referenced in flag evaluations and analytics events.
