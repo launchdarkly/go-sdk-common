@@ -3,7 +3,9 @@ package ldcontext
 import (
 	"sort"
 
+	"github.com/launchdarkly/go-sdk-common/v3/ldattr"
 	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
+	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
 )
 
 type ContextBuilder struct {
@@ -80,4 +82,78 @@ func (cb *ContextBuilder) Build() Context {
 	}
 
 	return ret
+}
+
+func (cb *ContextBuilder) TryBuild() (Context, error) {
+	c := cb.Build()
+	return c, c.Err()
+}
+
+func (kb *KindBuilder) Key(key string) *KindBuilder {
+	kb.singleBuilder.Key(key)
+	return kb
+}
+
+func (kb *KindBuilder) Name(name string) *KindBuilder {
+	kb.singleBuilder.Name(name)
+	return kb
+}
+
+func (kb *KindBuilder) OptName(name ldvalue.OptionalString) *KindBuilder {
+	kb.singleBuilder.OptName(name)
+	return kb
+}
+
+func (kb *KindBuilder) SetBool(attributeName string, value bool) *KindBuilder {
+	kb.singleBuilder.SetBool(attributeName, value)
+	return kb
+}
+
+func (kb *KindBuilder) SetFloat64(attributeName string, value float64) *KindBuilder {
+	kb.singleBuilder.SetFloat64(attributeName, value)
+	return kb
+}
+
+func (kb *KindBuilder) SetInt(attributeName string, value int) *KindBuilder {
+	kb.singleBuilder.SetInt(attributeName, value)
+	return kb
+}
+
+func (kb *KindBuilder) SetString(attributeName string, value string) *KindBuilder {
+	kb.singleBuilder.SetString(attributeName, value)
+	return kb
+}
+
+func (kb *KindBuilder) SetValue(attributeName string, value ldvalue.Value) *KindBuilder {
+	kb.singleBuilder.SetValue(attributeName, value)
+	return kb
+}
+
+func (kb *KindBuilder) TrySetValue(attributeName string, value ldvalue.Value) bool {
+	return kb.singleBuilder.TrySetValue(attributeName, value)
+}
+
+func (kb *KindBuilder) Anonymous(value bool) *KindBuilder {
+	kb.singleBuilder.Anonymous(value)
+	return kb
+}
+
+func (kb *KindBuilder) Private(attributeName string) *KindBuilder {
+	kb.singleBuilder.Private(attributeName)
+	return kb
+}
+
+func (kb *KindBuilder) PrivateRef(attributeRef ldattr.Ref) *KindBuilder {
+	kb.singleBuilder.PrivateRef(attributeRef)
+	return kb
+}
+
+func (kb *KindBuilder) RemovePrivate(attrRefStrings ...string) *KindBuilder {
+	kb.singleBuilder.RemovePrivate(attrRefStrings...)
+	return kb
+}
+
+func (kb *KindBuilder) RemovePrivateRef(attrRefs ...ldattr.Ref) *KindBuilder {
+	kb.singleBuilder.RemovePrivateRef(attrRefs...)
+	return kb
 }
