@@ -141,7 +141,8 @@ func (cb *ContextBuilder) Kind(kind Kind, key string) *KindBuilder {
 	}
 	singleBuilder, ok := cb.singleBuilders[kind]
 	if !ok {
-		singleBuilder = NewBuilder(key).Kind(kind)
+		b := &Builder{}
+		singleBuilder = b.Key(key).Kind(kind)
 		cb.singleBuilders[kind] = singleBuilder
 	}
 	singleBuilder.Key(key)

@@ -121,6 +121,8 @@ type Builder struct {
 //
 //	var b ldcontext.Builder
 //	c := b.Kind("org").Key("my-key").Name("my-name").Build()
+//
+// Deprecated: use [NewContextBuilder] instead.
 func NewBuilder(key string) *Builder {
 	b := &Builder{}
 	return b.Key(key)
@@ -134,6 +136,8 @@ func NewBuilder(key string) *Builder {
 //
 // If fromContext is a multi-context created with [NewMulti] or [MultiBuilder], this method is
 // not applicable and returns an uninitialized [Builder].
+//
+// Deprecated: use [NewContextBuilderFromContext] instead.
 func NewBuilderFromContext(fromContext Context) *Builder {
 	b := &Builder{}
 	b.copyFrom(fromContext)
