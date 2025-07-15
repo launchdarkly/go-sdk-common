@@ -493,3 +493,32 @@ func TestContextBuilderCopyOnWrite(t *testing.T) {
 	assert.Equal(t, 3, multi2.IndividualContextCount())
 	assert.Equal(t, 2, multi1.IndividualContextCount()) // unchanged
 }
+
+func TestNewContextBuilderFromContext(t *testing.T) {
+	t.Run("single", func(t *testing.T) {
+		c := NewContextBuilder().
+			Kind("org", "my-org-key").
+			Name("my-org-name").
+			SetString("attr", "value").
+			Private("attr").
+			Anonymous(true).
+			Build()
+		b := NewContextBuilderFromContext(c)
+		assert.Equal(t, c, b.Build())
+	})
+	t.Run("multi", func(t *testing.T) {
+		c := NewContextBuilder().
+			Kind("org", "my-org-key").
+			Name("my-org-name").
+			SetString("attr", "value").
+			Private("attr").
+			Anonymous(true).
+			Kind("user", "my-user-key").
+			Name("my-user-name").
+			SetString("attr", "value").
+			Private("attr").
+			Build()
+		b := NewContextBuilderFromContext(c)
+		assert.Equal(t, c, b.Build())
+	})
+}

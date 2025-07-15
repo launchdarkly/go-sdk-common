@@ -107,6 +107,14 @@ func NewContextBuilder() *ContextBuilder {
 	return &ContextBuilder{singleBuilders: make(map[Kind]*Builder)}
 }
 
+func NewContextBuilderFromContext(fromContext Context) *ContextBuilder {
+	cb := &ContextBuilder{singleBuilders: make(map[Kind]*Builder)}
+	for _, c := range fromContext.GetAllIndividualContexts(nil) {
+		cb.singleBuilders[c.Kind()] = NewBuilderFromContext(c)
+	}
+	return cb
+}
+
 // Kind starts building a new context with the specified kind and key in the current
 // ContextBuilder, returning a [KindBuilder] that can set properties for that inner context.
 // If a context with that kind has already been defined, its key is set to the new value,
