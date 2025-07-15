@@ -1,278 +1,386 @@
 package ldcontext
 
 import (
+	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/launchdarkly/go-sdk-common/v3/ldattr"
 	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
 	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
-
-	"github.com/stretchr/testify/assert"
+	"github.com/launchdarkly/go-test-helpers/v3/jsonhelpers"
 )
 
-func TestContextBuilderSingleKind(t *testing.T) {
-	t.Run("basic properties", func(t *testing.T) {
-		c := NewContextBuilder().Kind("user", "my-key").Build()
-		assert.True(t, c.IsDefined())
-		assert.NoError(t, c.Err())
-		assert.Equal(t, DefaultKind, c.Kind())
-		assert.Equal(t, "my-key", c.Key())
-		assert.Equal(t, ldvalue.OptionalString{}, c.Name())
-		assert.False(t, c.Anonymous())
-	})
+// Tests are adapted from builder_simple_test.go and builder_multi_test.go.
 
-	t.Run("custom kind", func(t *testing.T) {
-		c := NewContextBuilder().Kind("org", "my-org-key").Build()
-		assert.Equal(t, Kind("org"), c.Kind())
-		assert.Equal(t, "my-org-key", c.Key())
-	})
+// SINGLE KIND TESTS (adapted from builder_simple_test.go)
 
-	t.Run("with name", func(t *testing.T) {
-		c := NewContextBuilder().Kind("user", "my-key").Name("my-name").Build()
-		assert.Equal(t, ldvalue.NewOptionalString("my-name"), c.Name())
-	})
-
-	t.Run("with anonymous", func(t *testing.T) {
-		c := NewContextBuilder().Kind("user", "my-key").Anonymous(true).Build()
-		assert.True(t, c.Anonymous())
-	})
-
-	t.Run("with custom attributes", func(t *testing.T) {
-		c := NewContextBuilder().Kind("user", "my-key").
-			SetString("email", "test@example.com").
-			SetBool("active", true).
-			Build()
-
-		assert.Equal(t, ldvalue.String("test@example.com"), c.GetValue("email"))
-		assert.Equal(t, ldvalue.Bool(true), c.GetValue("active"))
-	})
-
-	t.Run("with private attributes", func(t *testing.T) {
-		c := NewContextBuilder().Kind("user", "my-key").
-			Name("my-name").
-			Private("name", "email").
-			Build()
-
-		assert.Equal(t, 2, c.PrivateAttributeCount())
-	})
+func makeKindBuilder() *KindBuilder {
+	// for test cases where the kind and key are unimportant
+	return NewContextBuilder().Kind("user", "my-key")
 }
 
-func TestContextBuilderMultiKind(t *testing.T) {
-	t.Run("two kinds", func(t *testing.T) {
-		c := NewContextBuilder().
-			Kind("user", "user-key").Name("User Name").
-			Kind("org", "org-key").Name("Org Name").
-			Build()
+func TestKindBuilderDefaultProperties(t *testing.T) {
+	c := makeKindBuilder().Build()
+	assert.True(t, c.IsDefined())
+	assert.NoError(t, c.Err())
+	assert.Equal(t, DefaultKind, c.Kind())
+	assert.Equal(t, "my-key", c.Key())
 
-		assert.True(t, c.Multiple())
-		assert.Equal(t, Kind("multi"), c.Kind())
-		assert.Equal(t, 2, c.IndividualContextCount())
-
-		userCtx := c.IndividualContextByKind("user")
-		assert.Equal(t, "user-key", userCtx.Key())
-		assert.Equal(t, ldvalue.NewOptionalString("User Name"), userCtx.Name())
-
-		orgCtx := c.IndividualContextByKind("org")
-		assert.Equal(t, "org-key", orgCtx.Key())
-		assert.Equal(t, ldvalue.NewOptionalString("Org Name"), orgCtx.Name())
-	})
-
-	t.Run("three kinds", func(t *testing.T) {
-		c := NewContextBuilder().
-			Kind("user", "user-key").
-			Kind("org", "org-key").
-			Kind("device", "device-key").
-			Build()
-
-		assert.Equal(t, 3, c.IndividualContextCount())
-		assert.NotEqual(t, Context{}, c.IndividualContextByKind("user"))
-		assert.NotEqual(t, Context{}, c.IndividualContextByKind("org"))
-		assert.NotEqual(t, Context{}, c.IndividualContextByKind("device"))
-	})
-
-	t.Run("updating existing kind", func(t *testing.T) {
-		c := NewContextBuilder().
-			Kind("user", "user-key-1").Name("Name 1").
-			Kind("org", "org-key").
-			Kind("user", "user-key-2").Name("Name 2").
-			Build()
-
-		assert.Equal(t, 2, c.IndividualContextCount())
-		userCtx := c.IndividualContextByKind("user")
-		assert.Equal(t, "user-key-2", userCtx.Key())
-		assert.Equal(t, ldvalue.NewOptionalString("Name 2"), userCtx.Name())
-	})
+	assert.Equal(t, ldvalue.OptionalString{}, c.Name())
+	assert.False(t, c.Anonymous())
+	assert.Equal(t, ldvalue.OptionalString{}, c.Secondary())
+	assert.Len(t, c.GetOptionalAttributeNames(nil), 0)
 }
 
-func TestContextBuilderKindValidation(t *testing.T) {
+func TestKindBuilderKindValidation(t *testing.T) {
 	for _, p := range makeInvalidKindTestParams() {
 		t.Run(p.kind, func(t *testing.T) {
-			c := NewContextBuilder().Kind(Kind(p.kind), "my-key").Build()
-			assert.True(t, c.IsDefined())
-			assert.Equal(t, p.err, c.Err())
+			b := NewContextBuilder().Kind(Kind(p.kind), "my-key")
+
+			c0 := b.Build()
+			assert.True(t, c0.IsDefined())
+			assert.Equal(t, p.err, c0.Err())
+
+			c1, err := b.TryBuild()
+			assert.True(t, c1.IsDefined())
+			assert.Equal(t, p.err, c1.Err())
+			assert.Equal(t, p.err, err)
 		})
 	}
 }
 
-func TestContextBuilderEmptyKind(t *testing.T) {
-	t.Run("empty kind is equivalent to default kind", func(t *testing.T) {
-		c := NewContextBuilder().Kind("", "my-key").Build()
-		assert.Equal(t, DefaultKind, c.Kind())
-	})
-	t.Run("empty kind in a multi context", func(t *testing.T) {
-		c := NewContextBuilder().
-			Kind("", "key1").
-			Kind("user", "key2").
-			Kind("org", "key3").
-			Build()
-		assert.Equal(t, 2, c.IndividualContextCount())
-		assert.Equal(t, "key2", c.IndividualContextKeyByKind("user"))
-		assert.Equal(t, "key3", c.IndividualContextKeyByKind("org"))
-	})
+func TestKindBuilderKeyValidation(t *testing.T) {
+	b := NewContextBuilder().Kind("user", "")
+
+	c0 := b.Build()
+	assert.True(t, c0.IsDefined())
+	assert.Equal(t, lderrors.ErrContextKeyEmpty{}, c0.Err())
+
+	c1, err := b.TryBuild()
+	assert.True(t, c1.IsDefined())
+	assert.Equal(t, lderrors.ErrContextKeyEmpty{}, c1.Err())
+	assert.Equal(t, lderrors.ErrContextKeyEmpty{}, err)
 }
 
-func TestContextBuilderKeyValidation(t *testing.T) {
-	c := NewContextBuilder().Kind("user", "").Build()
-	assert.True(t, c.IsDefined())
-	assert.Equal(t, lderrors.ErrContextKeyEmpty{}, c.Err())
-}
-
-func TestContextBuilderFullyQualifiedKey(t *testing.T) {
-	t.Run("single kind user", func(t *testing.T) {
-		c := NewContextBuilder().Kind("user", "my-user-key").Build()
+func TestKindBuilderFullyQualifiedKey(t *testing.T) {
+	t.Run("kind is user", func(t *testing.T) {
+		c := New("my-user-key")
 		assert.Equal(t, "my-user-key", c.FullyQualifiedKey())
 	})
 
-	t.Run("single kind non-user", func(t *testing.T) {
-		c := NewContextBuilder().Kind("org", "my-org-key").Build()
+	t.Run("kind is not user", func(t *testing.T) {
+		c := NewWithKind("org", "my-org-key")
 		assert.Equal(t, "org:my-org-key", c.FullyQualifiedKey())
 	})
 
-	t.Run("multi kind", func(t *testing.T) {
-		c := NewContextBuilder().
-			Kind("kind-c", "key-1").
-			Kind("kind-a", "key-2").
-			Kind("kind-d", "key-3").
-			Kind("kind-b", "key-4").
-			Build()
-		assert.Equal(t, "kind-a:key-2:kind-b:key-4:kind-c:key-1:kind-d:key-3", c.FullyQualifiedKey())
-	})
-
-	t.Run("keys are escaped", func(t *testing.T) {
-		c := NewContextBuilder().
-			Kind("kind-a", "key-1").
-			Kind("kind-b", "key:2").
-			Build()
-		assert.Equal(t, "kind-a:key-1:kind-b:key%3A2", c.FullyQualifiedKey())
+	t.Run("key is escaped", func(t *testing.T) {
+		c := NewWithKind("org", "my:key%x/y")
+		assert.Equal(t, "org:my%3Akey%25x/y", c.FullyQualifiedKey())
 	})
 }
 
-func TestKindBuilderSetters(t *testing.T) {
+func TestKindBuilderBasicSetters(t *testing.T) {
+	t.Run("Key", func(t *testing.T) {
+		assert.Equal(t, "other-key", makeKindBuilder().Key("other-key").Build().Key())
+	})
+
 	t.Run("Name", func(t *testing.T) {
-		c := NewContextBuilder().Kind("user", "my-key").Name("my-name").Build()
-		assert.Equal(t, ldvalue.NewOptionalString("my-name"), c.Name())
+		c0 := makeKindBuilder().Build()
+		assert.Equal(t, ldvalue.OptionalString{}, c0.Name())
+
+		c1 := makeKindBuilder().Name("my-name").Build()
+		assert.Equal(t, ldvalue.NewOptionalString("my-name"), c1.Name())
+
+		c2 := makeKindBuilder().OptName(ldvalue.OptionalString{}).Build()
+		assert.Equal(t, ldvalue.OptionalString{}, c2.Name())
+
+		c3 := makeKindBuilder().OptName(ldvalue.NewOptionalString("my-name")).Build()
+		assert.Equal(t, ldvalue.NewOptionalString("my-name"), c3.Name())
+	})
+
+	t.Run("Secondary", func(t *testing.T) {
+		c0 := makeKindBuilder().Build()
+		assert.Equal(t, ldvalue.OptionalString{}, c0.Secondary())
 	})
 
 	t.Run("Anonymous", func(t *testing.T) {
-		c1 := NewContextBuilder().Kind("user", "my-key").Anonymous(false).Build()
+		c0 := makeKindBuilder().Build()
+		assert.False(t, c0.Anonymous())
+
+		c1 := makeKindBuilder().Anonymous(false).Build()
 		assert.False(t, c1.Anonymous())
 
-		c2 := NewContextBuilder().Kind("user", "my-key").Anonymous(true).Build()
+		c2 := makeKindBuilder().Anonymous(true).Build()
 		assert.True(t, c2.Anonymous())
 	})
+}
 
+func TestKindBuilderSetCustomAttributes(t *testing.T) {
 	t.Run("SetValue", func(t *testing.T) {
-		c := NewContextBuilder().Kind("user", "my-key").
-			SetValue("my-attr", ldvalue.Bool(true)).
-			SetValue("other-attr", ldvalue.String("other-value")).
-			Build()
-
-		assert.Equal(t, ldvalue.Bool(true), c.GetValue("my-attr"))
-		assert.Equal(t, ldvalue.String("other-value"), c.GetValue("other-attr"))
+		otherValue := ldvalue.String("other-value")
+		for _, value := range []ldvalue.Value{
+			ldvalue.Bool(true),
+			ldvalue.Bool(false),
+			ldvalue.Int(0),
+			ldvalue.Int(1),
+			ldvalue.String(""),
+			ldvalue.String("x"),
+			ldvalue.ArrayOf(ldvalue.Int(1), ldvalue.Int(2)),
+			ldvalue.ObjectBuild().Set("a", ldvalue.Int(1)).Build(),
+		} {
+			t.Run(value.JSONString(), func(t *testing.T) {
+				c := makeKindBuilder().
+					SetValue("my-attr", value).
+					SetValue("other-attr", otherValue).
+					Build()
+				assert.Len(t, c.attributes.Keys(nil), 2)
+				jsonhelpers.AssertEqual(t, value, c.attributes.Get("my-attr"))
+				jsonhelpers.AssertEqual(t, otherValue, c.attributes.Get("other-attr"))
+			})
+		}
 	})
 
 	t.Run("typed setters", func(t *testing.T) {
-		c := NewContextBuilder().Kind("user", "my-key").
-			SetBool("bool-attr", true).
-			SetInt("int-attr", 100).
-			SetFloat64("float-attr", 1.5).
-			SetString("string-attr", "x").
-			Build()
-
-		assert.Equal(t, ldvalue.Bool(true), c.GetValue("bool-attr"))
-		assert.Equal(t, ldvalue.Int(100), c.GetValue("int-attr"))
-		assert.Equal(t, ldvalue.Float64(1.5), c.GetValue("float-attr"))
-		assert.Equal(t, ldvalue.String("x"), c.GetValue("string-attr"))
+		// For the typed setters, just verify that they produce the same builder state as SetValue
+		assert.Equal(t,
+			makeKindBuilder().SetValue("my-attr", ldvalue.Bool(true)),
+			makeKindBuilder().SetBool("my-attr", true))
+		assert.Equal(t,
+			makeKindBuilder().SetValue("my-attr", ldvalue.Int(100)),
+			makeKindBuilder().SetInt("my-attr", 100))
+		assert.Equal(t,
+			makeKindBuilder().SetValue("my-attr", ldvalue.Float64(1.5)),
+			makeKindBuilder().SetFloat64("my-attr", 1.5))
+		assert.Equal(t,
+			makeKindBuilder().SetValue("my-attr", ldvalue.String("x")),
+			makeKindBuilder().SetString("my-attr", "x"))
 	})
 
-	t.Run("Private", func(t *testing.T) {
-		c := NewContextBuilder().Kind("user", "my-key").
-			Name("my-name").
-			Private("name", "email").
-			Build()
+	t.Run("setting to null does not add attribute", func(t *testing.T) {
+		assert.Equal(t,
+			makeKindBuilder().SetString("attr1", "value1").SetString("attr3", "value3"),
+			makeKindBuilder().SetString("attr1", "value1").SetValue("attr2", ldvalue.Null()).SetString("attr3", "value3"))
+	})
 
-		assert.Equal(t, 2, c.PrivateAttributeCount())
-		ref1, ok1 := c.PrivateAttributeByIndex(0)
-		ref2, ok2 := c.PrivateAttributeByIndex(1)
-		assert.True(t, ok1)
-		assert.True(t, ok2)
+	t.Run("setting to null removes existing attribute", func(t *testing.T) {
+		assert.Equal(t,
+			makeKindBuilder().SetString("attr1", "value1").SetString("attr3", "value3"),
+			makeKindBuilder().SetString("attr1", "value1").SetString("attr2", "value2").SetString("attr3", "value3").
+				SetValue("attr2", ldvalue.Null()))
+	})
 
-		refs := []ldattr.Ref{ref1, ref2}
-		assert.Contains(t, refs, ldattr.NewRef("name"))
-		assert.Contains(t, refs, ldattr.NewRef("email"))
+	t.Run("cannot add attribute with empty name", func(t *testing.T) {
+		assert.Equal(t, makeKindBuilder().Build(), makeKindBuilder().SetBool("", true).Build())
+		assert.Equal(t, makeKindBuilder().Build(), makeKindBuilder().SetInt("", 1).Build())
+		assert.Equal(t, makeKindBuilder().Build(), makeKindBuilder().SetFloat64("", 1).Build())
+		assert.Equal(t, makeKindBuilder().Build(), makeKindBuilder().SetString("", "x").Build())
+		assert.Equal(t, makeKindBuilder().Build(), makeKindBuilder().SetValue("", ldvalue.ArrayOf()).Build())
 	})
 }
 
-func TestContextBuilderErrors(t *testing.T) {
-	t.Run("empty builder", func(t *testing.T) {
-		c := NewContextBuilder().Build()
-		assert.True(t, c.IsDefined())
-		assert.Equal(t, lderrors.ErrContextKindMultiWithNoKinds{}, c.Err())
+func TestKindBuilderSetBuiltInAttributesByName(t *testing.T) {
+	var boolFalse, boolTrue, stringEmpty, stringNonEmpty = ldvalue.Bool(false), ldvalue.Bool(true),
+		ldvalue.String("x"), ldvalue.String("")
+	var nullValue, intValue, floatValue, arrayValue, objectValue = ldvalue.Null(),
+		ldvalue.Int(1), ldvalue.Float64(1.5), ldvalue.ArrayOf(), ldvalue.ObjectBuild().Build()
+
+	type params struct {
+		name             string
+		equivalentSetter func(*KindBuilder, ldvalue.Value)
+		good, bad        []ldvalue.Value
+	}
+
+	for _, p := range []params{
+		{
+			name:             "key",
+			equivalentSetter: func(b *KindBuilder, v ldvalue.Value) { b.Key(v.StringValue()) },
+			good:             []ldvalue.Value{stringNonEmpty, stringEmpty},
+			bad:              []ldvalue.Value{nullValue, boolFalse, intValue, floatValue, arrayValue, objectValue},
+		},
+		{
+			name:             "name",
+			equivalentSetter: func(b *KindBuilder, v ldvalue.Value) { b.OptName(v.AsOptionalString()) },
+			good:             []ldvalue.Value{stringNonEmpty, stringEmpty, nullValue},
+			bad:              []ldvalue.Value{boolFalse, intValue, floatValue, arrayValue, objectValue},
+		},
+		{
+			name:             "anonymous",
+			equivalentSetter: func(b *KindBuilder, v ldvalue.Value) { b.Anonymous(v.BoolValue()) },
+			good:             []ldvalue.Value{boolTrue, boolFalse},
+			bad:              []ldvalue.Value{nullValue, intValue, floatValue, stringEmpty, stringNonEmpty, arrayValue, objectValue},
+		},
+	} {
+		t.Run(p.name, func(t *testing.T) {
+			builder := makeKindBuilder() // we will reuse this to prove that SetValue overwrites previous values
+			var lastGoodNonNullValue ldvalue.Value
+
+			for _, goodValue := range p.good {
+				t.Run(fmt.Sprintf("can set to %s", goodValue.JSONString()), func(t *testing.T) {
+					previousState := *builder
+
+					if !goodValue.IsNull() {
+						lastGoodNonNullValue = goodValue
+					}
+					expected := makeKindBuilder()
+					p.equivalentSetter(expected, goodValue)
+
+					builder.SetValue(p.name, goodValue)
+					assert.Equal(t, expected, builder)
+
+					b1 := previousState
+					assert.True(t, b1.TrySetValue(p.name, goodValue))
+					assert.Equal(t, *expected, b1)
+
+					b2 := previousState
+					switch goodValue.Type() {
+					case ldvalue.BoolType:
+						assert.Equal(t, expected, b2.SetBool(p.name, goodValue.BoolValue()))
+					case ldvalue.StringType:
+						assert.Equal(t, expected, b2.SetString(p.name, goodValue.StringValue()))
+					}
+				})
+			}
+			for _, badValue := range p.bad {
+				t.Run(fmt.Sprintf("cannot set to %s", badValue.JSONString()), func(t *testing.T) {
+					startingState := func() *KindBuilder {
+						if lastGoodNonNullValue.IsDefined() {
+							return makeKindBuilder().SetValue(p.name, lastGoodNonNullValue)
+						}
+						return makeKindBuilder()
+					}
+
+					assert.Equal(t, startingState(), startingState().SetValue(p.name, badValue))
+
+					b := startingState()
+					assert.False(t, b.TrySetValue(p.name, badValue))
+					assert.Equal(t, startingState(), b)
+
+					switch badValue.Type() {
+					case ldvalue.BoolType:
+						assert.Equal(t, startingState(), startingState().SetBool(p.name, badValue.BoolValue()))
+					case ldvalue.NumberType:
+						if badValue.IsInt() {
+							assert.Equal(t, startingState(), startingState().SetInt(p.name, badValue.IntValue()))
+						} else {
+							assert.Equal(t, startingState(), startingState().SetFloat64(p.name, badValue.Float64Value()))
+						}
+					case ldvalue.StringType:
+						assert.Equal(t, startingState(), makeKindBuilder().SetString(p.name, badValue.StringValue()))
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestKindBuilderSetValueCannotSetMetaProperties(t *testing.T) {
+	for _, p := range []struct {
+		name  string
+		value ldvalue.Value
+	}{
+		{"secondary", ldvalue.String("x")},
+		{"privateAttributes", ldvalue.ArrayOf(ldvalue.String("x"))},
+	} {
+		t.Run(p.name, func(t *testing.T) {
+			c := makeKindBuilder().SetValue(p.name, p.value).Build()
+			assert.Equal(t, p.value, c.attributes.Get(p.name))
+			assert.Equal(t, ldvalue.OptionalString{}, c.secondary)
+			assert.Len(t, c.privateAttrs, 0)
+		})
+	}
+
+	t.Run("_meta", func(t *testing.T) {
+		b := makeKindBuilder()
+		assert.False(t, b.TrySetValue("_meta", ldvalue.String("hi")))
+		assert.Equal(t, 0, b.Build().attributes.Count())
 	})
+}
 
-	t.Run("duplicate kind error not applicable", func(t *testing.T) {
-		// With ContextBuilder, setting the same kind twice just updates it
-		c := NewContextBuilder().
-			Kind("org", "key1").
-			Kind("org", "key2").
-			Build()
-		assert.NoError(t, c.Err())
-		assert.Equal(t, "key2", c.Key())
-	})
+func TestKindBuilderAttributesCopyOnWrite(t *testing.T) {
+	value1, value2 := ldvalue.String("value1"), ldvalue.String("value2")
 
-	t.Run("error in individual contexts", func(t *testing.T) {
-		c := NewContextBuilder().
-			Kind("kind1", "").
-			Kind("kind2", "my-key").
-			Kind("kind3!", "other-key").
-			Build()
+	b := makeKindBuilder().SetValue("attr", value1)
 
-		assert.Error(t, c.Err())
-		if assert.IsType(t, lderrors.ErrContextPerKindErrors{}, c.Err()) {
-			e := c.Err().(lderrors.ErrContextPerKindErrors)
-			assert.Len(t, e.Errors, 2)
-			assert.Equal(t, lderrors.ErrContextKeyEmpty{}, e.Errors["kind1"])
-			assert.Equal(t, lderrors.ErrContextKindInvalidChars{}, e.Errors["kind3!"])
+	c1 := b.Build()
+	jsonhelpers.AssertEqual(t, value1, c1.attributes.Get("attr"))
+
+	b.SetValue("attr", value2)
+
+	c2 := b.Build()
+	jsonhelpers.AssertEqual(t, value2, c2.attributes.Get("attr"))
+	jsonhelpers.AssertEqual(t, value1, c1.attributes.Get("attr")) // unchanged
+}
+
+func TestKindBuilderPrivate(t *testing.T) {
+	expectPrivateRefsToBe := func(t *testing.T, c Context, expectedRefs ...ldattr.Ref) {
+		if assert.Equal(t, len(expectedRefs), c.PrivateAttributeCount()) {
+			for i, expectedRef := range expectedRefs {
+				a, ok := c.PrivateAttributeByIndex(i)
+				assert.True(t, ok)
+				assert.Equal(t, expectedRef, a)
+			}
+			_, ok := c.PrivateAttributeByIndex(len(expectedRefs))
+			assert.False(t, ok)
 		}
-	})
-}
+		_, ok := c.PrivateAttributeByIndex(-1)
+		assert.False(t, ok)
+	}
 
-func TestContextBuilderChaining(t *testing.T) {
-	t.Run("method chaining works", func(t *testing.T) {
-		c := NewContextBuilder().
-			Kind("user", "user-key").Name("User Name").Anonymous(true).
-			Kind("org", "org-key").SetString("type", "enterprise").
+	t.Run("using Refs", func(t *testing.T) {
+		attrRef1, attrRef2, attrRef3 := ldattr.NewRef("a"), ldattr.NewRef("/b/c"), ldattr.NewRef("d")
+		c := makeKindBuilder().
+			PrivateRef(attrRef1, attrRef2).PrivateRef(attrRef3).
 			Build()
 
-		assert.Equal(t, 2, c.IndividualContextCount())
+		expectPrivateRefsToBe(t, c, attrRef1, attrRef2, attrRef3)
+	})
 
-		userCtx := c.IndividualContextByKind("user")
-		assert.Equal(t, "user-key", userCtx.Key())
-		assert.Equal(t, ldvalue.NewOptionalString("User Name"), userCtx.Name())
-		assert.True(t, userCtx.Anonymous())
+	t.Run("using strings", func(t *testing.T) {
+		s1, s2, s3 := "a", "/b/c", "d"
+		b0 := makeKindBuilder().
+			PrivateRef(ldattr.NewRef(s1), ldattr.NewRef(s2)).PrivateRef(ldattr.NewRef(s3))
+		b1 := makeKindBuilder().
+			Private(s1, s2, s3)
+		assert.Equal(t, b0, b1)
+	})
 
-		orgCtx := c.IndividualContextByKind("org")
-		assert.Equal(t, "org-key", orgCtx.Key())
-		assert.Equal(t, ldvalue.String("enterprise"), orgCtx.GetValue("type"))
+	t.Run("RemovePrivate", func(t *testing.T) {
+		b := makeKindBuilder().Private("a", "/b/c", "d", "/b/c")
+		b.RemovePrivate("/b/c")
+		c := b.Build()
+
+		expectPrivateRefsToBe(t, c, ldattr.NewRef("a"), ldattr.NewRef("d"))
+	})
+
+	t.Run("RemovePrivateRef", func(t *testing.T) {
+		b := makeKindBuilder().Private("a", "/b/c", "d", "/b/c")
+		b.RemovePrivateRef(ldattr.NewRef("/b/c"))
+		c := b.Build()
+
+		expectPrivateRefsToBe(t, c, ldattr.NewRef("a"), ldattr.NewRef("d"))
+	})
+
+	t.Run("copy on write", func(t *testing.T) {
+		b0 := makeKindBuilder().Private("a")
+
+		c0 := b0.Build()
+		expectPrivateRefsToBe(t, c0, ldattr.NewRef("a"))
+
+		b0.Private("b")
+		c1 := b0.Build()
+		expectPrivateRefsToBe(t, c1, ldattr.NewRef("a"), ldattr.NewRef("b"))
+		expectPrivateRefsToBe(t, c0, ldattr.NewRef("a")) // unchanged
+
+		b0.RemovePrivateRef(ldattr.NewRef("a"))
+		c2 := b0.Build()
+		expectPrivateRefsToBe(t, c2, ldattr.NewRef("b"))
+		expectPrivateRefsToBe(t, c1, ldattr.NewRef("a"), ldattr.NewRef("b")) // unchanged
+		expectPrivateRefsToBe(t, c0, ldattr.NewRef("a"))                     // unchanged
 	})
 }
+
+// MULTI KIND TESTS (adapted from builder_multi_test.go)
+
+// NEW TESTS (specific to ContextBuilder)
