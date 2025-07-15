@@ -522,3 +522,28 @@ func TestNewContextBuilderFromContext(t *testing.T) {
 		assert.Equal(t, c, b.Build())
 	})
 }
+
+func TestContextBuilderAdd(t *testing.T) {
+	c1 := NewContextBuilder().
+		Kind("org", "my-org-key").
+		Name("my-org-name").
+		Build()
+	c2 := NewContextBuilder().
+		Kind("user", "my-user-key").
+		Name("my-user-name").
+		Build()
+	c3 := NewContextBuilder().
+		Kind("thing", "my-thing-key").
+		Name("my-thing-name").
+		Kind("user", "other-user-key").
+		SetInt("age", 42).
+		Build()
+
+	c := NewContextBuilder().Add(c1, c2, c3).Build()
+	assert.Equal(t, 3, c.IndividualContextCount())
+	assert.Equal(t, "my-org-key", c.IndividualContextKeyByKind("org"))
+	assert.Equal(t, "my-thing-key", c.IndividualContextKeyByKind("thing"))
+	assert.Equal(t, "other-user-key", c.IndividualContextKeyByKind("user"))
+	assert.Equal(t, ldvalue.OptionalString{}, c.IndividualContextByKind("user").Name())
+	assert.Equal(t, 42, c.IndividualContextByKind("user").GetValue("age").IntValue())
+}

@@ -117,6 +117,23 @@ func NewContextBuilderFromContext(fromContext Context) *ContextBuilder {
 	return cb
 }
 
+// Add adds one or more contexts to a ContextBuilder. Only one context of each kind is allowed.
+// If multiple contexts are added with the same kind, the last one fully replaces the previous ones.
+func (cb *ContextBuilder) Add(contexts ...Context) *ContextBuilder {
+	for _, c := range contexts {
+		if c.Multiple() {
+			for _, ic := range c.multiContexts {
+				cb.Add(ic)
+			}
+		} else {
+			b := &Builder{}
+			b.copyFrom(c)
+			cb.singleBuilders[c.Kind()] = b
+		}
+	}
+	return cb
+}
+
 // Kind starts building a new context with the specified kind and key in the current
 // ContextBuilder, returning a [KindBuilder] that can set properties for that inner context.
 // If a context with that kind has already been defined, its key is set to the new value,

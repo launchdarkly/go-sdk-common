@@ -46,6 +46,8 @@ func NewWithKind(kind Kind, key string) Context {
 //
 //	c1plus2 := ldcontext.NewMulti(c1, c2)
 //	multi2 := ldcontext.NewMulti(c1plus2, c3)
+//
+// Deprecated: use [NewContextBuilder] instead.
 func NewMulti(contexts ...Context) Context {
 	// Same rationale as for New/NewWithKey of using the builder instead of constructing directly.
 	var m MultiBuilder
