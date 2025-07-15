@@ -114,6 +114,23 @@ func TestContextBuilderKindValidation(t *testing.T) {
 	}
 }
 
+func TestContextBuilderEmptyKind(t *testing.T) {
+	t.Run("empty kind is equivalent to default kind", func(t *testing.T) {
+		c := NewContextBuilder().Kind("", "my-key").Build()
+		assert.Equal(t, DefaultKind, c.Kind())
+	})
+	t.Run("empty kind in a multi context", func(t *testing.T) {
+		c := NewContextBuilder().
+			Kind("", "key1").
+			Kind("user", "key2").
+			Kind("org", "key3").
+			Build()
+		assert.Equal(t, 2, c.IndividualContextCount())
+		assert.Equal(t, "key2", c.IndividualContextKeyByKind("user"))
+		assert.Equal(t, "key3", c.IndividualContextKeyByKind("org"))
+	})
+}
+
 func TestContextBuilderKeyValidation(t *testing.T) {
 	c := NewContextBuilder().Kind("user", "").Build()
 	assert.True(t, c.IsDefined())

@@ -22,6 +22,9 @@ func NewContextBuilder() *ContextBuilder {
 }
 
 func (cb *ContextBuilder) Kind(kind Kind, key string) *KindBuilder {
+	if kind == "" {
+		kind = DefaultKind
+	}
 	singleBuilder, ok := cb.singleBuilders[kind]
 	if !ok {
 		singleBuilder = NewBuilder(key).Kind(kind)
@@ -35,10 +38,6 @@ func (cb *ContextBuilder) Build() Context {
 	if len(cb.singleBuilders) == 0 {
 		return Context{defined: true, err: lderrors.ErrContextKindMultiWithNoKinds{}}
 	}
-
-	// TODO: calling `.Build()` on a Builder does mostly what we want, but it also
-	// converts a "" kind to "user". This builder should instead probably enforce that you provide
-	// non-empty kinds.
 
 	if len(cb.singleBuilders) == 1 {
 		// If only one context kind was added, the result is just the same as building that one context
