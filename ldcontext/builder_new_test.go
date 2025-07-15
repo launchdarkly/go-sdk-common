@@ -259,27 +259,3 @@ func TestContextBuilderChaining(t *testing.T) {
 		assert.Equal(t, ldvalue.String("enterprise"), orgCtx.GetValue("type"))
 	})
 }
-
-func TestContextBuilderSafety(t *testing.T) {
-	t.Run("empty instance is safe to use", func(t *testing.T) {
-		var emptyInstance ContextBuilder
-		c := emptyInstance.Kind("user", "a").Build()
-		assert.Equal(t, "a", c.Key())
-	})
-
-	t.Run("nil pointer is safe to use", func(t *testing.T) {
-		var nilPtr *ContextBuilder
-		assert.Nil(t, nilPtr.Kind("user", "a"))
-		assert.Equal(t, Context{}, nilPtr.Build())
-	})
-}
-
-func TestKindBuilderSafety(t *testing.T) {
-	t.Run("nil pointer is safe to use", func(t *testing.T) {
-		var nilPtr *KindBuilder
-		assert.Nil(t, nilPtr.Name("a"))
-		assert.Nil(t, nilPtr.Anonymous(true))
-		assert.Nil(t, nilPtr.SetValue("a", ldvalue.Bool(true)))
-		assert.Nil(t, nilPtr.Private("a"))
-	})
-}

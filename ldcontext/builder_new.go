@@ -61,14 +61,23 @@ func (cb *ContextBuilder) Build() Context {
 		kind:          MultiKind,
 		multiContexts: make([]Context, 0, len(cb.singleBuilders)),
 	}
+
+	var individualErrors map[string]error
 	for _, kind := range kinds {
 		singleBuilder := cb.singleBuilders[Kind(kind)]
 		ctx, err := singleBuilder.TryBuild()
 		if err != nil {
-			ret.err = err
-			return ret
+			if individualErrors == nil {
+				individualErrors = make(map[string]error)
+			}
+			individualErrors[kind] = err
+			continue
 		}
 		ret.multiContexts = append(ret.multiContexts, ctx)
+	}
+	if len(individualErrors) != 0 {
+		ret.err = lderrors.ErrContextPerKindErrors{Errors: individualErrors}
+		return ret
 	}
 
 	// Fully-qualified key for multi-context is defined as "kind1:key1:kind2:key2" etc., where kinds are in
