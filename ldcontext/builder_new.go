@@ -345,8 +345,7 @@ func (kb *KindBuilder) SetString(attributeName string, value string) *KindBuilde
 // be a string or null, and "anonymous" must be a boolean. Any value of an unsupported type
 // is ignored (leaving the attribute unchanged).
 func (kb *KindBuilder) SetValue(attributeName string, value ldvalue.Value) *KindBuilder {
-	// TODO: disallow setting Kind with this
-	kb.singleBuilder.SetValue(attributeName, value)
+	_ = kb.TrySetValue(attributeName, value)
 	return kb
 }
 
@@ -356,7 +355,14 @@ func (kb *KindBuilder) SetValue(attributeName string, value ldvalue.Value) *Kind
 // parameters violated one of the restrictions described for SetValue (for instance,
 // attempting to set "key" to a value that was not a string).
 func (kb *KindBuilder) TrySetValue(attributeName string, value ldvalue.Value) bool {
-	return kb.singleBuilder.TrySetValue(attributeName, value)
+	// We mostly defer to kb.singlebuilder.TrySetValue, but we have an extra restriction
+	// that you cannot set "kind" with SetValue.
+	switch attributeName {
+	case ldattr.KindAttr:
+		return false
+	default:
+		return kb.singleBuilder.TrySetValue(attributeName, value)
+	}
 }
 
 // Anonymous sets whether the Context is only intended for flag evaluations and should not be indexed by
