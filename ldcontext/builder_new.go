@@ -198,7 +198,7 @@ func (cb *ContextBuilder) Build() Context {
 
 	// Sort the list by kind - this makes our output deterministic and will also be important when we
 	// compute a fully qualified key.
-	var kinds []string
+	kinds := make([]string, 0, len(cb.singleBuilders))
 	for kind := range cb.singleBuilders {
 		kinds = append(kinds, string(kind))
 	}
