@@ -467,6 +467,19 @@ func TestContextBuilderMultiKindErrors(t *testing.T) {
 	})
 }
 
+func TestContextBuilderEmptyKindIsUser(t *testing.T) {
+	c := NewContextBuilder().
+		Kind("", "my-user-key1").
+		Name("my-name").
+		Kind("user", "my-user-key2").
+		SetString("attr", "value").
+		Build()
+	assert.Equal(t, "my-user-key2", c.Key())
+	assert.Equal(t, ldvalue.String("value"), c.GetValue("attr"))
+	assert.Equal(t, ldvalue.NewOptionalString("my-name"), c.Name())
+	assert.Equal(t, Kind("user"), c.Kind())
+}
+
 func TestContextBuilderCopyOnWrite(t *testing.T) {
 	b := NewContextBuilder().
 		Kind("org", "my-org-key").
