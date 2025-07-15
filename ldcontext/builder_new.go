@@ -107,6 +107,9 @@ func NewContextBuilder() *ContextBuilder {
 	return &ContextBuilder{singleBuilders: make(map[Kind]*Builder)}
 }
 
+// NewContextBuilderFromContext creates a ContextBuilder whose properties are the same as an existing
+// Context. You may then change the ContextBuilder's state in any way and call [ContextBuilder.Build]
+// to create a new independent [Context].
 func NewContextBuilderFromContext(fromContext Context) *ContextBuilder {
 	cb := &ContextBuilder{singleBuilders: make(map[Kind]*Builder)}
 	for _, c := range fromContext.GetAllIndividualContexts(nil) {
