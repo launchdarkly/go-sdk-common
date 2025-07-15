@@ -381,6 +381,116 @@ func TestKindBuilderPrivate(t *testing.T) {
 	})
 }
 
-// MULTI KIND TESTS (adapted from builder_multi_test.go)
+// MULTI KIND TESTS (loosely adapted from builder_multi_test.go)
 
-// NEW TESTS (specific to ContextBuilder)
+func TestContextBuilderMultiKind(t *testing.T) {
+	t.Run("multiple kinds", func(t *testing.T) {
+		b := NewContextBuilder().Kind("org", "my-org-key").Kind("user", "my-user-key")
+		c0 := b.Build()
+
+		assert.True(t, c0.IsDefined())
+		assert.NoError(t, c0.Err())
+		assert.Equal(t, Kind("multi"), c0.Kind())
+		assert.Equal(t, "", c0.Key())
+
+		assert.Equal(t, 2, c0.IndividualContextCount())
+	})
+	t.Run("updating a kind", func(t *testing.T) {
+		c0 := NewContextBuilder().
+			Kind("org", "my-org-key").
+			Name("my-org-name").
+			SetString("attr", "value").
+			Kind("org", "other-org-key").
+			Name("other-org-name").
+			SetString("foo", "bar").
+			Build()
+
+		assert.Equal(t, Kind("org"), c0.Kind())
+		assert.Equal(t, "other-org-key", c0.Key())
+		assert.Equal(t, ldvalue.NewOptionalString("other-org-name"), c0.Name())
+		assert.Equal(t, ldvalue.String("value"), c0.GetValue("attr"))
+		assert.Equal(t, ldvalue.String("bar"), c0.GetValue("foo"))
+	})
+}
+
+func TestContextBuilderFullyQualifiedKey(t *testing.T) {
+	t.Run("kind is user", func(t *testing.T) {
+		c := NewContextBuilder().Kind("user", "my-user-key").Build()
+		assert.Equal(t, "my-user-key", c.FullyQualifiedKey())
+	})
+
+	t.Run("kind is not user", func(t *testing.T) {
+		c := NewContextBuilder().Kind("org", "my-org-key").Build()
+		assert.Equal(t, "org:my-org-key", c.FullyQualifiedKey())
+	})
+
+	t.Run("key is escaped", func(t *testing.T) {
+		c := NewContextBuilder().Kind("org", "my:key%x/y").Build()
+		assert.Equal(t, "org:my%3Akey%25x/y", c.FullyQualifiedKey())
+	})
+
+	t.Run("multiple kinds", func(t *testing.T) {
+		c := NewContextBuilder().
+			// The following ordering is deliberate because we want to verify that these items are
+			// sorted by kind, not by key.
+			Kind("kind-c", "key-1").
+			Kind("kind-a", "key-2").
+			Kind("kind-d", "key-3").
+			Kind("kind-b", "key-4").
+			Build()
+		assert.Equal(t, "kind-a:key-2:kind-b:key-4:kind-c:key-1:kind-d:key-3", c.FullyQualifiedKey())
+	})
+
+	t.Run("keys are escaped", func(t *testing.T) {
+		c := NewContextBuilder().
+			Kind("kind-a", "key-1").
+			Kind("kind-b", "key:2").
+			Build()
+		assert.Equal(t, "kind-a:key-1:kind-b:key%3A2", c.FullyQualifiedKey())
+	})
+}
+
+func TestContextBuilderMultiKindErrors(t *testing.T) {
+	verifyError := func(t *testing.T, builder *ContextBuilder, expectedErr error) {
+		c0 := builder.Build()
+		assert.True(t, c0.IsDefined())
+		assert.Equal(t, expectedErr, c0.Err())
+
+		c1, err := builder.TryBuild()
+		assert.True(t, c1.IsDefined())
+		assert.Equal(t, expectedErr, c1.Err())
+		assert.Equal(t, expectedErr, err)
+	}
+
+	t.Run("empty", func(t *testing.T) {
+		verifyError(t, NewContextBuilder(), lderrors.ErrContextKindMultiWithNoKinds{})
+	})
+
+	t.Run("error in individual contexts", func(t *testing.T) {
+		b := NewContextBuilder().
+			Kind("kind1", "").
+			Kind("kind2", "my-key").
+			Kind("kind3!", "other-key")
+
+		verifyError(t, b.ContextBuilder, lderrors.ErrContextPerKindErrors{
+			Errors: map[string]error{
+				"kind1":  lderrors.ErrContextKeyEmpty{},
+				"kind3!": lderrors.ErrContextKindInvalidChars{},
+			},
+		})
+	})
+}
+
+func TestContextBuilderCopyOnWrite(t *testing.T) {
+	b := NewContextBuilder().
+		Kind("org", "my-org-key").
+		Kind("user", "my-user-key")
+
+	multi1 := b.Build()
+	assert.Equal(t, 2, multi1.IndividualContextCount())
+
+	b.Kind("thing", "stuff")
+	multi2 := b.Build()
+	assert.Equal(t, 3, multi2.IndividualContextCount())
+	assert.Equal(t, 2, multi1.IndividualContextCount()) // unchanged
+}
