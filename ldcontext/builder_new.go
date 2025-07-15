@@ -9,7 +9,7 @@ import (
 )
 
 type ContextBuilder struct {
-	singleBuilders map[string]*Builder
+	singleBuilders map[Kind]*Builder
 }
 
 type KindBuilder struct {
@@ -18,13 +18,13 @@ type KindBuilder struct {
 }
 
 func NewContextBuilder() *ContextBuilder {
-	return &ContextBuilder{singleBuilders: make(map[string]*Builder)}
+	return &ContextBuilder{singleBuilders: make(map[Kind]*Builder)}
 }
 
-func (cb *ContextBuilder) Kind(kind string, key string) *KindBuilder {
+func (cb *ContextBuilder) Kind(kind Kind, key string) *KindBuilder {
 	singleBuilder, ok := cb.singleBuilders[kind]
 	if !ok {
-		singleBuilder = NewBuilder(key)
+		singleBuilder = NewBuilder(key).Kind(kind)
 		cb.singleBuilders[kind] = singleBuilder
 	}
 	singleBuilder.Key(key)
@@ -52,7 +52,7 @@ func (cb *ContextBuilder) Build() Context {
 	// compute a fully qualified key.
 	var kinds []string
 	for kind := range cb.singleBuilders {
-		kinds = append(kinds, kind)
+		kinds = append(kinds, string(kind))
 	}
 	sort.Strings(kinds)
 
@@ -62,7 +62,7 @@ func (cb *ContextBuilder) Build() Context {
 		multiContexts: make([]Context, 0, len(cb.singleBuilders)),
 	}
 	for _, kind := range kinds {
-		singleBuilder := cb.singleBuilders[kind]
+		singleBuilder := cb.singleBuilders[Kind(kind)]
 		ctx, err := singleBuilder.TryBuild()
 		if err != nil {
 			ret.err = err
@@ -138,13 +138,13 @@ func (kb *KindBuilder) Anonymous(value bool) *KindBuilder {
 	return kb
 }
 
-func (kb *KindBuilder) Private(attributeName string) *KindBuilder {
-	kb.singleBuilder.Private(attributeName)
+func (kb *KindBuilder) Private(attrRefStrings ...string) *KindBuilder {
+	kb.singleBuilder.Private(attrRefStrings...)
 	return kb
 }
 
-func (kb *KindBuilder) PrivateRef(attributeRef ldattr.Ref) *KindBuilder {
-	kb.singleBuilder.PrivateRef(attributeRef)
+func (kb *KindBuilder) PrivateRef(attrRefs ...ldattr.Ref) *KindBuilder {
+	kb.singleBuilder.PrivateRef(attrRefs...)
 	return kb
 }
 
