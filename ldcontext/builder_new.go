@@ -114,7 +114,7 @@ func NewContextBuilderFromContext(fromContext Context) *ContextBuilder {
 	cb := &ContextBuilder{singleBuilders: make(map[Kind]*Builder)}
 	for _, c := range fromContext.GetAllIndividualContexts(nil) {
 		b := &Builder{}
-		b.copyFrom(fromContext)
+		b.copyFrom(c)
 		cb.singleBuilders[c.Kind()] = b
 	}
 	return cb
