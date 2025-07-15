@@ -110,7 +110,9 @@ func NewContextBuilder() *ContextBuilder {
 func NewContextBuilderFromContext(fromContext Context) *ContextBuilder {
 	cb := &ContextBuilder{singleBuilders: make(map[Kind]*Builder)}
 	for _, c := range fromContext.GetAllIndividualContexts(nil) {
-		cb.singleBuilders[c.Kind()] = NewBuilderFromContext(c)
+		b := &Builder{}
+		b.copyFrom(fromContext)
+		cb.singleBuilders[c.Kind()] = b
 	}
 	return cb
 }
