@@ -28,6 +28,8 @@ const defaultMultiBuilderCapacity = 3 // arbitrary value based on presumed likel
 // A MultiBuilder should not be accessed by multiple goroutines at once. Once you have called
 // [MultiBuilder.Build], the resulting Context is immutable and safe to use from multiple
 // goroutines.
+//
+// Deprecated: use [ContextBuilder] instead.
 type MultiBuilder struct {
 	contexts            []Context
 	contextsCopyOnWrite bool
@@ -37,6 +39,8 @@ type MultiBuilder struct {
 //
 // This method is for building a [Context] that has multiple [Context.Kind] values, each with its
 // own nested Context. To define a single context, use [NewBuilder] instead.
+//
+// Deprecated: use [NewContextBuilder] instead.
 func NewMultiBuilder() *MultiBuilder {
 	return &MultiBuilder{contexts: make([]Context, 0, defaultMultiBuilderCapacity)}
 }
