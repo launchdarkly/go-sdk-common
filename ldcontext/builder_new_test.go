@@ -15,6 +15,9 @@ import (
 // Tests are adapted from builder_simple_test.go and builder_multi_test.go.
 
 // SINGLE KIND TESTS (adapted from builder_simple_test.go)
+// A lot of these tests are redundant because they test code that just calls through to a Builder anyway.
+// However, duplicating the tests means we can potentially rewrite KindBuilder to not use Builder at all, then deprecate
+// and remove the old Builder.
 
 func makeKindBuilder() *KindBuilder {
 	// for test cases where the kind and key are unimportant
@@ -62,23 +65,6 @@ func TestKindBuilderKeyValidation(t *testing.T) {
 	assert.True(t, c1.IsDefined())
 	assert.Equal(t, lderrors.ErrContextKeyEmpty{}, c1.Err())
 	assert.Equal(t, lderrors.ErrContextKeyEmpty{}, err)
-}
-
-func TestKindBuilderFullyQualifiedKey(t *testing.T) {
-	t.Run("kind is user", func(t *testing.T) {
-		c := New("my-user-key")
-		assert.Equal(t, "my-user-key", c.FullyQualifiedKey())
-	})
-
-	t.Run("kind is not user", func(t *testing.T) {
-		c := NewWithKind("org", "my-org-key")
-		assert.Equal(t, "org:my-org-key", c.FullyQualifiedKey())
-	})
-
-	t.Run("key is escaped", func(t *testing.T) {
-		c := NewWithKind("org", "my:key%x/y")
-		assert.Equal(t, "org:my%3Akey%25x/y", c.FullyQualifiedKey())
-	})
 }
 
 func TestKindBuilderBasicSetters(t *testing.T) {
