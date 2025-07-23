@@ -126,6 +126,14 @@ func NewBuilder(key string) *Builder {
 	return b.Key(key)
 }
 
+// NewBuilderWithCapacity extends the behavior of NewBuilder to pre-allocate capacity for attributes.
+func NewBuilderWithCapacity(key string, capacity int) *Builder {
+	b := &Builder{
+		attributes: *ldvalue.ValueMapBuildWithCapacity(capacity),
+	}
+	return b.Key(key)
+}
+
 // NewBuilderFromContext creates a Builder whose properties are the same as an existing
 // single context.
 //

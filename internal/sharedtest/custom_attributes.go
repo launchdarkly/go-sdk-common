@@ -7,8 +7,9 @@ import (
 )
 
 const (
-	SmallNumberOfCustomAttributes = 2  //nolint:revive
-	LargeNumberOfCustomAttributes = 20 //nolint:revive
+	SmallNumberOfCustomAttributes  = 2  //nolint:revive
+	MiddleNumberOfCustomAttributes = 10 //nolint:revive
+	LargeNumberOfCustomAttributes  = 50
 )
 
 type NameAndLDValue struct { //nolint:revive
