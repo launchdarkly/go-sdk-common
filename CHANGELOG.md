@@ -2,6 +2,18 @@
 
 All notable changes to the project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [3.4.0](https://github.com/launchdarkly/go-sdk-common/compare/v3.3.0...v3.4.0) (2025-07-25)
+
+
+### Features
+
+* Add ldcontext.NewBuilderWithCapacity constructor ([#40](https://github.com/launchdarkly/go-sdk-common/issues/40)) ([8c65d90](https://github.com/launchdarkly/go-sdk-common/commit/8c65d9043c16218a6ae7d07663e0f0321fa39397))
+
+
+### Bug Fixes
+
+* Bump minimum go version to 1.24 ([3a5523a](https://github.com/launchdarkly/go-sdk-common/commit/3a5523add955453cc58ae0957b7835a6460064ac))
+
 ## [3.3.0](https://github.com/launchdarkly/go-sdk-common/compare/v3.2.0...v3.3.0) (2025-05-19)
 
 
