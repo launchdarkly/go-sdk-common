@@ -21,6 +21,8 @@ const (
 	MultiKind Kind = "multi"
 )
 
+// NewSingleContextKind creates a Kind from the provided string, returning an
+// error if the string is not a valid single-context kind.
 func NewSingleContextKind(kindStr string) (Kind, error) {
 	return validateSingleKind(Kind(kindStr))
 }
