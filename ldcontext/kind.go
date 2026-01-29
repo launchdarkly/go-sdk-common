@@ -21,6 +21,12 @@ const (
 	MultiKind Kind = "multi"
 )
 
+// NewSingleContextKind creates a Kind from the provided string, returning an
+// error if the string is not a valid single-context kind.
+func NewSingleContextKind(kindStr string) (Kind, error) {
+	return validateSingleKind(Kind(kindStr))
+}
+
 // Used internally to enforce validation and defaulting logic. Per the users-to-contexts spec,
 // valid characters in "kind" are ASCII alphanumerics, period, hyphen, and underscore, it
 // cannot be the string "kind", and in a single context it cannot be the string "multi".
