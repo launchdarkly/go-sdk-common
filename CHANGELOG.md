@@ -2,6 +2,13 @@
 
 All notable changes to the project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [3.5.0](https://github.com/launchdarkly/go-sdk-common/compare/v3.4.0...v3.5.0) (2026-01-29)
+
+
+### Features
+
+* Add NewSingleContextKind constructor function ([#42](https://github.com/launchdarkly/go-sdk-common/issues/42)) ([6891b01](https://github.com/launchdarkly/go-sdk-common/commit/6891b0144ce109ffafa8837b1a36054370582209))
+
 ## [3.4.0](https://github.com/launchdarkly/go-sdk-common/compare/v3.3.0...v3.4.0) (2025-07-25)
 
 
