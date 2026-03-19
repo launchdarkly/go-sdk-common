@@ -22,8 +22,8 @@ jobs:
         id: date
         run: echo "date=$(date +'%Y/%m/%d')" >> "$GITHUB_OUTPUT"
       - name: Checkout Source
-        # https://github.com/actions/checkout/releases/tag/v4.3.1
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        # https://github.com/actions/checkout/releases/tag/v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
       - name: Run Gosec Security Scanner
         # https://github.com/securego/gosec/releases/tag/v2.25.0
         uses: securego/gosec@223e19b8856e00f02cc67804499a83f77e208f3c
@@ -31,8 +31,8 @@ jobs:
         with:
           args: --exclude-generated=true --severity=medium --concurrency=1 --fmt json --out=gosec-results.json --stdout --verbose=text --no-fail ./...
       - name: Configure AWS Credentials
-        # https://github.com/aws-actions/configure-aws-credentials/releases/tag/v4
-        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a
+        # https://github.com/aws-actions/configure-aws-credentials/releases/tag/v6.0.0
+        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7
         with:
           audience: https://github.com/launchdarkly
           role-to-assume: ${{ secrets.ORG_SECURITY_GHA_ROLE_ARN }}
