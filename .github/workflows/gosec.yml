@@ -33,6 +33,7 @@ jobs:
         with:
           args: --exclude-generated=true --severity=medium --concurrency=1 --fmt json --out=gosec-results.json --stdout --verbose=text --no-fail ./...
       - name: Configure AWS Credentials
+        if: github.event_name != 'pull_request'
         # https://github.com/aws-actions/configure-aws-credentials/releases/tag/v6.0.0
         uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7
         with:
@@ -40,5 +41,6 @@ jobs:
           role-to-assume: ${{ secrets.ORG_SECURITY_GHA_ROLE_ARN }}
           aws-region: us-east-1
       - name: Upload scan results to S3
+        if: github.event_name != 'pull_request'
         run: |
           aws s3 cp ./gosec-results.json "s3://launchdarkly-org-security-inventory/scan-results/gosec/${{ steps.date.outputs.date }}/$GITHUB_REPOSITORY.json"
