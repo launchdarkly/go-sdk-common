@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - main
+      - devin/1773939059-fix-gosec-workflow-action-shas
 
 permissions:
   id-token: write
