@@ -18,16 +18,19 @@ jobs:
     steps:
       - name: Get current date
         id: date
-        run: echo "::set-output name=date::$(date +'%Y/%m/%d')"
+        run: echo "date=$(date +'%Y/%m/%d')" >> "$GITHUB_OUTPUT"
       - name: Checkout Source
-        uses: actions/checkout@v3
+        # https://github.com/actions/checkout/releases/tag/v4.3.1
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Run Gosec Security Scanner
-        uses: securego/gosec@2.14.0
+        # https://github.com/securego/gosec/releases/tag/v2.25.0
+        uses: securego/gosec@223e19b8856e00f02cc67804499a83f77e208f3c
         timeout-minutes: 5
         with:
           args: --exclude-generated=true --severity=medium --concurrency=1 --fmt json --out=gosec-results.json --stdout --verbose=text --no-fail ./...
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        # https://github.com/aws-actions/configure-aws-credentials/releases/tag/v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a
         with:
           audience: https://github.com/launchdarkly
           role-to-assume: ${{ secrets.ORG_SECURITY_GHA_ROLE_ARN }}
