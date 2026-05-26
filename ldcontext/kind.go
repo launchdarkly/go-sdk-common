@@ -1,8 +1,8 @@
 package ldcontext
 
 import (
-	"github.com/launchdarkly/go-sdk-common/v3/ldattr"
-	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
+	"github.com/launchdarkly/go-sdk-common/v4/ldattr"
+	"github.com/launchdarkly/go-sdk-common/v4/lderrors"
 )
 
 // Kind is a string type set by the application to describe what kind of entity a Context

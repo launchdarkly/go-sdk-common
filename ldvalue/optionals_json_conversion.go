@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"reflect"
 
-	"github.com/launchdarkly/go-jsonstream/v3/jreader"
-	"github.com/launchdarkly/go-jsonstream/v3/jwriter"
+	"github.com/launchdarkly/go-jsonstream/v4/jreader"
+	"github.com/launchdarkly/go-jsonstream/v4/jwriter"
 )
 
 // JSONString returns the JSON representation of the value as a string. This is
@@ -108,7 +108,7 @@ func (o *OptionalString) UnmarshalJSON(data []byte) error {
 // ReadFromJSONReader provides JSON deserialization for use with the jsonstream API.
 //
 // This implementation is used by the SDK in cases where it is more efficient than [json.Unmarshal].
-// See [github.com/launchdarkly/go-jsonstream/v3] for more details.
+// See [github.com/launchdarkly/go-jsonstream/v4] for more details.
 func (o *OptionalBool) ReadFromJSONReader(r *jreader.Reader) {
 	val, nonNull := r.BoolOrNull()
 	if r.Error() == nil {
@@ -123,7 +123,7 @@ func (o *OptionalBool) ReadFromJSONReader(r *jreader.Reader) {
 // ReadFromJSONReader provides JSON deserialization for use with the jsonstream API.
 //
 // This implementation is used by the SDK in cases where it is more efficient than [json.Unmarshal].
-// See [github.com/launchdarkly/go-jsonstream/v3] for more details.
+// See [github.com/launchdarkly/go-jsonstream/v4] for more details.
 func (o *OptionalInt) ReadFromJSONReader(r *jreader.Reader) {
 	val, nonNull := r.IntOrNull()
 	if r.Error() == nil {
@@ -138,7 +138,7 @@ func (o *OptionalInt) ReadFromJSONReader(r *jreader.Reader) {
 // ReadFromJSONReader provides JSON deserialization for use with the jsonstream API.
 //
 // This implementation is used by the SDK in cases where it is more efficient than [json.Unmarshal].
-// See [github.com/launchdarkly/go-jsonstream/v3] for more details.
+// See [github.com/launchdarkly/go-jsonstream/v4] for more details.
 func (o *OptionalString) ReadFromJSONReader(r *jreader.Reader) {
 	val, nonNull := r.StringOrNull()
 	if r.Error() == nil {
@@ -153,7 +153,7 @@ func (o *OptionalString) ReadFromJSONReader(r *jreader.Reader) {
 // WriteToJSONWriter provides JSON serialization for use with the jsonstream API.
 //
 // This implementation is used by the SDK in cases where it is more efficient than [json.Marshal].
-// See [github.com/launchdarkly/go-jsonstream/v3] for more details.
+// See [github.com/launchdarkly/go-jsonstream/v4] for more details.
 func (o OptionalBool) WriteToJSONWriter(w *jwriter.Writer) {
 	o.AsValue().WriteToJSONWriter(w)
 }
@@ -161,7 +161,7 @@ func (o OptionalBool) WriteToJSONWriter(w *jwriter.Writer) {
 // WriteToJSONWriter provides JSON serialization for use with the jsonstream API.
 //
 // This implementation is used by the SDK in cases where it is more efficient than [json.Marshal].
-// See [github.com/launchdarkly/go-jsonstream/v3] for more details.
+// See [github.com/launchdarkly/go-jsonstream/v4] for more details.
 func (o OptionalInt) WriteToJSONWriter(w *jwriter.Writer) {
 	o.AsValue().WriteToJSONWriter(w)
 }
@@ -169,7 +169,7 @@ func (o OptionalInt) WriteToJSONWriter(w *jwriter.Writer) {
 // WriteToJSONWriter provides JSON serialization for use with the jsonstream API.
 //
 // This implementation is used by the SDK in cases where it is more efficient than [json.Marshal].
-// See [github.com/launchdarkly/go-jsonstream/v3] for more details.
+// See [github.com/launchdarkly/go-jsonstream/v4] for more details.
 func (o OptionalString) WriteToJSONWriter(w *jwriter.Writer) {
 	o.AsValue().WriteToJSONWriter(w)
 }

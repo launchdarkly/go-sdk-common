@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/launchdarkly/go-sdk-common/v3/internal/sharedtest"
-	"github.com/launchdarkly/go-sdk-common/v3/ldattr"
-	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
+	"github.com/launchdarkly/go-sdk-common/v4/internal/sharedtest"
+	"github.com/launchdarkly/go-sdk-common/v4/ldattr"
+	"github.com/launchdarkly/go-sdk-common/v4/ldvalue"
 )
 
 // If a benchmark's name ends in NoAlloc, our CI will enforce that it does not cause any heap allocations.

@@ -3,8 +3,8 @@ package ldcontext
 import (
 	"encoding/json"
 
-	"github.com/launchdarkly/go-sdk-common/v3/internal/sharedtest"
-	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
+	"github.com/launchdarkly/go-sdk-common/v4/internal/sharedtest"
+	"github.com/launchdarkly/go-sdk-common/v4/ldvalue"
 )
 
 var (

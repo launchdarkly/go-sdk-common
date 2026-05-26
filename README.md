@@ -1,12 +1,12 @@
 # LaunchDarkly Go SDK Core Packages
 
-[![Circle CI](https://circleci.com/gh/launchdarkly/go-sdk-common.svg?style=shield)](https://circleci.com/gh/launchdarkly/go-sdk-common) [![Documentation](https://img.shields.io/static/v1?label=go.dev&message=reference&color=00add8)](https://pkg.go.dev/github.com/launchdarkly/go-sdk-common/v3)
+[![Circle CI](https://circleci.com/gh/launchdarkly/go-sdk-common.svg?style=shield)](https://circleci.com/gh/launchdarkly/go-sdk-common) [![Documentation](https://img.shields.io/static/v1?label=go.dev&message=reference&color=00add8)](https://pkg.go.dev/github.com/launchdarkly/go-sdk-common/v4)
 
 ## Overview
 
 This repository contains packages and types that are shared between the [LaunchDarkly Go SDK](https://github.com/launchdarkly/go-server-sdk) and other LaunchDarkly Go components.
 
-Version 3.x of `go-sdk-common` is used by version 6.x of the LaunchDarkly Go SDK. It is not usable with earlier SDK versions.
+Version 4.x of `go-sdk-common` is used by version 7.x of the LaunchDarkly Go SDK. It is not usable with earlier SDK versions.
 
 Applications using the LaunchDarkly Go SDK will generally use the `ldcontext` subpackage, which contains the `Context` type, and may also use the `ldvalue` package, which contains the `Value` type that represents arbitrary JSON values. Other packages are less frequently used.
 

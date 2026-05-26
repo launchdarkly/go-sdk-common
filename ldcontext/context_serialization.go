@@ -1,8 +1,8 @@
 package ldcontext
 
 import (
-	"github.com/launchdarkly/go-jsonstream/v3/jreader"
-	"github.com/launchdarkly/go-jsonstream/v3/jwriter"
+	"github.com/launchdarkly/go-jsonstream/v4/jreader"
+	"github.com/launchdarkly/go-jsonstream/v4/jwriter"
 )
 
 // ContextSerializationMethods contains JSON marshaling and unmarshaling methods that are not

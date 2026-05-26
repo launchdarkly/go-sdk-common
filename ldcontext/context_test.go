@@ -5,9 +5,9 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/launchdarkly/go-sdk-common/v3/ldattr"
-	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
-	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
+	"github.com/launchdarkly/go-sdk-common/v4/ldattr"
+	"github.com/launchdarkly/go-sdk-common/v4/lderrors"
+	"github.com/launchdarkly/go-sdk-common/v4/ldvalue"
 
 	"github.com/launchdarkly/go-test-helpers/v3/jsonhelpers"
 

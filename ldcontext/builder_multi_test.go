@@ -3,7 +3,7 @@ package ldcontext
 import (
 	"testing"
 
-	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
+	"github.com/launchdarkly/go-sdk-common/v4/lderrors"
 	"github.com/stretchr/testify/assert"
 )
 
