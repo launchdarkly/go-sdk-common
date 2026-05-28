@@ -1,12 +1,9 @@
 package ldcontext
 
 import (
-	"github.com/launchdarkly/go-jsonstream/v3/jreader"
-	"github.com/launchdarkly/go-jsonstream/v3/jwriter"
+	"github.com/launchdarkly/go-jsonstream/v4/jreader"
+	"github.com/launchdarkly/go-jsonstream/v4/jwriter"
 )
-
-// Note: other ContextSerialization methods are in the conditionally-compiled file
-// context_easyjson.go.
 
 // ContextSerializationMethods contains JSON marshaling and unmarshaling methods that are not
 // normally used directly by applications. These methods are exported because they are used in

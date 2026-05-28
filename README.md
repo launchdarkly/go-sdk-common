@@ -1,24 +1,18 @@
 # LaunchDarkly Go SDK Core Packages
 
-[![Circle CI](https://circleci.com/gh/launchdarkly/go-sdk-common.svg?style=shield)](https://circleci.com/gh/launchdarkly/go-sdk-common) [![Documentation](https://img.shields.io/static/v1?label=go.dev&message=reference&color=00add8)](https://pkg.go.dev/github.com/launchdarkly/go-sdk-common/v3)
+[![Circle CI](https://circleci.com/gh/launchdarkly/go-sdk-common.svg?style=shield)](https://circleci.com/gh/launchdarkly/go-sdk-common) [![Documentation](https://img.shields.io/static/v1?label=go.dev&message=reference&color=00add8)](https://pkg.go.dev/github.com/launchdarkly/go-sdk-common/v4)
 
 ## Overview
 
 This repository contains packages and types that are shared between the [LaunchDarkly Go SDK](https://github.com/launchdarkly/go-server-sdk) and other LaunchDarkly Go components.
 
-Version 3.x of `go-sdk-common` is used by version 6.x of the LaunchDarkly Go SDK. It is not usable with earlier SDK versions.
+Version 4.x of `go-sdk-common` is used by version 7.x of the LaunchDarkly Go SDK. It is not usable with earlier SDK versions.
 
 Applications using the LaunchDarkly Go SDK will generally use the `ldcontext` subpackage, which contains the `Context` type, and may also use the `ldvalue` package, which contains the `Value` type that represents arbitrary JSON values. Other packages are less frequently used.
 
 ## Supported Go versions
 
 This version of the project requires a Go version of 1.23 or higher.
-
-## Integration with easyjson
-
-LaunchDarkly tools frequently read and write JSON data. By default, `go-sdk-common` uses LaunchDarkly's open-source JSON library [`go-jsonstream`](https://github.com/launchdarkly/go-jsonstream), which is considerably faster than Go's built-in `encoding/json` and does not depend on any third-party code. However, it can optionally integrate with the third-party library [`easyjson`](https://github.com/mailru/easyjson), which may be even faster in some cases, without requiring any changes in your code. To enable this, set the build tag `launchdarkly_easyjson` when you run `go build`, which both switches `go-jsonstream` to use `easyjson` internally and also generates `MarshalEasyJSON`/`UnmarshalEasyJSON` methods for each JSON-serializable type. The `easyjson` library is still under development and has some potential compatibility issues; see its documentation for more details.
-
-If you do not set the `launchdarkly_easyjson` build tag, `go-sdk-common` does not use any code from `easyjson`.
 
 ## Learn more
 

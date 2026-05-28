@@ -6,5 +6,5 @@
 //
 // These types and constants are mainly intended to be used internally by LaunchDarkly SDK and
 // service code. Applications are unlikely to need to use them directly; context attributes are
-// normally set via methods in [github.com/launchdarkly/go-sdk-common/v3/ldcontext].
+// normally set via methods in [github.com/launchdarkly/go-sdk-common/v4/ldcontext].
 package ldattr

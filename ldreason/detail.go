@@ -1,7 +1,7 @@
 package ldreason
 
 import (
-	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
+	"github.com/launchdarkly/go-sdk-common/v4/ldvalue"
 )
 
 // EvaluationDetail is an object returned by the SDK's "detail" evaluation methods, such as

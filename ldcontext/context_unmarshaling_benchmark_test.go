@@ -7,8 +7,6 @@ import (
 // BenchmarkJSONUnmarshal uses json.Unmarshal; BenchmarkJSONStreamUnmarshal uses the jsonstream API via
 // ReadFromJSONReader. They both end up calling the same underlying logic, but json.Unmarshal has some
 // extra indirection.
-//
-// Unmarshaling via EasyJSON is covered in the conditionally-compiled file context_easyjson_benchmark_test.go.
 
 func doUnmarshalBenchmark(b *testing.B, unmarshalFn func(*Context, []byte) error) {
 	for _, p := range makeBenchmarkUnmarshalTestParams() {

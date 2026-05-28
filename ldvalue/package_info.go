@@ -30,12 +30,4 @@
 // used with any packages that support the [encoding.TextMarshaler] and [encoding.TextUnmarshaler]
 // interfaces, such as gcfg. The format of this representation depends on the type, see
 // MarshalText() and UnmarshalText() for each type.
-//
-// # JSON conversion with EasyJSON
-//
-// The third-party library EasyJSON (https://github.com/mailru/easyjson) provides code generation of
-// fast JSON converters, without using reflection at runtime. Because EasyJSON is not compatible with
-// all runtime environments (due to the use of the "unsafe" package), LaunchDarkly code does not
-// reference it by default; to enable the MarshalEasyJSON() and UnmarshalEasyJSON() methods for these
-// types, you must set the build tag "launchdarkly_easyjson".
 package ldvalue

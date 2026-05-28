@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/launchdarkly/go-sdk-common/v3/lderrors"
+	"github.com/launchdarkly/go-sdk-common/v4/lderrors"
 
-	"github.com/launchdarkly/go-jsonstream/v3/jreader"
+	"github.com/launchdarkly/go-jsonstream/v4/jreader"
 )
 
 // Ref is an attribute name or path expression identifying a value within a Context.

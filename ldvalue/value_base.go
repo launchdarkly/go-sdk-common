@@ -17,10 +17,10 @@ import (
 // SDK method [github.com/launchdarkly/go-server-sdk/v6/LDClient.JSONVariationDetail] to get the value
 // and then use Value methods to examine it.
 //
-// Similarly, attributes of an evaluation context ([github.com/launchdarkly/go-sdk-common/v3/ldcontext.Context])
+// Similarly, attributes of an evaluation context ([github.com/launchdarkly/go-sdk-common/v4/ldcontext.Context])
 // can have variations of any JSON type other than null. If you want to set a context attribute in a general
 // way that will accept any type, or set the attribute value to a complex data structure such as an array
-// or object, you can use the builder method [github.com/launchdarkly/go-sdk-common/v3/ldcontext.Builder.SetValue].
+// or object, you can use the builder method [github.com/launchdarkly/go-sdk-common/v4/ldcontext.Builder.SetValue].
 //
 // Arrays and objects have special meanings in LaunchDarkly flag evaluation:
 //   - An array of values means "try to match any of these values to the targeting rule."

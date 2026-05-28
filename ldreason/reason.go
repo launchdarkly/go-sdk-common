@@ -3,10 +3,10 @@ package ldreason
 import (
 	"fmt"
 
-	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
+	"github.com/launchdarkly/go-sdk-common/v4/ldvalue"
 
-	"github.com/launchdarkly/go-jsonstream/v3/jreader"
-	"github.com/launchdarkly/go-jsonstream/v3/jwriter"
+	"github.com/launchdarkly/go-jsonstream/v4/jreader"
+	"github.com/launchdarkly/go-jsonstream/v4/jwriter"
 )
 
 // EvalReasonKind defines the possible values of [EvaluationReason.GetKind].
@@ -235,7 +235,7 @@ func (r *EvaluationReason) UnmarshalJSON(data []byte) error {
 // ReadFromJSONReader provides JSON deserialization for use with the jsonstream API.
 //
 // This implementation is used by the SDK in cases where it is more efficient than [encoding/json.Unmarshal].
-// See [github.com/launchdarkly/go-jsonstream/v3] for more details.
+// See [github.com/launchdarkly/go-jsonstream/v4] for more details.
 func (r *EvaluationReason) ReadFromJSONReader(reader *jreader.Reader) {
 	var ret EvaluationReason
 	for obj := reader.ObjectOrNull(); obj.Next(); {
@@ -264,7 +264,7 @@ func (r *EvaluationReason) ReadFromJSONReader(reader *jreader.Reader) {
 // WriteToJSONWriter provides JSON serialization for use with the jsonstream API.
 //
 // This implementation is used by the SDK in cases where it is more efficient than [encoding/json.Marshal].
-// See [github.com/launchdarkly/go-jsonstream/v3] for more details.
+// See [github.com/launchdarkly/go-jsonstream/v4] for more details.
 func (r EvaluationReason) WriteToJSONWriter(w *jwriter.Writer) {
 	if r.kind == "" {
 		w.Null()

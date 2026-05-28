@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/launchdarkly/go-sdk-common/v3/ldvalue"
+	"github.com/launchdarkly/go-sdk-common/v4/ldvalue"
 
-	"github.com/launchdarkly/go-jsonstream/v3/jreader"
+	"github.com/launchdarkly/go-jsonstream/v4/jreader"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
