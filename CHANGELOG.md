@@ -2,6 +2,17 @@
 
 All notable changes to the project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [4.0.0](https://github.com/launchdarkly/go-sdk-common/compare/v3.5.0...v4.0.0) (2026-05-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove easyjson from go-sdk-common ([#50](https://github.com/launchdarkly/go-sdk-common/issues/50))
+
+### Features
+
+* remove easyjson from go-sdk-common ([#50](https://github.com/launchdarkly/go-sdk-common/issues/50)) ([e7dec07](https://github.com/launchdarkly/go-sdk-common/commit/e7dec07a4c45b5e424884d56b028f24d4e094606))
+
 ## [3.5.0](https://github.com/launchdarkly/go-sdk-common/compare/v3.4.0...v3.5.0) (2026-01-29)
 
 
