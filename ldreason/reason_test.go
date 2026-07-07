@@ -72,6 +72,26 @@ func TestReasonExperimentProperties(t *testing.T) {
 	}
 }
 
+func TestReasonOverrideProperties(t *testing.T) {
+	for _, r := range []EvaluationReason{
+		NewEvalReasonOff(), NewEvalReasonFallthrough(), NewEvalReasonFallthroughExperiment(true), NewEvalReasonTargetMatch(),
+		NewEvalReasonRuleMatch(1, "id"), NewEvalReasonRuleMatchExperiment(1, "id", true),
+		NewEvalReasonPrerequisiteFailed("key"), NewEvalReasonError(EvalErrorFlagNotFound),
+	} {
+		t.Run(string(r.GetKind()), func(t *testing.T) {
+			assert.False(t, r.IsOverride())
+
+			r1 := NewEvalReasonFromReasonWithIsOverride(r, true)
+			assert.True(t, r1.IsOverride())
+			assert.Equal(t, r.GetKind(), r1.GetKind())
+
+			r2 := NewEvalReasonFromReasonWithIsOverride(r1, false)
+			assert.False(t, r2.IsOverride())
+			assert.Equal(t, r, r2)
+		})
+	}
+}
+
 func TestReasonPrerequisiteFailedProperties(t *testing.T) {
 	r := NewEvalReasonPrerequisiteFailed("key")
 	assert.Equal(t, "key", r.GetPrerequisiteKey())
@@ -120,7 +140,7 @@ type serializationTestParams struct {
 	expectedJSON string
 }
 
-func TestReasonSerializationAndDeserialization(t *testing.T) {
+func makeSerializationTestParams() []serializationTestParams {
 	baseParams := []serializationTestParams{
 		{EvaluationReason{}, "", "null"},
 		{NewEvalReasonOff(), "OFF", `{"kind":"OFF"}`},
@@ -145,8 +165,27 @@ func TestReasonSerializationAndDeserialization(t *testing.T) {
 			})
 		}
 	}
+	for _, param := range baseParams {
+		if param.reason.IsDefined() {
+			params = append(params, serializationTestParams{
+				reason:    NewEvalReasonFromReasonWithIsOverride(param.reason, true),
+				stringRep: param.stringRep,
+				expectedJSON: strings.TrimSuffix(param.expectedJSON, "}") +
+					`,"isOverride":true}`,
+			})
+			// Setting isOverride to false must not change the serialization.
+			params = append(params, serializationTestParams{
+				reason:       NewEvalReasonFromReasonWithIsOverride(param.reason, false),
+				stringRep:    param.stringRep,
+				expectedJSON: param.expectedJSON,
+			})
+		}
+	}
+	return params
+}
 
-	for _, param := range params {
+func TestReasonSerializationAndDeserialization(t *testing.T) {
+	for _, param := range makeSerializationTestParams() {
 		t.Run(param.expectedJSON, func(t *testing.T) {
 			actual, err := json.Marshal(param.reason)
 			assert.NoError(t, err)
