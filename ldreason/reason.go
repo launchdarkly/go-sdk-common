@@ -89,6 +89,7 @@ type EvaluationReason struct {
 	ruleID            string
 	prerequisiteKey   string
 	inExperiment      bool
+	isOverride        bool
 	errorKind         EvalErrorKind
 	bigSegmentsStatus BigSegmentsStatus
 }
@@ -145,6 +146,13 @@ func (r EvaluationReason) GetPrerequisiteKey() string {
 // variations in the experiment.  Otherwise it returns false.
 func (r EvaluationReason) IsInExperiment() bool {
 	return r.inExperiment
+}
+
+// IsOverride describes whether the evaluated flag's definition was supplied by an SDK
+// override source rather than by LaunchDarkly. It reflects the source of the evaluated
+// flag itself, not of any prerequisite or segment referenced during the evaluation.
+func (r EvaluationReason) IsOverride() bool {
+	return r.isOverride
 }
 
 // GetErrorKind describes the general category of the error, if the Kind is [EvalReasonError].
@@ -222,6 +230,16 @@ func NewEvalReasonFromReasonWithBigSegmentsStatus(
 	return reason
 }
 
+// NewEvalReasonFromReasonWithIsOverride returns a copy of an EvaluationReason with a
+// specific value for the [EvaluationReason.IsOverride] indicator.
+func NewEvalReasonFromReasonWithIsOverride(
+	reason EvaluationReason,
+	isOverride bool,
+) EvaluationReason {
+	reason.isOverride = isOverride
+	return reason
+}
+
 // MarshalJSON implements custom JSON serialization for EvaluationReason.
 func (r EvaluationReason) MarshalJSON() ([]byte, error) {
 	return jwriter.MarshalJSONWithWriter(r)
@@ -252,6 +270,8 @@ func (r *EvaluationReason) ReadFromJSONReader(reader *jreader.Reader) {
 			ret.prerequisiteKey = reader.String()
 		case "inExperiment":
 			ret.inExperiment = reader.Bool()
+		case "isOverride":
+			ret.isOverride = reader.Bool()
 		case "bigSegmentsStatus":
 			ret.bigSegmentsStatus = BigSegmentsStatus(reader.String())
 		}
@@ -277,6 +297,7 @@ func (r EvaluationReason) WriteToJSONWriter(w *jwriter.Writer) {
 		obj.Maybe("ruleId", r.ruleID != "").String(r.ruleID)
 	}
 	obj.Maybe("inExperiment", r.inExperiment).Bool(r.inExperiment)
+	obj.Maybe("isOverride", r.isOverride).Bool(r.isOverride)
 	if r.kind == EvalReasonPrerequisiteFailed {
 		obj.Name("prerequisiteKey").String(r.prerequisiteKey)
 	}
