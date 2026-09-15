@@ -89,7 +89,7 @@ type EvaluationReason struct {
 	ruleID            string
 	prerequisiteKey   string
 	inExperiment      bool
-	isOverride        bool
+	overrideAffected  bool
 	errorKind         EvalErrorKind
 	bigSegmentsStatus BigSegmentsStatus
 }
@@ -148,11 +148,15 @@ func (r EvaluationReason) IsInExperiment() bool {
 	return r.inExperiment
 }
 
-// IsOverride describes whether the evaluated flag's definition was supplied by an SDK
-// override source rather than by LaunchDarkly. It reflects the source of the evaluated
-// flag itself, not of any prerequisite or segment referenced during the evaluation.
-func (r EvaluationReason) IsOverride() bool {
-	return r.isOverride
+// IsOverrideAffected reports whether an override affected this evaluation, directly or
+// transitively. It returns true if the evaluated flag came from the SDK's override store.
+// It also returns true if a prerequisite flag at any depth, or a segment read during the
+// evaluation, came from that store. Otherwise it returns false.
+//
+// In the JSON representation, the "overrideAffected" property appears only when this
+// value is true.
+func (r EvaluationReason) IsOverrideAffected() bool {
+	return r.overrideAffected
 }
 
 // GetErrorKind describes the general category of the error, if the Kind is [EvalReasonError].
@@ -230,13 +234,14 @@ func NewEvalReasonFromReasonWithBigSegmentsStatus(
 	return reason
 }
 
-// NewEvalReasonFromReasonWithIsOverride returns a copy of an EvaluationReason with a
-// specific value for the [EvaluationReason.IsOverride] indicator.
-func NewEvalReasonFromReasonWithIsOverride(
+// NewEvalReasonFromReasonWithOverrideAffected returns a copy of an EvaluationReason with a
+// specific value for the [EvaluationReason.IsOverrideAffected] indicator. The copy keeps all
+// other properties of the original reason.
+func NewEvalReasonFromReasonWithOverrideAffected(
 	reason EvaluationReason,
-	isOverride bool,
+	overrideAffected bool,
 ) EvaluationReason {
-	reason.isOverride = isOverride
+	reason.overrideAffected = overrideAffected
 	return reason
 }
 
@@ -270,8 +275,8 @@ func (r *EvaluationReason) ReadFromJSONReader(reader *jreader.Reader) {
 			ret.prerequisiteKey = reader.String()
 		case "inExperiment":
 			ret.inExperiment = reader.Bool()
-		case "isOverride":
-			ret.isOverride = reader.Bool()
+		case "overrideAffected":
+			ret.overrideAffected = reader.Bool()
 		case "bigSegmentsStatus":
 			ret.bigSegmentsStatus = BigSegmentsStatus(reader.String())
 		}
@@ -297,7 +302,7 @@ func (r EvaluationReason) WriteToJSONWriter(w *jwriter.Writer) {
 		obj.Maybe("ruleId", r.ruleID != "").String(r.ruleID)
 	}
 	obj.Maybe("inExperiment", r.inExperiment).Bool(r.inExperiment)
-	obj.Maybe("isOverride", r.isOverride).Bool(r.isOverride)
+	obj.Maybe("overrideAffected", r.overrideAffected).Bool(r.overrideAffected)
 	if r.kind == EvalReasonPrerequisiteFailed {
 		obj.Name("prerequisiteKey").String(r.prerequisiteKey)
 	}

@@ -72,24 +72,79 @@ func TestReasonExperimentProperties(t *testing.T) {
 	}
 }
 
-func TestReasonOverrideProperties(t *testing.T) {
-	for _, r := range []EvaluationReason{
+func TestReasonOverrideAffectedProperties(t *testing.T) {
+	baseReasons := []EvaluationReason{
 		NewEvalReasonOff(), NewEvalReasonFallthrough(), NewEvalReasonFallthroughExperiment(true), NewEvalReasonTargetMatch(),
 		NewEvalReasonRuleMatch(1, "id"), NewEvalReasonRuleMatchExperiment(1, "id", true),
 		NewEvalReasonPrerequisiteFailed("key"), NewEvalReasonError(EvalErrorFlagNotFound),
-	} {
-		t.Run(string(r.GetKind()), func(t *testing.T) {
-			assert.False(t, r.IsOverride())
+	}
+	reasons := baseReasons
+	for _, r := range baseReasons {
+		reasons = append(reasons, NewEvalReasonFromReasonWithBigSegmentsStatus(r, BigSegmentsStale))
+	}
+	for _, r := range reasons {
+		name := r.String()
+		if r.GetBigSegmentsStatus() != "" {
+			name += "+bigSegmentsStatus"
+		}
+		t.Run(name, func(t *testing.T) {
+			assert.False(t, r.IsOverrideAffected())
 
-			r1 := NewEvalReasonFromReasonWithIsOverride(r, true)
-			assert.True(t, r1.IsOverride())
-			assert.Equal(t, r.GetKind(), r1.GetKind())
+			r1 := NewEvalReasonFromReasonWithOverrideAffected(r, true)
+			assert.True(t, r1.IsOverrideAffected())
+			assertOtherReasonPropertiesEqual(t, r, r1)
 
-			r2 := NewEvalReasonFromReasonWithIsOverride(r1, false)
-			assert.False(t, r2.IsOverride())
+			r2 := NewEvalReasonFromReasonWithOverrideAffected(r1, false)
+			assert.False(t, r2.IsOverrideAffected())
 			assert.Equal(t, r, r2)
 		})
 	}
+}
+
+// assertOtherReasonPropertiesEqual checks every EvaluationReason property except the
+// override indicator.
+func assertOtherReasonPropertiesEqual(t *testing.T, expected, actual EvaluationReason) {
+	assert.Equal(t, expected.GetKind(), actual.GetKind())
+	assert.Equal(t, expected.GetRuleIndex(), actual.GetRuleIndex())
+	assert.Equal(t, expected.GetRuleID(), actual.GetRuleID())
+	assert.Equal(t, expected.GetPrerequisiteKey(), actual.GetPrerequisiteKey())
+	assert.Equal(t, expected.IsInExperiment(), actual.IsInExperiment())
+	assert.Equal(t, expected.GetErrorKind(), actual.GetErrorKind())
+	assert.Equal(t, expected.GetBigSegmentsStatus(), actual.GetBigSegmentsStatus())
+	assert.Equal(t, expected.String(), actual.String())
+}
+
+func TestReasonOverrideAffectedJSON(t *testing.T) {
+	t.Run("round trip when true", func(t *testing.T) {
+		r := NewEvalReasonFromReasonWithOverrideAffected(NewEvalReasonRuleMatch(1, "x"), true)
+		data, err := json.Marshal(r)
+		assert.NoError(t, err)
+		assert.JSONEq(t, `{"kind":"RULE_MATCH","ruleIndex":1,"ruleId":"x","overrideAffected":true}`, string(data))
+
+		var parsed EvaluationReason
+		assert.NoError(t, json.Unmarshal(data, &parsed))
+		assert.True(t, parsed.IsOverrideAffected())
+		assert.Equal(t, r, parsed)
+	})
+
+	t.Run("parses key from external JSON", func(t *testing.T) {
+		var parsed EvaluationReason
+		assert.NoError(t, json.Unmarshal([]byte(`{"kind":"OFF","overrideAffected":true}`), &parsed))
+		assert.True(t, parsed.IsOverrideAffected())
+		assert.Equal(t, NewEvalReasonFromReasonWithOverrideAffected(NewEvalReasonOff(), true), parsed)
+	})
+
+	t.Run("omits key when false", func(t *testing.T) {
+		r := NewEvalReasonFromReasonWithOverrideAffected(NewEvalReasonOff(), false)
+		data, err := json.Marshal(r)
+		assert.NoError(t, err)
+		assert.JSONEq(t, `{"kind":"OFF"}`, string(data))
+		assert.NotContains(t, string(data), "overrideAffected")
+
+		var parsed EvaluationReason
+		assert.NoError(t, json.Unmarshal([]byte(`{"kind":"OFF"}`), &parsed))
+		assert.False(t, parsed.IsOverrideAffected())
+	})
 }
 
 func TestReasonPrerequisiteFailedProperties(t *testing.T) {
@@ -168,14 +223,14 @@ func makeSerializationTestParams() []serializationTestParams {
 	for _, param := range baseParams {
 		if param.reason.IsDefined() {
 			params = append(params, serializationTestParams{
-				reason:    NewEvalReasonFromReasonWithIsOverride(param.reason, true),
+				reason:    NewEvalReasonFromReasonWithOverrideAffected(param.reason, true),
 				stringRep: param.stringRep,
 				expectedJSON: strings.TrimSuffix(param.expectedJSON, "}") +
-					`,"isOverride":true}`,
+					`,"overrideAffected":true}`,
 			})
-			// Setting isOverride to false must not change the serialization.
+			// Setting overrideAffected to false must not change the serialization.
 			params = append(params, serializationTestParams{
-				reason:       NewEvalReasonFromReasonWithIsOverride(param.reason, false),
+				reason:       NewEvalReasonFromReasonWithOverrideAffected(param.reason, false),
 				stringRep:    param.stringRep,
 				expectedJSON: param.expectedJSON,
 			})
