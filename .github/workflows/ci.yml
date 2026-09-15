@@ -11,10 +11,7 @@ on:
 
 jobs:
   go-versions:
-    # TEMPORARY: pinned to a commit on the unmerged gh-actions branch
-    # mk/SDK-3095/go-version-matrix so this PR's CI can resolve the workflow.
-    # Flip to @main before merging, once that branch has landed.
-    uses: launchdarkly/gh-actions/.github/workflows/sdk-go-version-matrix.yml@902cb178bdac874dd28fcc28eeaf7ad5cc5e0ac8
+    uses: launchdarkly/gh-actions/.github/workflows/sdk-go-version-matrix.yml@main
 
   # Runs the common tasks (unit tests, lint, contract tests) for each Go version.
   test-linux:
