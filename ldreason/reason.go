@@ -89,6 +89,7 @@ type EvaluationReason struct {
 	ruleID            string
 	prerequisiteKey   string
 	inExperiment      bool
+	overrideAffected  bool
 	errorKind         EvalErrorKind
 	bigSegmentsStatus BigSegmentsStatus
 }
@@ -145,6 +146,19 @@ func (r EvaluationReason) GetPrerequisiteKey() string {
 // variations in the experiment.  Otherwise it returns false.
 func (r EvaluationReason) IsInExperiment() bool {
 	return r.inExperiment
+}
+
+// IsOverrideAffected reports whether an override affected this evaluation, directly or
+// transitively. It returns true if the evaluated flag came from the SDK's override store.
+// It also returns true if a prerequisite flag at any depth, or a segment read during the
+// evaluation, came from that store. Otherwise it returns false.
+//
+// In the JSON representation, the "overrideAffected" property appears only when this
+// value is true.
+//
+// Flag overrides are currently experimental and subject to change.
+func (r EvaluationReason) IsOverrideAffected() bool {
+	return r.overrideAffected
 }
 
 // GetErrorKind describes the general category of the error, if the Kind is [EvalReasonError].
@@ -222,6 +236,19 @@ func NewEvalReasonFromReasonWithBigSegmentsStatus(
 	return reason
 }
 
+// NewEvalReasonFromReasonWithOverrideAffected returns a copy of an EvaluationReason with a
+// specific value for the [EvaluationReason.IsOverrideAffected] indicator. The copy keeps all
+// other properties of the original reason.
+//
+// Flag overrides are currently experimental and subject to change.
+func NewEvalReasonFromReasonWithOverrideAffected(
+	reason EvaluationReason,
+	overrideAffected bool,
+) EvaluationReason {
+	reason.overrideAffected = overrideAffected
+	return reason
+}
+
 // MarshalJSON implements custom JSON serialization for EvaluationReason.
 func (r EvaluationReason) MarshalJSON() ([]byte, error) {
 	return jwriter.MarshalJSONWithWriter(r)
@@ -252,6 +279,8 @@ func (r *EvaluationReason) ReadFromJSONReader(reader *jreader.Reader) {
 			ret.prerequisiteKey = reader.String()
 		case "inExperiment":
 			ret.inExperiment = reader.Bool()
+		case "overrideAffected":
+			ret.overrideAffected = reader.Bool()
 		case "bigSegmentsStatus":
 			ret.bigSegmentsStatus = BigSegmentsStatus(reader.String())
 		}
@@ -277,6 +306,7 @@ func (r EvaluationReason) WriteToJSONWriter(w *jwriter.Writer) {
 		obj.Maybe("ruleId", r.ruleID != "").String(r.ruleID)
 	}
 	obj.Maybe("inExperiment", r.inExperiment).Bool(r.inExperiment)
+	obj.Maybe("overrideAffected", r.overrideAffected).Bool(r.overrideAffected)
 	if r.kind == EvalReasonPrerequisiteFailed {
 		obj.Name("prerequisiteKey").String(r.prerequisiteKey)
 	}
