@@ -155,6 +155,8 @@ func (r EvaluationReason) IsInExperiment() bool {
 //
 // In the JSON representation, the "overrideAffected" property appears only when this
 // value is true.
+//
+// Flag overrides are currently experimental and subject to change.
 func (r EvaluationReason) IsOverrideAffected() bool {
 	return r.overrideAffected
 }
@@ -237,6 +239,8 @@ func NewEvalReasonFromReasonWithBigSegmentsStatus(
 // NewEvalReasonFromReasonWithOverrideAffected returns a copy of an EvaluationReason with a
 // specific value for the [EvaluationReason.IsOverrideAffected] indicator. The copy keeps all
 // other properties of the original reason.
+//
+// Flag overrides are currently experimental and subject to change.
 func NewEvalReasonFromReasonWithOverrideAffected(
 	reason EvaluationReason,
 	overrideAffected bool,
