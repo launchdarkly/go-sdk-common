@@ -2,6 +2,13 @@
 
 All notable changes to the project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [4.1.0](https://github.com/launchdarkly/go-sdk-common/compare/v4.0.1...v4.1.0) (2026-09-29)
+
+
+### Features
+
+* Add overrideAffected indicator to EvaluationReason ([#68](https://github.com/launchdarkly/go-sdk-common/issues/68)) ([051a15c](https://github.com/launchdarkly/go-sdk-common/commit/051a15c9223733c0d4f8ae02489830ed25dbe1a8))
+
 ## [4.0.1](https://github.com/launchdarkly/go-sdk-common/compare/v4.0.0...v4.0.1) (2026-08-14)
 
 
