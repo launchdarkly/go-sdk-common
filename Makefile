@@ -78,7 +78,10 @@ $(LINTER_VERSION_FILE):
 # the Go release that built it. CI tests the newest Go version, so a prebuilt
 # binary breaks on every Go release until upstream ships a build that uses it.
 # `go install` uses the toolchain of the job, so the versions always agree.
-	GOBIN=$(CURDIR)/bin go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+# GOTOOLCHAIN=auto is needed because golangci-lint requires a newer Go than
+# the minimum this module supports, and actions/setup-go v7 sets
+# GOTOOLCHAIN=local, which forbids the toolchain switch that builds it.
+	GOBIN=$(CURDIR)/bin GOTOOLCHAIN=auto go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 	touch $(LINTER_VERSION_FILE)
 
 lint: $(LINTER_VERSION_FILE)
