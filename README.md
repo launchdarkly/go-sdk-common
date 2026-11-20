@@ -12,7 +12,7 @@ Applications using the LaunchDarkly Go SDK will generally use the `ldcontext` su
 
 ## Supported Go versions
 
-This version of the project requires a Go version of 1.24 or higher.
+While this version of the project requires Go 1.24 or later, you should use the latest patched version of a supported Go release.
 
 ## Learn more
 
