@@ -28,7 +28,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
       - name: Run Gosec Security Scanner
         # https://github.com/securego/gosec/releases/tag/v2.25.0
-        uses: securego/gosec@223e19b8856e00f02cc67804499a83f77e208f3c
+        uses: securego/gosec@5eb1d104ef85ff2c905c877eb600e8c1dee33a22
         timeout-minutes: 5
         with:
           args: --exclude-generated=true --severity=medium --concurrency=1 --fmt json --out=gosec-results.json --stdout --verbose=text --no-fail ./...
