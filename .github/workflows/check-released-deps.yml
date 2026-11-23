@@ -34,4 +34,4 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Verify go.mod references released LaunchDarkly module versions
-        uses: launchdarkly/gh-actions/actions/check-released-go-deps@check-released-go-deps-v0
+        uses: launchdarkly/gh-actions/actions/check-released-go-deps@check-released-go-deps/v0
