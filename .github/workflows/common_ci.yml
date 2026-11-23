@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     name: 'Unit Tests and Coverage'
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - name: Setup Go ${{ inputs.go-version }}
         uses: actions/setup-go@v7
         with:
@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     name: 'Unit Tests (easyjson)'
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - name: Setup Go ${{ inputs.go-version }}
         uses: actions/setup-go@v7
         with:
@@ -44,7 +44,7 @@ jobs:
     name: 'Benchmarks'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - name: Setup Go ${{ inputs.go-version }}
         uses: actions/setup-go@v7
         with:
@@ -55,7 +55,7 @@ jobs:
     name: 'Benchmarks (easyjson)'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - name: Setup Go ${{ inputs.go-version }}
         uses: actions/setup-go@v7
         with:
